@@ -1,0 +1,211 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  BENDAHARA
+  ADMIN
+  KEPALA_SEKOLAH
+}
+
+enum ActivityStatus {
+  DRAFT
+  AKTIF
+  SELESAI
+  ARSIP
+}
+
+enum CategoryStatus {
+  AKTIF
+  NONAKTIF
+}
+
+enum PaymentMethod {
+  TUNAI
+  TRANSFER
+}
+
+enum PaymentStatus {
+  SAH
+  DIBATALKAN
+}
+
+enum ExpenseStatus {
+  AKTIF
+  DIBATALKAN
+}
+
+enum Grade {
+  X
+  XI
+  XII
+}
+
+enum NotifKind {
+  OK
+  WARN
+  INFO
+}
+
+model User {
+  id           String   @id @default(cuid())
+  name         String
+  email        String   @unique
+  nip          String?
+  phone        String?
+  role         Role     @default(BENDAHARA)
+  passwordHash String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model School {                       // satu baris; identitas untuk kop & kuitansi
+  id         String   @id @default("default")
+  name       String   @default("SMAN 21 Surabaya")
+  address    String?
+  npsn       String?
+  logoPath   String?
+  fiscalYear Int      @default(2026)
+  updatedAt  DateTime @updatedAt
+}
+
+model ActivityCategory {             // KATEGORI — mis. Outclass, Study Tour
+  id          String         @id @default(cuid())
+  code        String         @unique   // 'OUT', 'ST', 'KGT', 'LMB'
+  name        String
+  description String?
+  status      CategoryStatus @default(AKTIF)
+  activities  Activity[]
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+}
+
+model ExpenseCategory {              // EXPCAT — mis. Transportasi, Konsumsi
+  id          String         @id @default(cuid())
+  code        String         @unique   // 'TRP', 'KNS', 'TKT', ...
+  name        String
+  description String?
+  status      CategoryStatus @default(AKTIF)
+  expenses    Expense[]
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+}
+
+model Activity {
+  id                String           @id @default(cuid())
+  name              String
+  categoryId        String
+  category          ActivityCategory @relation(fields: [categoryId], references: [id])
+  year              Int
+  startDate         DateTime         @db.Date
+  endDate           DateTime         @db.Date
+  location          String
+  description       String?
+  contribution      Int                        // tagihan per siswa, rupiah
+  participantTarget Int              @default(0)
+  chairperson       String?
+  status            ActivityStatus   @default(DRAFT)
+  receiptPrefix     String                     // 'OC-X' -> kuitansi 'OC-X/0001'
+  participants      Participant[]
+  payments          Payment[]
+  expenses          Expense[]
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+}
+
+model Student {
+  id             String        @id @default(cuid())
+  nis            String        @unique
+  name           String
+  grade          Grade
+  className      String?                       // opsional, mis. 'X-3'
+  phone          String?
+  participations Participant[]
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+}
+
+model Participant {
+  id         String    @id @default(cuid())
+  activityId String
+  activity   Activity  @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  studentId  String
+  student    Student   @relation(fields: [studentId], references: [id])
+  billing    Int                           // default: activity.contribution
+  payments   Payment[]
+  createdAt  DateTime  @default(now())
+
+  @@unique([activityId, studentId])
+}
+
+model Payment {
+  id            String        @id @default(cuid())
+  activityId    String
+  activity      Activity      @relation(fields: [activityId], references: [id])
+  participantId String
+  participant   Participant   @relation(fields: [participantId], references: [id])
+  seq           Int                        // urut per kegiatan, dasar nomor kuitansi
+  receiptNo     String                     // 'OC-X/0001'
+  amount        Int
+  method        PaymentMethod
+  date          DateTime      @db.Date
+  status        PaymentStatus @default(SAH)
+  note          String?
+  createdById   String
+  createdAt     DateTime      @default(now())
+  cancelledById String?
+  cancelledAt   DateTime?
+  cancelReason  String?
+
+  @@unique([activityId, receiptNo])
+  @@index([activityId, date])
+}
+
+model Expense {
+  id          String          @id @default(cuid())
+  activityId  String
+  activity    Activity        @relation(fields: [activityId], references: [id])
+  categoryId  String
+  category    ExpenseCategory @relation(fields: [categoryId], references: [id])
+  seq         Int
+  refNo       String                       // 'BKK/OC-X/001'
+  date        DateTime        @db.Date
+  description String
+  amount      Int
+  method      PaymentMethod
+  status      ExpenseStatus   @default(AKTIF)
+  note        String?
+  createdById String
+  createdAt   DateTime        @default(now())
+
+  @@unique([activityId, refNo])
+  @@index([activityId, date])
+}
+
+model Notification {
+  id        String    @id @default(cuid())
+  userId    String
+  title     String
+  body      String
+  kind      NotifKind @default(INFO)
+  readAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId, createdAt])
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String
+  action    String                          // 'payment.cancel', 'activity.archive', ...
+  entity    String
+  entityId  String
+  meta      Json?
+  createdAt DateTime @default(now())
+
+  @@index([entity, entityId])
+}

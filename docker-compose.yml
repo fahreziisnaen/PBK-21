@@ -1,0 +1,20 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: pbk-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: pbk
+      POSTGRES_PASSWORD: pbk
+      POSTGRES_DB: pbk
+    ports:
+      - "5433:5432"
+    volumes:
+      - pbk-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pbk -d pbk"]
+      interval: 5s
+      retries: 10
+
+volumes:
+  pbk-pgdata:
