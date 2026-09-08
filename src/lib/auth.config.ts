@@ -8,14 +8,14 @@ export const authConfig = {
     jwt({ token, user }) {
       if (user) {
         token.sub = user.id;
-        token.role = (user as { role?: string }).role;
+        token.role = user.role;
       }
       return token;
     },
     session({ session, token }) {
       if (session.user) {
         session.user.id = token.sub as string;
-        session.user.role = token.role as string;
+        session.user.role = token.role as typeof session.user.role;
       }
       return session;
     },
