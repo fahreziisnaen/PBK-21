@@ -1,0 +1,73 @@
+@import "tailwindcss";
+
+@theme {
+  --color-brand-50:  #f5f8ff;
+  --color-brand-100: #eaf0fb;
+  --color-brand-600: #1857b8;
+  --color-brand-700: #12428c;
+
+  --color-sidebar:       #0f1b33;
+  --color-sidebar-fg:    #b6c6e2;
+  --color-sidebar-dot:   #40567f;
+  --color-sidebar-muted: #8fa4cc;
+
+  --color-gray-50:  #f9fafb;
+  --color-gray-100: #f2f4f7;
+  --color-gray-200: #e4e7ec;
+  --color-gray-300: #d0d5dd;
+  --color-gray-400: #98a2b3;
+  --color-gray-500: #667085;
+  --color-gray-600: #475467;
+  --color-gray-700: #344054;
+  --color-gray-900: #101828;
+
+  --color-success-50:  #ecfdf3;
+  --color-success-500: #12b76a;
+  --color-success-700: #067647;
+
+  --color-error-50:  #fef3f2;
+  --color-error-100: #fda29b;
+  --color-error-200: #fecdca;
+  --color-error-500: #f04438;
+  --color-error-600: #b42318;
+  --color-error-700: #912018;
+
+  --color-warn-50:  #fffaeb;
+  --color-warn-200: #fedf89;
+  --color-warn-500: #f0b429;
+  --color-warn-700: #b54708;
+
+  --color-body-bg: #f7f8fa;
+
+  --font-sans: var(--font-jakarta), system-ui, sans-serif;
+  --font-mono: var(--font-plex-mono), ui-monospace, monospace;
+
+  --radius-control: 8px;
+  --radius-brand: 9px;
+}
+
+@layer base {
+  body {
+    background: var(--color-body-bg);
+    color: var(--color-gray-900);
+    -webkit-font-smoothing: antialiased;
+  }
+  input:focus, select:focus, textarea:focus {
+    outline: none;
+    border-color: var(--color-brand-600);
+    box-shadow: 0 0 0 3px rgb(24 87 184 / 0.14);
+  }
+  ::placeholder { color: var(--color-gray-500); }
+  table { border-collapse: collapse; width: 100%; }
+}
+
+@keyframes pbkin {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: none; }
+}
+.animate-pbkin { animation: pbkin 0.18s ease-out; }
+
+@media print {
+  body { background: #fff; }
+  [data-noprint] { display: none !important; }
+}

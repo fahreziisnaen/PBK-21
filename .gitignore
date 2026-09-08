@@ -1,5 +1,7 @@
 node_modules/
 .next/
+/out/
+/build
 .env
 .env.local
 .superpooks-tmp/
@@ -9,3 +11,20 @@ node_modules/
 design/.thumbnail
 test-results/
 playwright-report/
+
+# testing
+/coverage
+
+# misc
+.DS_Store
+*.pem
+
+# debug
+npm-debug.log*
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts
+
+# vercel
+.vercel
