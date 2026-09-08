@@ -1,0 +1,11 @@
+node_modules/
+.next/
+.env
+.env.local
+.superpooks-tmp/
+.superpowers/
+.postgres/
+.pgdata/
+design/.thumbnail
+test-results/
+playwright-report/
