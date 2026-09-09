@@ -44,6 +44,28 @@ describe('normalizePhone', () => {
   });
 });
 
+// Task 3's SQL migration reimplements this boundary in the database.
+// The two must agree: normalized form is 628 + 8-11 digits (11-14 total).
+// A regression that changes the regex to \d{7,11} or \d{8,12} would pass all
+// other tests unnoticed, but these boundary cases guard the ±1 edge.
+describe('normalizePhone — boundary cases', () => {
+  it('rejects one digit below minimum', () => {
+    expect(normalizePhone('081234567')).toBeNull();
+  });
+
+  it('accepts exactly at minimum (10 digits local)', () => {
+    expect(normalizePhone('0812345678')).toBe('62812345678');
+  });
+
+  it('accepts exactly at maximum (13 digits local)', () => {
+    expect(normalizePhone('0812345678901')).toBe('62812345678901');
+  });
+
+  it('rejects one digit above maximum', () => {
+    expect(normalizePhone('08123456789012')).toBeNull();
+  });
+});
+
 describe('formatPhoneLocal', () => {
   it('menampilkan kembali dalam bentuk lokal', () => {
     expect(formatPhoneLocal('6281233445566')).toBe('0812-3344-5566');
