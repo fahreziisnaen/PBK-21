@@ -8,11 +8,11 @@ export async function Header() {
   return (
     <header
       data-noprint
-      className="sticky top-0 z-10 flex h-16 items-center justify-between gap-4 border-b border-gray-200 bg-white px-6"
+      className="sticky top-0 z-10 flex h-16 items-center justify-between gap-4 border-b border-gray-200 bg-white px-6 max-[900px]:h-auto max-[900px]:py-2"
     >
       <div id="activity-switcher-slot" />
 
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-3 max-[900px]:flex-wrap">
         <Link href="/notifikasi" className="text-[13px] font-medium text-gray-600 hover:text-brand-600">
           Notifikasi
         </Link>

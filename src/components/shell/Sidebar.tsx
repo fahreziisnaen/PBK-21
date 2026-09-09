@@ -22,9 +22,9 @@ export function Sidebar() {
         </div>
       </div>
 
-      <nav className="flex-1 overflow-y-auto px-3 pb-6">
+      <nav className="flex-1 overflow-y-auto px-3 pb-6 max-[900px]:flex max-[900px]:flex-wrap max-[900px]:gap-1.5 max-[900px]:overflow-visible">
         {NAV_GROUPS.map((group) => (
-          <div key={group.label} className="mb-4">
+          <div key={group.label} className="mb-4 max-[900px]:mb-0">
             <div className="mb-1.5 px-2 text-[10px] font-bold tracking-[0.6px] text-sidebar-dot">
               {group.label}
             </div>
