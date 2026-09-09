@@ -1,0 +1,43 @@
+import { Secret, TOTP } from 'otpauth';
+
+const ISSUER = 'PBK';
+const DIGITS = 6;
+const PERIOD = 30;
+
+function totpFor(secret: string): TOTP {
+  return new TOTP({
+    issuer: ISSUER,
+    algorithm: 'SHA1', // what Google Authenticator expects
+    digits: DIGITS,
+    period: PERIOD,
+    secret: Secret.fromBase32(secret),
+  });
+}
+
+export function generateTotpSecret(): string {
+  return new Secret({ size: 20 }).base32;
+}
+
+export function buildOtpauthUri(username: string, secret: string): string {
+  const totp = new TOTP({
+    issuer: ISSUER,
+    label: username,
+    algorithm: 'SHA1',
+    digits: DIGITS,
+    period: PERIOD,
+    secret: Secret.fromBase32(secret),
+  });
+  return totp.toString();
+}
+
+/**
+ * `window: 1` accepts the previous and next step, covering a phone clock
+ * that drifts by up to 30 seconds either way. Wider windows trade real
+ * security for convenience and are not worth it here.
+ */
+export function verifyTotp(secret: string, code: string, at?: Date): boolean {
+  const cleaned = code.replace(/\D/g, '');
+  if (cleaned.length !== DIGITS) return false;
+  const delta = totpFor(secret).validate({ token: cleaned, window: 1, timestamp: at?.getTime() });
+  return delta !== null;
+}
