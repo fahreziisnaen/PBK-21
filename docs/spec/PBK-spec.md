@@ -6,6 +6,8 @@
 
 Prototipe itu **berfungsi penuh** — bukan mockup. Setiap angka, warna, salinan teks, dan aturan bisnis di dokumen ini disalin verbatim dari sana. Kalau spec dan prototipe berbeda, prototipe yang menang; perbaiki spec.
 
+**Satu pengecualian:** kesetiaan pada prototipe tidak menang atas kendala global bahasa. Prototipe tidak konsisten di satu titik — route `/profil` diberi judul Inggris `User Profile` dengan breadcrumb `Akun / Profile`, sementara 17 route lainnya berbahasa Indonesia. Itu kekhilafan hulu, bukan keputusan desain, dan sudah dikoreksi menjadi `Profil Pengguna` / `Akun / Profil`. Kesetiaan pada desain adalah sarana untuk menghasilkan produk yang benar bagi bendahara sekolah yang memakainya, bukan alasan untuk mereproduksi kesalahan.
+
 ---
 
 ## 1. Ringkasan
@@ -296,7 +298,7 @@ Judul, subjudul, dan breadcrumb disalin verbatim dari `ROUTES` di `PBK.dc.html`.
 | | `/laporan/pembayaran` | Laporan Pembayaran | Laporan tagihan dan pelunasan siswa |
 | ADMINISTRASI | `/kuitansi` | Kuitansi | Pratinjau kuitansi siap cetak |
 | | `/pengaturan` | Pengaturan Kegiatan | Konfigurasi kegiatan dan format kuitansi |
-| AKUN | `/profil` | User Profile | Akun dan preferensi pengguna |
+| AKUN | `/profil` | Profil Pengguna | Akun dan preferensi pengguna |
 | | `/notifikasi` | Pusat Notifikasi | Semua peristiwa keuangan dan kegiatan |
 | SISTEM | `/states` | Status & Komponen | Empty state, error state, dan dialog konfirmasi |
 
