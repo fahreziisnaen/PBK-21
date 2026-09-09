@@ -33,7 +33,7 @@ Dokumen ini merancang penggantian lapisan autentikasi PBK dan penambahan otorisa
 
 ## 2. Keputusan yang diambil
 
-Lima pertanyaan dijawab pengguna selama brainstorming. Dicatat di sini karena alasannya menentukan bentuk kodenya.
+Dijawab pengguna selama brainstorming. Dicatat di sini karena alasannya menentukan bentuk kodenya.
 
 | Keputusan | Pilihan | Konsekuensi |
 |---|---|---|
@@ -151,7 +151,7 @@ model AppSetting {
 Database produksi mungkin sudah berisi pengguna. Migrasi harus:
 
 1. Menambah `username` sebagai nullable
-2. Mengisi mundur dari bagian lokal email (`anggi.prawita@…` → `anggi.prawita`), menyelesaikan tabrakan dengan sufiks angka
+2. Mengisi mundur dari bagian lokal email (`administrator@…` → `administrator`), menyelesaikan tabrakan dengan sufiks angka. Dalam praktiknya hanya ada satu baris pada titik ini — identitas seed sudah diganti menjadi administrator generik sebelum plan ini berjalan (§14.1) — tetapi logika pengisian mundur tetap ditulis umum, karena database yang sudah lebih dulu dipakai bisa berisi lebih banyak.
 3. Menjadikannya `NOT NULL UNIQUE`
 4. Melepas keunikan dan kewajiban `email`
 5. Menormalisasi `phone` ke `628xxx` — data seed sekarang `0812-3344-5566` dan **tidak akan bisa dipakai mengirim WhatsApp apa adanya**
