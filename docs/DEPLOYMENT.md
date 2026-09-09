@@ -23,11 +23,23 @@ Perkiraan waktu: 20 menit.
   terbit sebelum DNS benar-benar mengarah ke server.
 - Port 80 dan 443 terbuka di firewall
 
-Cek DNS sudah benar sebelum lanjut:
+Buka port 80 dan 443 (lewati kalau Anda sudah punya aturan firewall sendiri):
 
 ```bash
+sudo ufw allow 80/tcp
+sudo ufw allow 443/tcp
+```
+
+Cek DNS sudah benar sebelum lanjut. Ubuntu minimal biasanya tidak punya `dig`
+terpasang — pasang dulu, atau pakai `getent` yang sudah ada di mana pun:
+
+```bash
+sudo apt install -y dnsutils
 dig +short pbk.sekolahanda.sch.id
 # harus mengeluarkan IP VPS Anda
+
+# alternatif tanpa memasang apa pun:
+getent hosts pbk.sekolahanda.sch.id
 ```
 
 ## 1. Pasang Docker
@@ -97,6 +109,16 @@ Buka `https://pbk.sekolahanda.sch.id`. Masuk dengan akun seed di bawah — lalu
 riwayat repositori — siapa pun yang bisa membaca kode sumber tahu sandinya.
 Selama akun `anggi.prawita@sman21sby.sch.id` masih memakai `pbk-demo-2026`,
 siapa pun bisa masuk sebagai Bendahara di server produksi Anda.
+
+> **Ganti sandinya, JANGAN hapus akunnya.** Naluri yang wajar setelah Anda
+> membuat akun sendiri adalah menghapus baris `anggi.prawita@sman21sby.sch.id`
+> ini. Jangan — service `migrate` menjalankan `prisma db seed` di setiap
+> `docker compose up`, dan seed-nya meng-upsert akun ini (`update: {}`, dibuat
+> ulang bila hilang). Kalau barisnya dihapus, `git pull && docker compose
+> -f docker-compose.prod.yml up -d --build` berikutnya membuatnya lagi
+> dengan sandi bawaan `pbk-demo-2026` — diam-diam, tanpa peringatan. Kalau
+> barisnya masih ada tapi sandinya sudah diganti (langkah di bawah ini),
+> upsert tidak menyentuhnya sama sekali dan sandi baru Anda bertahan.
 
 Fondasi aplikasi ini (rilis saat ini) belum punya halaman ganti-sandi di
 dalam aplikasi — menyusul pada pembaruan berikutnya. Sampai saat itu, ganti
@@ -170,11 +192,11 @@ docker compose -f docker-compose.prod.yml up -d --build
 
 Migrasi baru diterapkan otomatis oleh service `migrate` setiap kali naik.
 
-> Jangan menjalankan `npm install prisma` atau `npm install @prisma/client`
-> tanpa versi di mana pun — termasuk kalau Anda membuka shell di dalam
-> container untuk debugging. Prisma dipin ke `^7.10.0` di `package.json`;
-> tag `latest` di npm saat ini adalah rilis pre-release `8.0.0-rc.13` yang
-> tidak kompatibel.
+> Jangan menjalankan `npm install prisma`, `npm install @prisma/client`, atau
+> `npm install @prisma/adapter-pg` tanpa versi di mana pun — termasuk kalau
+> Anda membuka shell di dalam container untuk debugging. Ketiganya dipin ke
+> `^7.10.0` di `package.json`; tag `latest` di npm saat ini adalah rilis
+> pre-release `8.0.0-rc.13` yang tidak kompatibel.
 
 **Backup database** — jalankan harian lewat cron:
 
@@ -204,13 +226,19 @@ tabel-tabelnya dihapus dan diisi ulang (`db` tetap menyala — restore
 tersambung ke situ):
 
 ```bash
+cd /opt/pbk
 docker compose -f docker-compose.prod.yml stop app
 
-gunzip -c backup/pbk-2026-09-08.sql.gz | \
+gunzip -c /opt/pbk/backup/pbk-2026-09-08.sql.gz | \
   docker compose -f docker-compose.prod.yml exec -T db psql -U pbk -d pbk
 
 docker compose -f docker-compose.prod.yml start app
 ```
+
+(Jalur backup di atas sengaja ditulis absolut, `/opt/pbk/backup/...` — saat
+memulihkan lewat sesi darurat, bekerja dari direktori yang salah dan tidak
+menyadarinya adalah kesalahan paling gampang terjadi. Sesuaikan nama berkas
+dengan tanggal backup yang ingin Anda pulihkan.)
 
 **Menghentikan / menyalakan**
 
@@ -228,6 +256,7 @@ docker compose -f docker-compose.prod.yml start
 | App restart terus | `AUTH_SECRET` kosong. Isi di `.env` lalu `up -d` lagi |
 | Port 80 sudah dipakai | Nginx/Apache bawaan masih jalan: `sudo systemctl disable --now nginx apache2` |
 | `docker build` lambat sekali atau kehabisan disk | Pastikan `.dockerignore` ikut ter-clone dari git (bukan berkas lokal yang lupa di-commit) — tanpa itu, Docker mengirim seluruh isi repo termasuk folder pengembangan lokal sebagai build context |
+| Build gagal di tahap `builder` dengan pesan `PrismaConfigEnvError: Cannot resolve environment variable: DATABASE_URL` | Ini sudah ditangani oleh `Dockerfile` (nilai `DATABASE_URL` placeholder di-scope ke perintah `prisma generate` saja) — kalau Anda tetap melihat galat ini, kemungkinan `Dockerfile` sudah diubah lokal atau di-build dari branch lama. Tarik ulang kode terbaru (`git pull`) lalu build ulang |
 | Lupa sandi baru setelah Langkah 5 | Ulangi Langkah 5 dari awal dengan sandi baru — tidak ada batas berapa kali boleh diganti |
 | Perintah Langkah 5a tidak mencetak apa pun | `npm install` di dalamnya gagal (biasanya jaringan) dan pesannya tersembunyi oleh `>/dev/null 2>&1`. Jalankan ulang tanpa bagian itu untuk melihat error aslinya: `docker run --rm node:24-alpine sh -c 'npm install -g bcryptjs && bcrypt "$1" 10' sh 'sandi-baru-anda'` |
 | Ingin mulai dari database kosong | `docker compose -f docker-compose.prod.yml down -v` — **menghapus seluruh data**, backup dulu |

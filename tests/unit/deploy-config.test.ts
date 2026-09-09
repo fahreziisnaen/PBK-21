@@ -25,6 +25,15 @@ describe('Dockerfile', () => {
     expect(build).toBeGreaterThan(gen);
   });
 
+  it('menyediakan DATABASE_URL placeholder khusus untuk RUN prisma generate, tanpa membocorkannya ke stage lain', () => {
+    // prisma.config.ts memanggil env('DATABASE_URL') secara eager (lihat
+    // @prisma/config), dan builder stage tidak punya .env (dikecualikan oleh
+    // .dockerignore) — tanpa placeholder yang di-scope ke baris ini, `prisma
+    // generate` keluar dengan exit 1 dan mematikan build image pertama.
+    expect(df).toMatch(/^RUN DATABASE_URL="[^"]+"\s+npx prisma generate/m);
+    expect(df).not.toMatch(/^ENV DATABASE_URL/m);
+  });
+
   it('memasang openssl yang dibutuhkan Prisma di Alpine', () => {
     expect(df).toMatch(/apk add[^\n]*openssl/);
   });

@@ -21,15 +21,31 @@ export const ROUTES: Record<string, RouteMeta> = {
   '/states': { title: 'Status & Komponen', subtitle: 'Empty state, error state, dan dialog konfirmasi', crumbs: ['Sistem', 'Status & Komponen'] },
 };
 
-export function getRouteMeta(pathname: string): RouteMeta {
-  const exact = ROUTES[pathname];
+/**
+ * `routes` sengaja bisa disuntik (default: ROUTES) supaya algoritme
+ * pencarian prefix bisa diuji dengan data tetap tanpa menunggu route
+ * bersarang sungguhan (mis. `/master/kegiatan/[id]`) terdaftar oleh plan
+ * berikutnya.
+ */
+export function getRouteMeta(
+  pathname: string,
+  routes: Record<string, RouteMeta> = ROUTES,
+): RouteMeta {
+  const exact = routes[pathname];
   if (exact) return exact;
 
+  // Coba setiap prefix `/{…}/[id]` dari yang terpanjang ke yang terpendek,
+  // supaya route detail bersarang (mis. `/master/kegiatan/abc123`, bukan
+  // cuma `/siswa/abc123` yang persis dua segmen) juga bisa ditemukan.
   const segments = pathname.split('/').filter(Boolean);
-  if (segments.length === 2) {
-    const dynamic = ROUTES[`/${segments[0]}/[id]`];
+  for (let prefixLen = segments.length - 1; prefixLen >= 1; prefixLen--) {
+    const dynamic = routes[`/${segments.slice(0, prefixLen).join('/')}/[id]`];
     if (dynamic) return dynamic;
   }
 
-  return ROUTES['/dashboard'];
+  if (process.env.NODE_ENV !== 'production') {
+    console.warn(`[routes] Tidak ada RouteMeta terdaftar untuk path "${pathname}"; jatuh ke Dashboard.`);
+  }
+
+  return routes['/dashboard'];
 }

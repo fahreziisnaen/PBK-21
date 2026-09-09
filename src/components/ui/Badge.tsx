@@ -1,4 +1,4 @@
-import { statusTone, type Tone } from '@/lib/status';
+import { statusLabel, statusTone, type Tone } from '@/lib/status';
 
 const CLASSES: Record<Tone, string> = {
   success: 'bg-success-50 text-success-700',
@@ -7,6 +7,11 @@ const CLASSES: Record<Tone, string> = {
   neutral: 'bg-gray-100 text-gray-600',
 };
 
+/**
+ * `status` menerima baik nilai enum Prisma mentah (mis. 'AKTIF') maupun
+ * label tampilan berbahasa Indonesia (mis. 'Aktif') — keduanya diterjemahkan
+ * ke label dan warna yang sama lewat `statusLabel`/`statusTone`.
+ */
 export function Badge({ status }: { status: string }) {
   return (
     <span
@@ -15,7 +20,7 @@ export function Badge({ status }: { status: string }) {
         CLASSES[statusTone(status)]
       }
     >
-      {status}
+      {statusLabel(status)}
     </span>
   );
 }

@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest';
-import { getRouteMeta, ROUTES } from '@/lib/routes';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { getRouteMeta, ROUTES, type RouteMeta } from '@/lib/routes';
 import { NAV_GROUPS } from '@/lib/nav';
 
 describe('ROUTES', () => {
@@ -30,6 +30,54 @@ describe('getRouteMeta', () => {
 
   it('jatuh ke Dashboard untuk path tak dikenal', () => {
     expect(getRouteMeta('/entah').title).toBe('Dashboard');
+  });
+
+  describe('route dinamis bersarang (kedalaman > 2)', () => {
+    // Tabel route kustom — plan 03 belum mendaftarkan '/master/kegiatan/[id]'
+    // ke ROUTES sungguhan, jadi algoritme prefix diuji lewat parameter
+    // `routes` yang bisa disuntik, bukan lewat data produksi.
+    const routes: Record<string, RouteMeta> = {
+      '/dashboard': { title: 'Dashboard', subtitle: '', crumbs: ['Dashboard'] },
+      '/master/kegiatan/[id]': { title: 'Detail Kegiatan', subtitle: '', crumbs: ['Master Data', 'Kegiatan', 'Detail'] },
+    };
+
+    it('mencocokkan prefix /{…}/[id] pada kedalaman 3', () => {
+      expect(getRouteMeta('/master/kegiatan/abc123', routes).title).toBe('Detail Kegiatan');
+    });
+
+    it('tidak mencocokkan prefix parsial yang salah dan tetap jatuh ke Dashboard', () => {
+      expect(getRouteMeta('/master/kategori-kegiatan/abc123', routes).title).toBe('Dashboard');
+      expect(getRouteMeta('/lain/master/kegiatan/abc123', routes).title).toBe('Dashboard');
+    });
+  });
+
+  describe('console.warn saat fallback', () => {
+    afterEach(() => {
+      vi.unstubAllEnvs();
+      vi.restoreAllMocks();
+    });
+
+    it('mencetak console.warn saat fallback di luar production', () => {
+      vi.stubEnv('NODE_ENV', 'development');
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      getRouteMeta('/tidak-terdaftar');
+      expect(warn).toHaveBeenCalledTimes(1);
+      expect(warn.mock.calls[0][0]).toContain('/tidak-terdaftar');
+    });
+
+    it('tidak mencetak apa pun di production', () => {
+      vi.stubEnv('NODE_ENV', 'production');
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      getRouteMeta('/tidak-terdaftar');
+      expect(warn).not.toHaveBeenCalled();
+    });
+
+    it('tidak mencetak apa pun untuk path yang berhasil dicocokkan', () => {
+      vi.stubEnv('NODE_ENV', 'development');
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      getRouteMeta('/dashboard');
+      expect(warn).not.toHaveBeenCalled();
+    });
   });
 });
 
