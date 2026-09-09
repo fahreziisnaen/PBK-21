@@ -19,7 +19,13 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         const parsed = credentialsSchema.safeParse(raw);
         if (!parsed.success) return null;
 
-        const user = await prisma.user.findUnique({
+        // findFirst, not findUnique: Task 3's migration made `email`
+        // non-unique (username is now the unique login identity). This is
+        // a deliberate stopgap so the file type-checks against the new
+        // schema, not a design decision — Task 10 replaces this whole
+        // Credentials provider with the two-stage password + OTP/TOTP
+        // flow, at which point this lookup goes away entirely.
+        const user = await prisma.user.findFirst({
           where: { email: parsed.data.email.toLowerCase().trim() },
         });
         if (!user) return null;
