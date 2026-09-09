@@ -1,30 +1,43 @@
+# dependencies
 node_modules/
+
+# build output
 .next/
 /out/
 /build
-.env
-.env.local
-.superpooks-tmp/
-.superpowers/
+*.tsbuildinfo
+next-env.d.ts
+
+# secrets — ignore every env file, then re-allow only the templates.
+# Enumerating names (.env, .env.local) left .env.production, .env.vps and
+# similar unprotected, which matters because DEPLOYMENT.md has you copy from
+# a file literally named .env.production.example.
+.env*
+!.env.example
+!.env.production.example
+
+# local development database (portable PostgreSQL, ~1.4 GB — test tooling only)
 .postgres/
 .pgdata/
-design/.thumbnail
+
+# agent scratch workspace
+.superpowers/
+
+# test output
 test-results/
 playwright-report/
-
-# testing
 /coverage
+
+# design export artifacts
+design/.thumbnail
 
 # misc
 .DS_Store
 *.pem
-
-# debug
 npm-debug.log*
-
-# typescript
-*.tsbuildinfo
-next-env.d.ts
-
-# vercel
 .vercel
+
+# editors
+.idea/
+.vscode/
+*.swp
