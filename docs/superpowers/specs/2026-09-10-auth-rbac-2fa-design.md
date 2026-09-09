@@ -18,7 +18,7 @@ Dokumen ini merancang penggantian lapisan autentikasi PBK dan penambahan otorisa
 - Peran **SUPERADMIN** dengan manajemen pengguna dan penetapan peran
 - Penegakan peran pada seluruh operasi tulis
 - Lupa sandi mandiri
-- Dua penampil log: keamanan (SUPERADMIN) dan aktivitas bisnis (BENDAHARA ke atas)
+- Dua penampil log: keamanan (SUPERADMIN saja) dan aktivitas bisnis (keempat peran — lihat §8)
 - Konfigurasi WA Gateway lewat UI
 - Prosedur pemulihan lewat SSH
 
