@@ -16,7 +16,7 @@ export const ROUTES: Record<string, RouteMeta> = {
   '/laporan/keuangan': { title: 'Laporan Keuangan', subtitle: 'Laporan pemasukan, pengeluaran, dan saldo', crumbs: ['Laporan', 'Laporan Keuangan'] },
   '/laporan/pembayaran': { title: 'Laporan Pembayaran', subtitle: 'Laporan tagihan dan pelunasan siswa', crumbs: ['Laporan', 'Laporan Pembayaran'] },
   '/pengaturan': { title: 'Pengaturan Kegiatan', subtitle: 'Konfigurasi kegiatan dan format kuitansi', crumbs: ['Administrasi', 'Pengaturan Kegiatan'] },
-  '/profil': { title: 'User Profile', subtitle: 'Akun dan preferensi pengguna', crumbs: ['Akun', 'Profile'] },
+  '/profil': { title: 'Profil Pengguna', subtitle: 'Akun dan preferensi pengguna', crumbs: ['Akun', 'Profil'] },
   '/notifikasi': { title: 'Pusat Notifikasi', subtitle: 'Semua peristiwa keuangan dan kegiatan', crumbs: ['Akun', 'Notifikasi'] },
   '/states': { title: 'Status & Komponen', subtitle: 'Empty state, error state, dan dialog konfirmasi', crumbs: ['Sistem', 'Status & Komponen'] },
 };
