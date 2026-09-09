@@ -1,0 +1,35 @@
+export type RouteMeta = { title: string; subtitle: string; crumbs: string[] };
+
+export const ROUTES: Record<string, RouteMeta> = {
+  '/dashboard': { title: 'Dashboard', subtitle: 'Ringkasan keuangan kegiatan terpilih', crumbs: ['Dashboard'] },
+  '/siswa': { title: 'Data Siswa', subtitle: 'Peserta dan tagihan pada kegiatan aktif', crumbs: ['Data', 'Data Siswa'] },
+  '/siswa/[id]': { title: 'Detail Siswa', subtitle: 'Riwayat tagihan dan pembayaran', crumbs: ['Data', 'Data Siswa', 'Detail'] },
+  '/pembayaran': { title: 'Pembayaran', subtitle: 'Seluruh transaksi penerimaan kontribusi siswa', crumbs: ['Keuangan', 'Pembayaran'] },
+  '/pembayaran/[id]': { title: 'Detail Pembayaran', subtitle: 'Rincian satu transaksi pembayaran', crumbs: ['Keuangan', 'Pembayaran', 'Detail'] },
+  '/kuitansi': { title: 'Kuitansi', subtitle: 'Pratinjau kuitansi siap cetak', crumbs: ['Administrasi', 'Kuitansi'] },
+  '/pengeluaran': { title: 'Pengeluaran', subtitle: 'Belanja kegiatan menurut kategori master', crumbs: ['Keuangan', 'Pengeluaran'] },
+  '/buku-kas': { title: 'Buku Kas', subtitle: 'Mutasi kas kronologis kegiatan aktif', crumbs: ['Keuangan', 'Buku Kas'] },
+  '/rekap': { title: 'Rekap Pembayaran', subtitle: 'Rekapitulasi per tingkat dan status', crumbs: ['Data', 'Rekap Pembayaran'] },
+  '/master/kategori-kegiatan': { title: 'Kategori Kegiatan', subtitle: 'Master kategori untuk pengelompokan kegiatan', crumbs: ['Master Data', 'Kategori Kegiatan'] },
+  '/master/kategori-pengeluaran': { title: 'Kategori Pengeluaran', subtitle: 'Master kategori belanja kegiatan', crumbs: ['Master Data', 'Kategori Pengeluaran'] },
+  '/master/kegiatan': { title: 'Kegiatan', subtitle: 'Seluruh kegiatan sekolah yang dikelola PBK', crumbs: ['Master Data', 'Kegiatan'] },
+  '/laporan/keuangan': { title: 'Laporan Keuangan', subtitle: 'Laporan pemasukan, pengeluaran, dan saldo', crumbs: ['Laporan', 'Laporan Keuangan'] },
+  '/laporan/pembayaran': { title: 'Laporan Pembayaran', subtitle: 'Laporan tagihan dan pelunasan siswa', crumbs: ['Laporan', 'Laporan Pembayaran'] },
+  '/pengaturan': { title: 'Pengaturan Kegiatan', subtitle: 'Konfigurasi kegiatan dan format kuitansi', crumbs: ['Administrasi', 'Pengaturan Kegiatan'] },
+  '/profil': { title: 'User Profile', subtitle: 'Akun dan preferensi pengguna', crumbs: ['Akun', 'Profile'] },
+  '/notifikasi': { title: 'Pusat Notifikasi', subtitle: 'Semua peristiwa keuangan dan kegiatan', crumbs: ['Akun', 'Notifikasi'] },
+  '/states': { title: 'Status & Komponen', subtitle: 'Empty state, error state, dan dialog konfirmasi', crumbs: ['Sistem', 'Status & Komponen'] },
+};
+
+export function getRouteMeta(pathname: string): RouteMeta {
+  const exact = ROUTES[pathname];
+  if (exact) return exact;
+
+  const segments = pathname.split('/').filter(Boolean);
+  if (segments.length === 2) {
+    const dynamic = ROUTES[`/${segments[0]}/[id]`];
+    if (dynamic) return dynamic;
+  }
+
+  return ROUTES['/dashboard'];
+}
