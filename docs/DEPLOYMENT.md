@@ -182,6 +182,7 @@ docker compose -f docker-compose.prod.yml start
 | Port 80 sudah dipakai | Nginx/Apache bawaan masih jalan: `sudo systemctl disable --now nginx apache2` |
 | `docker build` lambat sekali atau kehabisan disk | Pastikan `.dockerignore` ikut ter-clone dari git (bukan berkas lokal yang lupa di-commit) — tanpa itu, Docker mengirim seluruh isi repo termasuk folder pengembangan lokal sebagai build context |
 | Lupa sandi baru setelah Langkah 5 | Ulangi Langkah 5 dari awal dengan sandi baru — tidak ada batas berapa kali boleh diganti |
+| Perintah Langkah 5a tidak mencetak apa pun | `npm install` di dalamnya gagal (biasanya jaringan) dan pesannya tersembunyi oleh `>/dev/null 2>&1`. Jalankan ulang tanpa bagian itu — `docker run --rm node:24-alpine sh -c "npm install -g bcryptjs && bcrypt 'sandi-baru-anda' 10"` — untuk melihat error aslinya |
 | Ingin mulai dari database kosong | `docker compose -f docker-compose.prod.yml down -v` — **menghapus seluruh data**, backup dulu |
 
 ## 8. Catatan keamanan

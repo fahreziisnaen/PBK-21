@@ -16,7 +16,15 @@ services:
       retries: 10
 
   migrate:
-    build: .
+    # Targets the "builder" stage, not the default final stage ("runner").
+    # The runner stage COPYs only .next/standalone — it has no prisma/
+    # directory, no prisma.config.ts, and none of the devDependencies
+    # (prisma CLI, tsx) that `prisma migrate deploy` and `prisma db seed`
+    # need. The builder stage has the full repo and a full npm ci install,
+    # so it has all of that.
+    build:
+      context: .
+      target: builder
     command: sh -c "npx prisma migrate deploy && npx prisma db seed"
     environment:
       DATABASE_URL: postgresql://pbk:${POSTGRES_PASSWORD}@db:5432/pbk?schema=public
@@ -26,7 +34,9 @@ services:
     restart: "no"
 
   app:
-    build: .
+    build:
+      context: .
+      target: runner
     restart: unless-stopped
     environment:
       DATABASE_URL: postgresql://pbk:${POSTGRES_PASSWORD}@db:5432/pbk?schema=public

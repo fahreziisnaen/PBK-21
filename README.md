@@ -26,6 +26,7 @@ Pilih salah satu — keduanya berjalan di `localhost:5433`, sesuai `.env.example
 ```bash
 scripts/db.sh setup   # sekali saja: initdb cluster baru ke .pgdata/
 scripts/db.sh start
+.postgres/pgsql/bin/createdb.exe -U pbk -h 127.0.0.1 -p 5433 pbk   # sekali saja: buat database "pbk"
 ```
 
 **B. Dengan Docker Compose**, kalau mesin Anda punya Docker:
