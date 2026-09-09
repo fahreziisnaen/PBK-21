@@ -25,12 +25,17 @@ describe('Dockerfile', () => {
     expect(build).toBeGreaterThan(gen);
   });
 
-  it('menyediakan DATABASE_URL placeholder khusus untuk RUN prisma generate, tanpa membocorkannya ke stage lain', () => {
+  it('menyediakan placeholder DATABASE_URL khusus untuk RUN prisma generate dan RUN npm run build, tanpa membocorkannya ke stage lain', () => {
     // prisma.config.ts memanggil env('DATABASE_URL') secara eager (lihat
-    // @prisma/config), dan builder stage tidak punya .env (dikecualikan oleh
-    // .dockerignore) — tanpa placeholder yang di-scope ke baris ini, `prisma
-    // generate` keluar dengan exit 1 dan mematikan build image pertama.
+    // @prisma/config), dan module graph aplikasi (layout -> Header -> @/lib/
+    // auth dan @/lib/activity-context) menjangkau guard runtime di
+    // src/lib/prisma.ts saat Next mengumpulkan data halaman ("Collecting
+    // page data") — builder stage tidak punya .env (dikecualikan oleh
+    // .dockerignore), jadi tanpa placeholder yang di-scope ke masing-masing
+    // baris ini, `prisma generate` maupun `npm run build` keluar dengan
+    // exit 1 dan mematikan build image pertama.
     expect(df).toMatch(/^RUN DATABASE_URL="[^"]+"\s+npx prisma generate/m);
+    expect(df).toMatch(/^RUN DATABASE_URL="[^"]+"\s+npm run build/m);
     expect(df).not.toMatch(/^ENV DATABASE_URL/m);
   });
 

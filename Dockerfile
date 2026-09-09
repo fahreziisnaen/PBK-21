@@ -18,12 +18,16 @@ RUN apk add --no-cache openssl
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
-# prisma.config.ts resolves DATABASE_URL eagerly via env(); `generate` never
-# opens a connection, so a syntactically valid placeholder is enough here.
-# Scoped to this one RUN so it never leaks into the `migrate` container,
-# which gets the real URL from compose.
+# Both `prisma generate` and `npm run build` need DATABASE_URL at build
+# time, for different reasons: prisma.config.ts resolves it eagerly via
+# env(), and Next's "Collecting page data" phase executes the app's module
+# graph, which reaches src/lib/prisma.ts's runtime guard through every
+# (app) route (layout -> Header -> @/lib/auth and @/lib/activity-context).
+# Neither step opens a connection, so a syntactically valid placeholder is
+# enough for both. Scoped to these two RUNs so it never leaks into the
+# `migrate` container, which gets the real URL from compose.
 RUN DATABASE_URL="postgresql://build:build@localhost:5432/build?schema=public" npx prisma generate
-RUN npm run build
+RUN DATABASE_URL="postgresql://build:build@localhost:5432/build?schema=public" npm run build
 
 FROM node:24-alpine AS runner
 RUN apk add --no-cache openssl
