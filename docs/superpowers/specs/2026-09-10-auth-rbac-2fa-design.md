@@ -65,7 +65,7 @@ model User {
   name               String
   email              String?                    // was @unique + wajib
   nip                String?
-  phone              String?                    // disimpan ternormalisasi: 628xxxxxxxxxx
+  phone              String?                    // ternormalisasi 62xxx; lihat §3.5
   role               Role      @default(BENDAHARA)
   passwordHash       String
   mustChangePassword Boolean   @default(false)  // BARU
@@ -143,6 +143,35 @@ Database produksi mungkin sudah berisi pengguna. Migrasi harus:
 5. Menormalisasi `phone` ke `628xxx` — data seed sekarang `0812-3344-5566` dan **tidak akan bisa dipakai mengirim WhatsApp apa adanya**
 
 Langkah 5 wajib. Tanpa itu, OTP gagal terkirim untuk setiap pengguna lama, dan gejalanya (`422`) terlihat seperti gangguan gateway.
+
+### 3.5 Normalisasi nomor telepon
+
+Pengguna mengetik nomor dalam format Indonesia yang biasa (`081233445566`). Aplikasi yang mengubahnya ke format yang dituntut WA Gateway (`6281233445566`).
+
+**Aturan penyimpanan:** disimpan **ternormalisasi** sebagai `62…`. Satu bentuk kanonik di database membuat pencarian dan pengecekan duplikat dapat diandalkan; kalau disimpan apa adanya, `0812-3344-5566` dan `081233445566` menjadi dua nomor berbeda bagi database padahal orangnya sama.
+
+**Aturan tampilan:** ditampilkan kembali dalam format lokal (`0812-3344-5566`). Pengguna tidak perlu melihat bentuk internal.
+
+**Fungsi murni `normalizePhone(input: string): string | null`** — mengembalikan bentuk `62…` atau `null` bila tidak valid. Karena murni, ia diuji langsung dengan tabel kasus:
+
+| Masukan | Hasil | Alasan |
+|---|---|---|
+| `081233445566` | `6281233445566` | bentuk baku yang disebut pengguna |
+| `0812-3344-5566` | `6281233445566` | pemisah dibuang — ini format data seed sekarang |
+| `0812 3344 5566` | `6281233445566` | spasi dibuang |
+| `(0812) 3344-5566` | `6281233445566` | tanda kurung dibuang |
+| `+6281233445566` | `6281233445566` | `+` dibuang |
+| `6281233445566` | `6281233445566` | sudah internasional, dibiarkan |
+| `81233445566` | `6281233445566` | `0` di depan hilang, `62` ditambahkan |
+| `02112345678` | `null` | nomor tetap, tidak bisa menerima WhatsApp |
+| `08123` | `null` | terlalu pendek |
+| `0812334455661234` | `null` | terlalu panjang |
+| `0812abc45566` | `null` | mengandung huruf |
+| `` (kosong) | `null` | telepon opsional; kosong berarti tidak ada jalur WA |
+
+Bentuk yang diterima: `62` diikuti nomor nasional yang diawali `8`, panjang total 11–14 digit.
+
+**Konsekuensi bila `null`:** nomor ditolak di form dengan pesan jelas, bukan disimpan diam-diam. Pengguna tanpa nomor telepon yang sah **tidak bisa memakai jalur WA OTP sama sekali** — bagi mereka, TOTP wajib, dan UI manajemen pengguna harus menampilkannya sebagai peringatan, bukan membiarkan superadmin menemukannya saat orangnya gagal login.
 
 ---
 
