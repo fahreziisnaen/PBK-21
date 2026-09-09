@@ -1,4 +1,4 @@
-import type { CategoryStatus } from '@prisma/client';
+import type { CategoryStatus, Role } from '@prisma/client';
 
 export type SeedCategory = {
   code: string;
@@ -25,3 +25,15 @@ export const EXPENSE_CATEGORIES: SeedCategory[] = [
   { code: 'LNL', name: 'Lain-lain', description: 'Pengeluaran tidak terkategori', status: 'AKTIF' },
   { code: 'SVN', name: 'Souvenir', description: 'Cinderamata peserta', status: 'NONAKTIF' },
 ];
+
+export const SEED_ADMIN: {
+  username: string;
+  name: string;
+  role: Role;
+  phone: string | null;
+} = {
+  username: 'admin',
+  name: 'Administrator',
+  role: 'SUPERADMIN',
+  phone: null,
+};

@@ -2,7 +2,7 @@ import 'dotenv/config';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
-import { ACTIVITY_CATEGORIES, EXPENSE_CATEGORIES } from './seed-data';
+import { ACTIVITY_CATEGORIES, EXPENSE_CATEGORIES, SEED_ADMIN } from './seed-data';
 
 const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL });
 const prisma = new PrismaClient({ adapter });
@@ -21,14 +21,25 @@ async function main() {
     await prisma.expenseCategory.upsert({ where: { code: c.code }, update: {}, create: c });
   }
 
+  const adminPassword = process.env.SEED_ADMIN_PASSWORD;
+  if (!adminPassword) {
+    throw new Error(
+      'SEED_ADMIN_PASSWORD belum diisi. Set di .env (pengembangan lokal) atau di ' +
+        'environment container (produksi) — lihat .env.example. Tidak ada nilai ' +
+        'baku: sandi awal tidak boleh tersimpan di repositori.',
+    );
+  }
+
   await prisma.user.upsert({
-    where: { email: 'admin@pbk.local' },
+    where: { username: SEED_ADMIN.username },
+    // Empty update: a redeploy must never reset a password the operator changed.
     update: {},
     create: {
-      name: 'Administrator',
-      email: 'admin@pbk.local',
-      role: 'ADMIN',
-      passwordHash: await bcrypt.hash('pbk-demo-2026', 10),
+      username: SEED_ADMIN.username,
+      name: SEED_ADMIN.name,
+      role: SEED_ADMIN.role,
+      passwordHash: await bcrypt.hash(adminPassword, 10),
+      mustChangePassword: true,
     },
   });
 
