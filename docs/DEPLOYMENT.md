@@ -104,23 +104,55 @@ langsung lewat database dengan dua perintah ini:
 
 **a. Buat hash bcrypt dari sandi baru Anda** (dijalankan di container
 sekali-pakai terpisah, supaya tidak menyentuh apa pun yang sedang berjalan —
-ganti `sandi-baru-anda` dulu dengan sandi pilihan Anda):
+ganti `sandi-baru-anda` di **akhir** baris dengan sandi pilihan Anda, di
+antara tanda kutip tunggal):
 
 ```bash
-docker run --rm node:24-alpine sh -c \
-  "npm install -g --silent bcryptjs >/dev/null 2>&1 && bcrypt 'sandi-baru-anda' 10"
+docker run --rm node:24-alpine sh -c '
+  npm install -g --silent bcryptjs >/dev/null 2>&1 &&
+  bcrypt "$1" 10
+' sh 'sandi-baru-anda'
 ```
+
+**Kenapa bentuknya seperti ini, bukan sandi ditulis langsung di dalam skrip
+`sh -c "..."`:** sandi bisa mengandung karakter yang berarti khusus buat
+shell — tanda dolar (`$`), backtick, titik koma. Kalau sandi ditulis di
+dalam tanda kutip **ganda**, bash men-substitusi karakter-karakter itu sebelum
+Docker sempat melihatnya, sehingga yang di-hash bukan sandi yang Anda
+ketik. Bentuk di atas melewatkan sandi sebagai argumen terpisah (`'sandi-baru-anda'`
+di ujung baris, dalam tanda kutip **tunggal**, yang mencegah bash
+memprosesnya sama sekali) sehingga sandi apa pun sampai ke `bcrypt` persis
+apa adanya — **kecuali** sandi yang mengandung tanda kutip tunggal (`'`)
+itu sendiri; kalau sandi pilihan Anda memakainya, pakai sandi sementara
+tanpa tanda kutip tunggal untuk langkah ini saja, atau ganti karakter itu.
 
 Perintah ini mencetak satu baris hash yang diawali `$2b$10$…` — salin
-seluruhnya.
+seluruhnya, termasuk seluruh tanda `$` di dalamnya.
 
 **b. Terapkan hash itu ke akun seed** (tempelkan hash dari langkah (a)
-menggantikan `TEMPEL_HASH_DI_SINI`, termasuk tanda `$` di dalamnya):
+menggantikan `TEMPEL_HASH_DI_SINI`):
 
 ```bash
-docker compose -f docker-compose.prod.yml exec -T db psql -U pbk -d pbk -c \
-  "UPDATE \"User\" SET \"passwordHash\" = 'TEMPEL_HASH_DI_SINI' WHERE email = 'anggi.prawita@sman21sby.sch.id';"
+docker compose -f docker-compose.prod.yml exec -T db psql -U pbk -d pbk -c '
+UPDATE "User" SET "passwordHash" = $h$TEMPEL_HASH_DI_SINI$h$
+WHERE email = $e$anggi.prawita@sman21sby.sch.id$e$;
+'
 ```
+
+**Kenapa bentuknya seperti ini:** hash bcrypt selalu mengandung tanda `$`
+sebagai bagian dari formatnya sendiri (`$2b$10$…`). Kalau argumen `-c`
+ditulis di dalam tanda kutip **ganda** — seperti pada versi panduan ini
+sebelumnya — bash men-substitusi tanda `$` itu *sebelum* `psql` sempat
+menjalankannya, merusak awalan `$2b$10$` yang dipakai aplikasi untuk
+mengenali algoritme dan biaya hash-nya. `psql` tetap mencetak `UPDATE 1`
+seolah berhasil, padahal hash yang tersimpan sudah rusak dan akun terkunci
+total — tidak bisa masuk dengan sandi lama maupun sandi baru, dan aplikasi
+ini belum punya halaman lupa-sandi. Bentuk di atas memakai tanda kutip
+**tunggal** di sekeliling seluruh argumen `-c` (supaya bash tidak menyentuh
+tanda `$` sama sekali) dan tanda kutip dolar milik PostgreSQL sendiri
+(`$h$…$h$`, `$e$…$e$`, bukan tanda kutip tunggal SQL biasa) untuk membatasi
+teksnya — supaya tidak perlu mikirin karakter kutip tunggal apa pun di
+dalam hash atau email.
 
 Keluar dari sesi yang sedang login, lalu masuk ulang dengan sandi baru untuk
 memastikan berhasil. Simpan sandi baru di pengelola kata sandi — jangan
@@ -149,20 +181,35 @@ Migrasi baru diterapkan otomatis oleh service `migrate` setiap kali naik.
 ```bash
 mkdir -p /opt/pbk/backup
 docker compose -f docker-compose.prod.yml exec -T db \
-  pg_dump -U pbk pbk | gzip > /opt/pbk/backup/pbk-$(date +%F).sql.gz
+  pg_dump --clean --if-exists -U pbk pbk | gzip > /opt/pbk/backup/pbk-$(date +%F).sql.gz
 ```
+
+`--clean --if-exists` membuat berkas backup ini menghapus dan membuat ulang
+setiap tabel sebelum mengisi datanya. Tanpa itu, memulihkan backup ke
+database yang sudah berisi skema (kasus yang selalu terjadi pada deployment
+yang berjalan normal, karena service `migrate` menerapkan skema setiap kali
+naik) akan gagal dengan galat "relation already exists" dan galat
+pelanggaran constraint unik untuk setiap baris.
 
 Pasang di crontab (`crontab -e`), jam 2 pagi, simpan 30 hari terakhir:
 
 ```
-0 2 * * * cd /opt/pbk && docker compose -f docker-compose.prod.yml exec -T db pg_dump -U pbk pbk | gzip > backup/pbk-$(date +\%F).sql.gz && find backup -name '*.sql.gz' -mtime +30 -delete
+0 2 * * * cd /opt/pbk && docker compose -f docker-compose.prod.yml exec -T db pg_dump --clean --if-exists -U pbk pbk | gzip > backup/pbk-$(date +\%F).sql.gz && find backup -name '*.sql.gz' -mtime +30 -delete
 ```
 
 **Memulihkan dari backup**
 
+Hentikan dulu service `app` supaya tidak ada yang memakai aplikasi selagi
+tabel-tabelnya dihapus dan diisi ulang (`db` tetap menyala — restore
+tersambung ke situ):
+
 ```bash
+docker compose -f docker-compose.prod.yml stop app
+
 gunzip -c backup/pbk-2026-09-08.sql.gz | \
   docker compose -f docker-compose.prod.yml exec -T db psql -U pbk -d pbk
+
+docker compose -f docker-compose.prod.yml start app
 ```
 
 **Menghentikan / menyalakan**
@@ -182,7 +229,7 @@ docker compose -f docker-compose.prod.yml start
 | Port 80 sudah dipakai | Nginx/Apache bawaan masih jalan: `sudo systemctl disable --now nginx apache2` |
 | `docker build` lambat sekali atau kehabisan disk | Pastikan `.dockerignore` ikut ter-clone dari git (bukan berkas lokal yang lupa di-commit) — tanpa itu, Docker mengirim seluruh isi repo termasuk folder pengembangan lokal sebagai build context |
 | Lupa sandi baru setelah Langkah 5 | Ulangi Langkah 5 dari awal dengan sandi baru — tidak ada batas berapa kali boleh diganti |
-| Perintah Langkah 5a tidak mencetak apa pun | `npm install` di dalamnya gagal (biasanya jaringan) dan pesannya tersembunyi oleh `>/dev/null 2>&1`. Jalankan ulang tanpa bagian itu — `docker run --rm node:24-alpine sh -c "npm install -g bcryptjs && bcrypt 'sandi-baru-anda' 10"` — untuk melihat error aslinya |
+| Perintah Langkah 5a tidak mencetak apa pun | `npm install` di dalamnya gagal (biasanya jaringan) dan pesannya tersembunyi oleh `>/dev/null 2>&1`. Jalankan ulang tanpa bagian itu untuk melihat error aslinya: `docker run --rm node:24-alpine sh -c 'npm install -g bcryptjs && bcrypt "$1" 10' sh 'sandi-baru-anda'` |
 | Ingin mulai dari database kosong | `docker compose -f docker-compose.prod.yml down -v` — **menghapus seluruh data**, backup dulu |
 
 ## 8. Catatan keamanan
