@@ -45,6 +45,20 @@ Lima pertanyaan dijawab pengguna selama brainstorming. Dicatat di sini karena al
 
 **Peredam yang lahir dari keputusan terakhir:** TOTP bekerja tanpa jaringan. Desain ini menempatkan TOTP sebagai jalur utama dan WA sebagai jaring pengaman bagi yang belum mendaftar — bukan sebaliknya. **SUPERADMIN wajib mendaftar TOTP**, karena dialah jalur pemulihan dan tidak boleh bergantung pada komponen yang sedang rusak.
 
+### 2.1 Pengecualian bootstrap
+
+Keputusan "OTP di setiap login" berbenturan dengan keadaan awal sistem. Deploy baru hanya berisi akun `admin`: belum ada TOTP, belum ada nomor telepon. Faktor keduanya tidak bisa dikirim ke mana pun, sehingga **login pertama menjadi mustahil** dan pemulihan SSH tidak menolong — ia mereset 2FA yang memang belum ada.
+
+Aturannya:
+
+> Akun yang **tidak punya TOTP terdaftar maupun nomor telepon sah** tidak dapat menerima faktor kedua. Login untuk akun demikian hanya memerlukan sandi, lalu pengguna **langsung dipaksa mendaftarkan TOTP sebelum dapat membuka halaman mana pun**.
+
+Pengecualian ini menutup dirinya sendiri: begitu TOTP terdaftar, syaratnya tidak pernah terpenuhi lagi untuk akun itu. Ia juga tidak dapat disalahgunakan dengan menghapus nomor telepon, karena syaratnya menuntut **keduanya** kosong, dan TOTP hanya bisa dinonaktifkan oleh SUPERADMIN atau lewat SSH — keduanya tercatat di `AuthEvent`.
+
+**Tidak ada sandi baku di repositori.** Seed membaca `SEED_ADMIN_PASSWORD` dari environment; wajib diisi, tanpa nilai default. `DEPLOYMENT.md` menyuruh operator mengisinya dengan `openssl rand`. Ini sekaligus menutup temuan review Plan 01 tentang sandi yang tertulis di README.
+
+Urutan deploy pertama menjadi: isi `SEED_ADMIN_PASSWORD` → `docker compose up` → login `admin` → paksa ganti sandi → paksa daftar TOTP → baru dapat membuat pengguna lain.
+
 ---
 
 ## 3. Model data
@@ -226,7 +240,12 @@ Di `/profil`: server membangkitkan secret, menampilkan QR `otpauth://totp/PBK:<u
 
 **`totpEnabledAt` hanya diisi setelah pengguna memasukkan satu kode yang benar.** Mengaktifkan 2FA tanpa membuktikan aplikasinya bekerja akan mengunci pengguna pada login berikutnya.
 
-SUPERADMIN tidak bisa mengakses halaman lain sampai pendaftaran ini selesai.
+**Pendaftaran dipaksakan sebelum akses**, bukan ditawarkan. Dua golongan pengguna diarahkan ke halaman ini dan tidak dapat ke mana pun sebelum selesai:
+
+1. **SUPERADMIN**, selalu — dialah jalur pemulihan, jadi tidak boleh bergantung pada WA Gateway yang mungkin sedang rusak
+2. **Siapa pun yang masuk lewat pengecualian bootstrap §2.1** — tanpa TOTP dan tanpa nomor telepon, akun itu tidak punya faktor kedua sama sekali sampai pendaftaran selesai
+
+Bagi pengguna lain yang punya nomor telepon sah, TOTP dianjurkan tetapi tidak dipaksakan; mereka sudah terlindungi faktor kedua lewat WA. UI mendorongnya dengan menjelaskan bahwa TOTP tetap bekerja saat WhatsApp bermasalah.
 
 ---
 
@@ -349,12 +368,29 @@ Ditambahkan ke `src/lib/routes.ts` dan `src/lib/nav.ts`. Item nav difilter peran
 
 ## 14. Pertanyaan terbuka
 
-| Pertanyaan | Default sampai dijawab |
+| Pertanyaan | Status |
 |---|---|
-| Instance WA (`from`) mana yang dipakai? | Kosongkan — gateway memakai instance terhubung pertama |
-| Panjang dan masa berlaku OTP | 6 digit, 5 menit |
-| Apakah ADMIN boleh melihat Log Keamanan? | Tidak — hanya SUPERADMIN |
-| Username untuk akun seed yang ada | `anggi.prawita`, diisi mundur dari email |
+| Apakah ADMIN boleh melihat Log Keamanan? | **Dijawab:** tidak. Hanya SUPERADMIN. |
+| Akun seed | **Dijawab:** hanya satu — `admin`, peran SUPERADMIN. Identitas `anggi.prawita` dihapus; pengguna lain dibuat sendiri lewat UI. |
+| Instance WA (`from`) mana yang dipakai? | Terbuka — dikosongkan, gateway memakai instance terhubung pertama |
+| Panjang dan masa berlaku OTP | Terbuka — 6 digit, 5 menit |
+
+### 14.1 Akun seed
+
+Satu akun, dibuat oleh seed dan tidak pernah lebih:
+
+| Field | Nilai |
+|---|---|
+| `username` | `admin` |
+| `name` | `Administrator` |
+| `role` | `SUPERADMIN` |
+| `passwordHash` | dari `SEED_ADMIN_PASSWORD` (wajib, tanpa default) |
+| `mustChangePassword` | `true` |
+| `phone`, `email`, `nip`, `totpSecret` | kosong |
+
+Identitas `anggi.prawita@sman21sby.sch.id` beserta nama, NIP, dan nomor teleponnya **dihapus dari seed**. Data itu berasal dari prototipe demo dan memuat alamat pada domain sekolah yang nyata beserta angka berformat NIP — tidak layak diterbitkan ke repositori publik, terlebih berpasangan dengan sandi yang terdokumentasi.
+
+Karena `phone` kosong dan TOTP belum ada, akun ini masuk lewat pengecualian bootstrap §2.1 pada login pertamanya, lalu langsung dipaksa mendaftarkan TOTP.
 
 ---
 
