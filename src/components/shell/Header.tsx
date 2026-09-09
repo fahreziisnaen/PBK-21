@@ -1,16 +1,19 @@
 import Link from 'next/link';
 import { auth } from '@/lib/auth';
 import { logout } from '@/lib/actions/logout';
+import { ActivitySwitcher } from '@/components/shell/ActivitySwitcher';
+import { getActiveActivity, listSelectableActivities } from '@/lib/activity-context';
 
 export async function Header() {
   const session = await auth();
+  const [activities, active] = await Promise.all([listSelectableActivities(), getActiveActivity()]);
 
   return (
     <header
       data-noprint
       className="sticky top-0 z-10 flex h-16 items-center justify-between gap-4 border-b border-gray-200 bg-white px-6 max-[900px]:h-auto max-[900px]:py-2"
     >
-      <div id="activity-switcher-slot" />
+      <ActivitySwitcher activities={activities} active={active} />
 
       <div className="flex items-center gap-3 max-[900px]:flex-wrap">
         <Link href="/notifikasi" className="text-[13px] font-medium text-gray-600 hover:text-brand-600">
