@@ -18,6 +18,12 @@ const eslintConfig = defineConfig([
     ".postgres/**",
     ".pgdata/**",
     ".superpowers/**",
+    // Vendored Claude Design export, kept as the design source of truth.
+    // Never built, imported, or shipped — design/support.js is a GENERATED
+    // UMD bundle (its own header says so) that trips no-unused-vars and
+    // no-assign-module-variable by construction. Linting it is meaningless
+    // and "fixing" it would corrupt a reference artifact.
+    "design/**",
   ]),
 ]);
 

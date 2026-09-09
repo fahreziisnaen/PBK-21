@@ -1,0 +1,197 @@
+# Deployment — VPS dengan Docker Compose
+
+Panduan memasang PBK di VPS Ubuntu 22.04/24.04 dengan HTTPS otomatis.
+Perkiraan waktu: 20 menit.
+
+> **Catatan jujur tentang panduan ini.** Konfigurasi Docker di repo ini
+> (`Dockerfile`, `docker-compose.prod.yml`, `Caddyfile`) belum pernah
+> dijalankan lewat `docker build` atau `docker compose up` — mesin yang
+> dipakai menulis panduan ini tidak punya Docker terpasang. Yang sudah
+> diverifikasi: `next.config.ts` benar-benar menghasilkan
+> `.next/standalone/server.js` (jadi target `COPY` di `Dockerfile` menunjuk
+> berkas yang nyata, bukan tebakan), dan seluruh berkas konfigurasi lolos
+> pengujian sintaks/isi otomatis (`tests/unit/deploy-config.test.ts`). Uji
+> jalan yang sebenarnya — apakah image benar-benar ter-build dan stack-nya
+> benar-benar menyala — baru terjadi pertama kali saat Anda menjalankan
+> Langkah 4 di server Anda sendiri. Ikuti bagian **Kalau bermasalah** di
+> bawah bila ada langkah yang tidak sesuai harapan, dan laporkan baliknya.
+
+## 0. Yang perlu disiapkan
+
+- VPS Ubuntu, RAM minimal 2 GB, akses SSH
+- Nama domain yang **sudah diarahkan** ke IP VPS (A record). HTTPS tidak akan
+  terbit sebelum DNS benar-benar mengarah ke server.
+- Port 80 dan 443 terbuka di firewall
+
+Cek DNS sudah benar sebelum lanjut:
+
+```bash
+dig +short pbk.sekolahanda.sch.id
+# harus mengeluarkan IP VPS Anda
+```
+
+## 1. Pasang Docker
+
+```bash
+curl -fsSL https://get.docker.com | sudo sh
+sudo usermod -aG docker $USER
+newgrp docker
+docker --version && docker compose version
+```
+
+## 2. Ambil kode
+
+```bash
+sudo mkdir -p /opt/pbk && sudo chown $USER:$USER /opt/pbk
+git clone <URL-REPO-ANDA> /opt/pbk
+cd /opt/pbk
+```
+
+## 3. Buat berkas rahasia
+
+```bash
+cp .env.production.example .env
+```
+
+Buat dua nilai acak:
+
+```bash
+echo "POSTGRES_PASSWORD=$(openssl rand -base64 24 | tr -d '/+=')"
+echo "AUTH_SECRET=$(openssl rand -base64 32)"
+```
+
+Salin keduanya ke `.env`, lalu isi `DOMAIN` dengan domain Anda. Kunci berkasnya:
+
+```bash
+chmod 600 .env
+```
+
+`.env` **tidak boleh** masuk git — sudah tercantum di `.gitignore`.
+
+## 4. Nyalakan
+
+```bash
+docker compose -f docker-compose.prod.yml up -d --build
+```
+
+Urutan yang terjadi: `db` menyala dan menunggu sehat → `migrate` menerapkan
+skema dan mengisi master data lalu berhenti → `app` menyala → `caddy` meminta
+sertifikat TLS ke Let's Encrypt.
+
+Pantau prosesnya:
+
+```bash
+docker compose -f docker-compose.prod.yml logs -f
+```
+
+Buka `https://pbk.sekolahanda.sch.id`. Masuk dengan akun seed di bawah — lalu
+**langsung lanjut ke Langkah 5, sebelum melakukan apa pun yang lain.**
+
+| Email | Sandi | Peran |
+|---|---|---|
+| anggi.prawita@sman21sby.sch.id | pbk-demo-2026 | Bendahara |
+
+## 5. WAJIB sekarang juga: ganti sandi akun bawaan
+
+**Jangan lewati langkah ini.** Sandi di atas tercetak di README ini dan di
+riwayat repositori — siapa pun yang bisa membaca kode sumber tahu sandinya.
+Selama akun `anggi.prawita@sman21sby.sch.id` masih memakai `pbk-demo-2026`,
+siapa pun bisa masuk sebagai Bendahara di server produksi Anda.
+
+Fondasi aplikasi ini (rilis saat ini) belum punya halaman ganti-sandi di
+dalam aplikasi — menyusul pada pembaruan berikutnya. Sampai saat itu, ganti
+langsung lewat database dengan dua perintah ini:
+
+**a. Buat hash bcrypt dari sandi baru Anda** (dijalankan di container
+sekali-pakai terpisah, supaya tidak menyentuh apa pun yang sedang berjalan —
+ganti `sandi-baru-anda` dulu dengan sandi pilihan Anda):
+
+```bash
+docker run --rm node:24-alpine sh -c \
+  "npm install -g --silent bcryptjs >/dev/null 2>&1 && bcrypt 'sandi-baru-anda' 10"
+```
+
+Perintah ini mencetak satu baris hash yang diawali `$2b$10$…` — salin
+seluruhnya.
+
+**b. Terapkan hash itu ke akun seed** (tempelkan hash dari langkah (a)
+menggantikan `TEMPEL_HASH_DI_SINI`, termasuk tanda `$` di dalamnya):
+
+```bash
+docker compose -f docker-compose.prod.yml exec -T db psql -U pbk -d pbk -c \
+  "UPDATE \"User\" SET \"passwordHash\" = 'TEMPEL_HASH_DI_SINI' WHERE email = 'anggi.prawita@sman21sby.sch.id';"
+```
+
+Keluar dari sesi yang sedang login, lalu masuk ulang dengan sandi baru untuk
+memastikan berhasil. Simpan sandi baru di pengelola kata sandi — jangan
+dikirim lewat chat atau email biasa.
+
+## 6. Perawatan
+
+**Memperbarui aplikasi**
+
+```bash
+cd /opt/pbk
+git pull
+docker compose -f docker-compose.prod.yml up -d --build
+```
+
+Migrasi baru diterapkan otomatis oleh service `migrate` setiap kali naik.
+
+> Jangan menjalankan `npm install prisma` atau `npm install @prisma/client`
+> tanpa versi di mana pun — termasuk kalau Anda membuka shell di dalam
+> container untuk debugging. Prisma dipin ke `^7.10.0` di `package.json`;
+> tag `latest` di npm saat ini adalah rilis pre-release `8.0.0-rc.13` yang
+> tidak kompatibel.
+
+**Backup database** — jalankan harian lewat cron:
+
+```bash
+mkdir -p /opt/pbk/backup
+docker compose -f docker-compose.prod.yml exec -T db \
+  pg_dump -U pbk pbk | gzip > /opt/pbk/backup/pbk-$(date +%F).sql.gz
+```
+
+Pasang di crontab (`crontab -e`), jam 2 pagi, simpan 30 hari terakhir:
+
+```
+0 2 * * * cd /opt/pbk && docker compose -f docker-compose.prod.yml exec -T db pg_dump -U pbk pbk | gzip > backup/pbk-$(date +\%F).sql.gz && find backup -name '*.sql.gz' -mtime +30 -delete
+```
+
+**Memulihkan dari backup**
+
+```bash
+gunzip -c backup/pbk-2026-09-08.sql.gz | \
+  docker compose -f docker-compose.prod.yml exec -T db psql -U pbk -d pbk
+```
+
+**Menghentikan / menyalakan**
+
+```bash
+docker compose -f docker-compose.prod.yml stop
+docker compose -f docker-compose.prod.yml start
+```
+
+## 7. Kalau bermasalah
+
+| Gejala | Penyebab dan penanganan |
+|---|---|
+| HTTPS gagal terbit | DNS belum mengarah ke VPS. Cek `dig +short <domain>`, tunggu propagasi, lalu `docker compose -f docker-compose.prod.yml restart caddy` |
+| `migrate` keluar dengan error | Baca `docker compose -f docker-compose.prod.yml logs migrate`. Umumnya `POSTGRES_PASSWORD` di `.env` tidak cocok dengan yang dipakai volume lama |
+| App restart terus | `AUTH_SECRET` kosong. Isi di `.env` lalu `up -d` lagi |
+| Port 80 sudah dipakai | Nginx/Apache bawaan masih jalan: `sudo systemctl disable --now nginx apache2` |
+| `docker build` lambat sekali atau kehabisan disk | Pastikan `.dockerignore` ikut ter-clone dari git (bukan berkas lokal yang lupa di-commit) — tanpa itu, Docker mengirim seluruh isi repo termasuk folder pengembangan lokal sebagai build context |
+| Lupa sandi baru setelah Langkah 5 | Ulangi Langkah 5 dari awal dengan sandi baru — tidak ada batas berapa kali boleh diganti |
+| Ingin mulai dari database kosong | `docker compose -f docker-compose.prod.yml down -v` — **menghapus seluruh data**, backup dulu |
+
+## 8. Catatan keamanan
+
+- Port PostgreSQL tidak pernah dipublikasikan ke internet; hanya bisa dijangkau
+  antar-container lewat jaringan internal Docker (`docker-compose.prod.yml`
+  tidak mempublikasikan port pada service `db`).
+- Aplikasi berjalan sebagai user non-root (`nextjs`) di dalam container.
+- Cookie sesi dan cookie kegiatan aktif ditandai `secure` di produksi —
+  browser menolak mengirimkannya lewat koneksi non-HTTPS.
+- **Ganti sandi akun seed sebelum melakukan apa pun yang lain** — lihat
+  Langkah 5. Ini bukan saran, ini kewajiban.
+- Simpan `.env` dan backup di tempat yang tidak bisa diakses publik.

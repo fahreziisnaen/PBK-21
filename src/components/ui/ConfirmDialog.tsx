@@ -23,7 +23,10 @@ export function ConfirmDialog({
   const cancelRef = useRef<HTMLButtonElement>(null);
   const previouslyFocused = useRef<HTMLElement | null>(null);
   const onCancelRef = useRef(onCancel);
-  onCancelRef.current = onCancel;
+
+  useEffect(() => {
+    onCancelRef.current = onCancel;
+  });
 
   useEffect(() => {
     if (!open) return;

@@ -21,7 +21,6 @@ export function LoginForm() {
         name="email"
         type="text"
         required
-        defaultValue="anggi.prawita@sman21sby.sch.id"
         className="mb-4 h-[42px] w-full rounded-lg border border-gray-300 px-3 text-[13.5px]"
       />
 

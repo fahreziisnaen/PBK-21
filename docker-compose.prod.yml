@@ -1,0 +1,63 @@
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: pbk
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?wajib diisi di .env}
+      POSTGRES_DB: pbk
+      TZ: Asia/Jakarta
+    volumes:
+      - pbk-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pbk -d pbk"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  migrate:
+    build: .
+    command: sh -c "npx prisma migrate deploy && npx prisma db seed"
+    environment:
+      DATABASE_URL: postgresql://pbk:${POSTGRES_PASSWORD}@db:5432/pbk?schema=public
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: "no"
+
+  app:
+    build: .
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql://pbk:${POSTGRES_PASSWORD}@db:5432/pbk?schema=public
+      AUTH_SECRET: ${AUTH_SECRET:?wajib diisi di .env}
+      AUTH_TRUST_HOST: "true"
+      NODE_ENV: production
+      TZ: Asia/Jakarta
+    depends_on:
+      db:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    expose:
+      - "3000"
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      DOMAIN: ${DOMAIN:?wajib diisi di .env}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      - app
+
+volumes:
+  pbk-pgdata:
+  caddy-data:
+  caddy-config:

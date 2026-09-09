@@ -11,6 +11,9 @@ export async function setActiveActivity(id: string) {
     sameSite: 'lax',
     path: '/',
     maxAge: 60 * 60 * 24 * 365,
+    // The VPS deploy terminates TLS at Caddy, so the cookie must be marked
+    // secure in production. Conditional so local HTTP development still works.
+    secure: process.env.NODE_ENV === 'production',
   });
   revalidatePath('/', 'layout');
 }

@@ -1,36 +1,92 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# PBK — Pencatatan Buku Kas
 
-## Getting Started
+Sistem administrasi keuangan sekolah: mencatat kontribusi siswa dan belanja
+kegiatan, lalu menghasilkan buku kas, kuitansi siap cetak, dan laporan.
 
-First, run the development server:
+## Dokumentasi
+
+- **[docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)** — pasang di VPS dengan Docker Compose
+- **[docs/spec/PBK-spec.md](docs/spec/PBK-spec.md)** — spesifikasi produk: model data, aturan bisnis, peta halaman
+- `design/PBK.dc.html` — prototipe desain asal (buka di browser, butuh internet)
+
+## Stack
+
+Next.js 16 · React 19 · TypeScript · Tailwind CSS v4 · Prisma 7 · PostgreSQL 16 · Auth.js v5
+
+## Menjalankan secara lokal
+
+Butuh **Node.js 20.19 atau lebih baru** dan PostgreSQL 16.
+
+### 1. Nyalakan PostgreSQL
+
+Pilih salah satu — keduanya berjalan di `localhost:5433`, sesuai `.env.example`:
+
+**A. Tanpa Docker**, memakai binari PostgreSQL portabel yang sudah ada di repo:
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+scripts/db.sh setup   # sekali saja: initdb cluster baru ke .pgdata/
+scripts/db.sh start
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+**B. Dengan Docker Compose**, kalau mesin Anda punya Docker:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+docker compose up -d
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+(`docker-compose.yml` di root adalah untuk pengembangan lokal. File produksi
+terpisah, `docker-compose.prod.yml`, dipakai saat deploy — lihat
+[docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).)
 
-## Learn More
+### 2. Pasang dan jalankan aplikasi
 
-To learn more about Next.js, take a look at the following resources:
+```bash
+npm install
+cp .env.example .env                          # sesuaikan DATABASE_URL bila perlu
+echo "AUTH_SECRET=$(openssl rand -base64 32)" >> .env
+npm run db:migrate
+npm run db:seed
+npm run dev
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Buka http://localhost:3000. Akun awal dari seed:
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+| Email | Sandi | Peran |
+|---|---|---|
+| anggi.prawita@sman21sby.sch.id | pbk-demo-2026 | Bendahara |
 
-## Deploy on Vercel
+**Ganti sandi ini sebelum dipakai sungguhan** — lihat peringatan di
+[docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+> **Prisma dipin ke `^7.10.0` di `package.json`.** Jangan pernah menjalankan
+> `npm install prisma`, `npm install @prisma/client`, atau
+> `npm install @prisma/adapter-pg` tanpa menuliskan versinya — tag `latest` di
+> registry npm saat ini mengarah ke `8.0.0-rc.13` (rilis pre-release), dan
+> instalasi tanpa pin akan diam-diam memutus pasangan CLI/client yang sudah
+> cocok. Kalau perlu memasang ulang, gunakan versi yang tertulis di
+> `package.json`.
+>
+> URL koneksi database diatur di **`prisma.config.ts`**, bukan di
+> `schema.prisma`. `PrismaClient` (lihat `src/lib/prisma.ts`) dibuat memakai
+> driver adapter `PrismaPg` dari `@prisma/adapter-pg` — kode baru yang
+> membutuhkan instance Prisma sendiri harus mengikuti pola yang sama.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Perintah
+
+| Perintah | Kegunaan |
+|---|---|
+| `npm run dev` | Server pengembangan |
+| `npm run build` | Build produksi (`.next/standalone`) |
+| `npm run start` | Jalankan build produksi secara lokal |
+| `npm test` | Unit test (Vitest) |
+| `npm run test:e2e` | End-to-end test (Playwright) |
+| `npm run lint` | ESLint |
+| `npm run db:migrate` | Terapkan migrasi (dev) |
+| `npm run db:seed` | Isi master data |
+| `npm run db:studio` | Prisma Studio |
+| `scripts/db.sh {setup\|start\|stop}` | Kelola PostgreSQL portabel (tanpa Docker) |
+
+## Deploy produksi
+
+Lihat **[docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)** — tutorial lengkap memasang
+di VPS Ubuntu dengan Docker Compose dan HTTPS otomatis.
