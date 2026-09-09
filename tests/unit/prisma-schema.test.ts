@@ -37,3 +37,37 @@ describe('skema Prisma', () => {
     expect(schema).toContain('@@unique([activityId, studentId])');
   });
 });
+
+describe('skema autentikasi', () => {
+  it('menambahkan SUPERADMIN ke enum Role', () => {
+    // No `/s` (dotAll) flag: the pattern uses `[^}]*`, a negated character
+    // class, which already matches newlines regardless of dotAll — dotAll
+    // only changes what `.` matches, and this pattern has no `.`. Adding
+    // the flag would trip TS1501 under this project's ES2017 target for no
+    // behavioral gain.
+    expect(schema).toMatch(/enum Role \{[^}]*SUPERADMIN/);
+  });
+
+  it('mendeklarasikan enum challenge', () => {
+    expect(schema).toContain('enum ChallengePurpose');
+    expect(schema).toContain('enum SecondFactor');
+  });
+
+  it('mendeklarasikan model autentikasi baru', () => {
+    for (const m of ['model AuthChallenge', 'model AuthEvent', 'model AppSetting']) {
+      expect(schema).toContain(m);
+    }
+  });
+
+  it('menjadikan username unik dan email opsional', () => {
+    expect(schema).toMatch(/username\s+String\s+@unique/);
+    expect(schema).toMatch(/email\s+String\?/);
+    expect(schema).not.toMatch(/email\s+String\s+@unique/);
+  });
+
+  it('menyimpan kolom 2FA pada User', () => {
+    for (const f of ['totpSecret', 'totpEnabledAt', 'mustChangePassword', 'isActive', 'lastLoginAt']) {
+      expect(schema).toContain(f);
+    }
+  });
+});

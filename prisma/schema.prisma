@@ -7,9 +7,20 @@ datasource db {
 }
 
 enum Role {
-  BENDAHARA
+  SUPERADMIN
   ADMIN
+  BENDAHARA
   KEPALA_SEKOLAH
+}
+
+enum ChallengePurpose {
+  LOGIN
+  PASSWORD_RESET
+}
+
+enum SecondFactor {
+  TOTP
+  WA_OTP
 }
 
 enum ActivityStatus {
@@ -52,15 +63,61 @@ enum NotifKind {
 }
 
 model User {
-  id           String   @id @default(cuid())
-  name         String
-  email        String   @unique
-  nip          String?
-  phone        String?
-  role         Role     @default(BENDAHARA)
-  passwordHash String
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id                 String    @id @default(cuid())
+  username           String    @unique          // BARU — identitas login
+  name               String
+  email              String?                    // was @unique + wajib
+  nip                String?
+  phone              String?                    // ternormalisasi 62xxx; lihat §3.5
+  role               Role      @default(BENDAHARA)
+  passwordHash       String
+  mustChangePassword Boolean   @default(false)  // BARU
+  totpSecret         String?                    // BARU — terenkripsi saat disimpan
+  totpEnabledAt      DateTime?                  // BARU — null = belum mendaftar
+  isActive           Boolean   @default(true)   // BARU
+  lastLoginAt        DateTime?                  // BARU
+  passwordChangedAt  DateTime?                  // membatalkan sesi JWT lama setelah reset sandi
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  challenges AuthChallenge[]
+}
+
+model AuthChallenge {
+  id         String           @id @default(cuid())
+  userId     String
+  user       User             @relation(fields: [userId], references: [id])
+  purpose    ChallengePurpose
+  method     SecondFactor
+  otpHash    String?          // null bila method = TOTP; kode WA tidak pernah disimpan polos
+  expiresAt  DateTime         // dibuat + 5 menit
+  attempts   Int              @default(0)
+  consumedAt DateTime?        // sekali pakai
+  createdAt  DateTime         @default(now())
+
+  @@index([userId, purpose, createdAt])
+}
+
+model AuthEvent {
+  id        String   @id @default(cuid())
+  userId    String?           // null bila username tidak dikenal
+  username  String?           // dicatat apa adanya, termasuk untuk percobaan gagal
+  event     String            // lihat §3.3
+  ip        String?
+  userAgent String?
+  meta      Json?
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([userId, createdAt])
+}
+
+model AppSetting {
+  key       String   @id      // 'wa.baseUrl' | 'wa.apiKey' | 'wa.instance'
+  value     String            // nilai rahasia disimpan terenkripsi
+  isSecret  Boolean  @default(false)
+  updatedAt DateTime @updatedAt
+  updatedBy String?
 }
 
 model School {                       // satu baris; identitas untuk kop & kuitansi
