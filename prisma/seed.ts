@@ -1,4 +1,5 @@
 import 'dotenv/config';
+import { fileURLToPath } from 'node:url';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
@@ -7,7 +8,18 @@ import { ACTIVITY_CATEGORIES, EXPENSE_CATEGORIES, SEED_ADMIN } from './seed-data
 const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL });
 const prisma = new PrismaClient({ adapter });
 
-async function main() {
+export async function main() {
+  // Checked first, before any database work: no default password may ever
+  // exist in the repository, so a missing env var must fail fast.
+  const adminPassword = process.env.SEED_ADMIN_PASSWORD;
+  if (!adminPassword) {
+    throw new Error(
+      'SEED_ADMIN_PASSWORD belum diisi. Set di .env (pengembangan lokal) atau di ' +
+        'environment container (produksi) — lihat .env.example. Tidak ada nilai ' +
+        'baku: sandi awal tidak boleh tersimpan di repositori.',
+    );
+  }
+
   await prisma.school.upsert({
     where: { id: 'default' },
     update: {},
@@ -19,15 +31,6 @@ async function main() {
   }
   for (const c of EXPENSE_CATEGORIES) {
     await prisma.expenseCategory.upsert({ where: { code: c.code }, update: {}, create: c });
-  }
-
-  const adminPassword = process.env.SEED_ADMIN_PASSWORD;
-  if (!adminPassword) {
-    throw new Error(
-      'SEED_ADMIN_PASSWORD belum diisi. Set di .env (pengembangan lokal) atau di ' +
-        'environment container (produksi) — lihat .env.example. Tidak ada nilai ' +
-        'baku: sandi awal tidak boleh tersimpan di repositori.',
-    );
   }
 
   await prisma.user.upsert({
@@ -67,10 +70,15 @@ async function main() {
   }
 }
 
-main()
-  .then(() => prisma.$disconnect())
-  .catch(async (e) => {
-    console.error(e);
-    await prisma.$disconnect();
-    process.exit(1);
-  });
+// Run only when this file is the process entry point (`npx tsx prisma/seed.ts`
+// via `prisma db seed`), not when a test imports `main` for inspection.
+const isEntryPoint = process.argv[1] !== undefined && fileURLToPath(import.meta.url) === process.argv[1];
+if (isEntryPoint) {
+  main()
+    .then(() => prisma.$disconnect())
+    .catch(async (e) => {
+      console.error(e);
+      await prisma.$disconnect();
+      process.exit(1);
+    });
+}
