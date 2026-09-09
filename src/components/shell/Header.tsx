@@ -5,13 +5,13 @@ import { ActivitySwitcher } from '@/components/shell/ActivitySwitcher';
 import { getActiveActivity, listSelectableActivities } from '@/lib/activity-context';
 
 export async function Header() {
-  const session = await auth();
-  const [activities, active] = await Promise.all([listSelectableActivities(), getActiveActivity()]);
+  const [session, activities] = await Promise.all([auth(), listSelectableActivities()]);
+  const active = await getActiveActivity(activities);
 
   return (
     <header
       data-noprint
-      className="sticky top-0 z-10 flex h-16 items-center justify-between gap-4 border-b border-gray-200 bg-white px-6 max-[900px]:h-auto max-[900px]:py-2"
+      className="sticky top-0 z-10 flex h-16 items-center justify-between gap-4 border-b border-gray-200 bg-white px-6 max-[900px]:h-auto max-[900px]:flex-wrap max-[900px]:py-2"
     >
       <ActivitySwitcher activities={activities} active={active} />
 

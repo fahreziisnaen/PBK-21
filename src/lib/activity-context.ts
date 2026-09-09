@@ -21,8 +21,14 @@ export async function listSelectableActivities(): Promise<Activity[]> {
   });
 }
 
-export async function getActiveActivity(): Promise<Activity | null> {
-  const activities = await listSelectableActivities();
+/**
+ * Untuk Server Component. Menerima daftar kegiatan yang sudah diambil bila
+ * caller sudah memilikinya (mis. Header, yang juga menampilkan seluruh
+ * daftar) — supaya `listSelectableActivities()` tidak dijalankan dua kali
+ * per render. Tanpa argumen, ia mengambil daftarnya sendiri.
+ */
+export async function getActiveActivity(preloadedActivities?: Activity[]): Promise<Activity | null> {
+  const activities = preloadedActivities ?? (await listSelectableActivities());
   const store = await cookies();
   const id = resolveActiveActivity(store.get(ACTIVITY_COOKIE)?.value, activities);
   return activities.find((a) => a.id === id) ?? null;
