@@ -1,0 +1,33 @@
+import Link from 'next/link';
+import { auth } from '@/lib/auth';
+import { logout } from '@/lib/actions/logout';
+
+export async function Header() {
+  const session = await auth();
+
+  return (
+    <header
+      data-noprint
+      className="sticky top-0 z-10 flex h-16 items-center justify-between gap-4 border-b border-gray-200 bg-white px-6"
+    >
+      <div id="activity-switcher-slot" />
+
+      <div className="flex items-center gap-3">
+        <Link href="/notifikasi" className="text-[13px] font-medium text-gray-600 hover:text-brand-600">
+          Notifikasi
+        </Link>
+        <Link href="/profil" className="text-[13px] font-semibold text-gray-900 hover:text-brand-600">
+          {session?.user?.name ?? 'Pengguna'}
+        </Link>
+        <form action={logout}>
+          <button
+            type="submit"
+            className="rounded-lg border border-gray-300 px-3 py-1.5 text-[12.5px] font-semibold text-gray-700 hover:bg-gray-50"
+          >
+            Keluar
+          </button>
+        </form>
+      </div>
+    </header>
+  );
+}
