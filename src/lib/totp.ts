@@ -19,14 +19,13 @@ export function generateTotpSecret(): string {
 }
 
 export function buildOtpauthUri(username: string, secret: string): string {
-  const totp = new TOTP({
-    issuer: ISSUER,
-    label: username,
-    algorithm: 'SHA1',
-    digits: DIGITS,
-    period: PERIOD,
-    secret: Secret.fromBase32(secret),
-  });
+  // Reuse the same construction as verifyTotp — `label` is a plain mutable
+  // property on TOTP, so there's no need for a second, separately-written
+  // constructor call. If enrolment and verification ever built TOTP with
+  // different parameters, everyone who enrolled in between would be
+  // permanently locked out with no symptom pointing at the cause.
+  const totp = totpFor(secret);
+  totp.label = username;
   return totp.toString();
 }
 

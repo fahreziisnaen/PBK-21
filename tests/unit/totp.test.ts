@@ -24,6 +24,24 @@ describe('verifyTotp terhadap vektor RFC 6238', () => {
   });
 });
 
+describe('toleransi format input', () => {
+  // Authenticator apps display codes as "123 456", and people paste them
+  // verbatim (with a space or a stray dash). A correct code must not be
+  // rejected just because of formatting — that reads as a wrong code to
+  // the person typing it, and burns the attempt cap from Task 8.
+  it('menerima kode dengan spasi di tengah', () => {
+    expect(verifyTotp(RFC_SECRET, '287 082', new Date(59_000))).toBe(true);
+  });
+
+  it('menerima kode dengan spasi di awal dan akhir', () => {
+    expect(verifyTotp(RFC_SECRET, ' 287082 ', new Date(59_000))).toBe(true);
+  });
+
+  it('menerima kode dengan tanda hubung', () => {
+    expect(verifyTotp(RFC_SECRET, '287-082', new Date(59_000))).toBe(true);
+  });
+});
+
 describe('toleransi jam', () => {
   it('menerima kode dari satu langkah sebelumnya', () => {
     // 287082 valid at T=59; still accepted 30s later
@@ -50,5 +68,9 @@ describe('buildOtpauthUri', () => {
     expect(uri).toContain('otpauth://totp/');
     expect(uri).toContain('issuer=PBK');
     expect(uri).toContain(`secret=${RFC_SECRET}`);
+    // The label identifies which account the QR code enrols; if it were
+    // dropped, the library falls back to a default label and the three
+    // assertions above would still pass while the QR code names nobody.
+    expect(uri).toContain('PBK:admin');
   });
 });
