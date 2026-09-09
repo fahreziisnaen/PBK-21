@@ -310,6 +310,12 @@ Tambahkan ke `.env.example`:
 ```
 ENCRYPTION_KEY="hasil-dari-openssl-rand-base64-32"
 SEED_ADMIN_PASSWORD="sandi-awal-akun-admin"
+
+# WA Gateway — sementara dibaca dari environment. Plan 03 memindahkannya ke
+# tabel AppSetting agar dapat diubah lewat UI tanpa deploy ulang.
+WA_BASE_URL="http://localhost:3000"
+WA_API_KEY="wag_ganti-dengan-kunci-dari-dashboard-gateway"
+WA_INSTANCE=""
 ```
 
 Tambahkan ke `.env.production.example`:
@@ -317,7 +323,15 @@ Tambahkan ke `.env.production.example`:
 ```
 ENCRYPTION_KEY=hasil-dari-openssl-rand-base64-32
 SEED_ADMIN_PASSWORD=sandi-acak-panjang-untuk-login-pertama
+WA_BASE_URL=http://alamat-gateway-anda:3000
+WA_API_KEY=wag_kunci-dari-dashboard-gateway
+WA_INSTANCE=
 ```
+
+Sekalian perbaiki petunjuk usang di `.env.example`: baris `AUTH_SECRET`
+menyarankan `npx auth secret`, yang tidak bekerja — perintah itu me-resolve
+ke paket npm yang tidak berhubungan. Ganti petunjuknya menjadi
+`node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"`.
 
 - [ ] **Step 5: Isi nilai lokal agar test dan aplikasi jalan**
 
@@ -408,6 +422,19 @@ Terapkan blok §3.1 dan §3.2 spec ke `prisma/schema.prisma`. Tambahkan juga rel
   challenges AuthChallenge[]
 ```
 
+Dan satu kolom yang tidak ada di spec tetapi dibutuhkan Task 13 untuk
+membatalkan sesi lama setelah sandi diganti:
+
+```prisma
+  passwordChangedAt DateTime?
+```
+
+Auth.js memakai sesi JWT, yang tidak dapat dicabut dari sisi server. Cara
+paling sederhana membatalkannya adalah membandingkan waktu terbit token
+dengan kolom ini di callback `session`, lalu menolak token yang lebih tua.
+Tanpa kolom ini, sandi yang direset tidak mengusir sesi yang sudah berjalan
+di perangkat lain — yang justru menjadi alasan orang mereset sandinya.
+
 - [ ] **Step 4: Hasilkan migrasi tanpa menerapkannya**
 
 ```bash
@@ -464,6 +491,20 @@ Pastikan pernyataan yang melepas keunikan email ada:
 ```sql
 DROP INDEX IF EXISTS "User_email_key";
 ALTER TABLE "User" ALTER COLUMN "email" DROP NOT NULL;
+```
+
+Terakhir, naikkan akun bootstrap ke peran barunya. Tanpa ini akun `admin`
+tetap `ADMIN` selamanya: seed Task 4 memakai `update: {}` — yang memang
+benar, karena redeploy tidak boleh mereset sandi yang sudah diganti
+operator — sehingga ia tidak akan pernah memperbarui peran baris yang sudah
+ada.
+
+```sql
+-- One-time promotion of the bootstrap account. Scoped to the seeded
+-- username and its pre-migration role so a deliberate demotion later is
+-- never silently undone.
+UPDATE "User" SET "role" = 'SUPERADMIN'
+WHERE "username" = 'admin' AND "role" = 'ADMIN';
 ```
 
 - [ ] **Step 6: Terapkan migrasi**
@@ -1449,14 +1490,17 @@ test('menolak kredensial salah', async ({ page }) => {
   await expect(page.getByText('Username atau kata sandi salah')).toBeVisible();
 });
 
-test('kredensial benar membawa ke layar faktor kedua, bukan ke dashboard', async ({ page }) => {
+test('kredensial benar menyelesaikan login', async ({ page }) => {
   await page.goto('/login');
   await page.getByLabel('Username').fill(USERNAME);
   await page.getByLabel('Kata Sandi').fill(PASSWORD);
   await page.getByRole('button', { name: 'Masuk' }).click();
-  // The seed account is a bootstrap account, so it is admitted and then
-  // immediately pushed into the forced flows rather than to the dashboard.
-  await expect(page).not.toHaveURL(/\/dashboard$/);
+  // The seed account has neither TOTP nor a phone, so it enters through the
+  // bootstrap exemption and lands on the dashboard. Task 11 adds the forced
+  // enrolment gate and updates this assertion to expect /keamanan/2fa —
+  // asserting that here would leave a test red across a task boundary for no
+  // benefit, since nothing in Task 10 can make it pass.
+  await expect(page).toHaveURL(/\/dashboard/);
 });
 
 test('mengarahkan tamu ke login', async ({ page }) => {
@@ -1639,10 +1683,25 @@ Di `src/app/(app)/layout.tsx`, sebelum merender shell: ambil pengguna, hitung `n
 
 Form dengan sandi lama, sandi baru, konfirmasi. Action memverifikasi sandi lama, menyimpan hash baru, `mustChangePassword: false`, menulis `password.changed`.
 
-- [ ] **Step 6: Jalankan seluruh test dan commit**
+- [ ] **Step 6: Perbarui asersi e2e yang ditinggalkan Task 10**
+
+`tests/e2e/login.spec.ts` menegaskan login berhasil mendarat di `/dashboard`.
+Setelah gerbang ini terpasang, akun seed — yang wajib ganti sandi — tidak lagi
+mendarat di sana. Ubah asersinya:
+
+```ts
+  await expect(page).toHaveURL(/\/ganti-sandi/);
+```
+
+Ini bukan melemahkan test, melainkan memindahkannya mengikuti perilaku yang
+sekarang benar. Jalankan e2e sebelum dan sesudah perubahan gerbang untuk
+melihat asersi lama gagal dan yang baru lulus, lalu tempelkan keduanya di
+laporan — asersi yang tidak pernah terlihat gagal tidak membuktikan apa pun.
+
+- [ ] **Step 7: Jalankan seluruh test dan commit**
 
 ```bash
-npm test && npx tsc --noEmit
+npm test && npx playwright test && npx tsc --noEmit
 git add -A
 git commit -m "feat: gate the app behind forced password change and TOTP enrolment
 
