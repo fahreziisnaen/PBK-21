@@ -8,7 +8,7 @@ const prisma = new PrismaClient({ adapter });
 
 async function login(page: Page) {
   await page.goto('/login');
-  await page.getByLabel('Email / NIP').fill('anggi.prawita@sman21sby.sch.id');
+  await page.getByLabel('Email / NIP').fill('admin@pbk.local');
   await page.getByLabel('Kata Sandi').fill('pbk-demo-2026');
   await page.getByRole('button', { name: 'Masuk' }).click();
   await page.waitForURL(/\/dashboard/);

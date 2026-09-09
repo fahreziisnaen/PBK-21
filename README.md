@@ -54,7 +54,7 @@ Buka http://localhost:3000. Akun awal dari seed:
 
 | Email | Sandi | Peran |
 |---|---|---|
-| anggi.prawita@sman21sby.sch.id | pbk-demo-2026 | Bendahara |
+| admin@pbk.local | pbk-demo-2026 | Admin |
 
 **Ganti sandi ini sebelum dipakai sungguhan** — lihat peringatan di
 [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).

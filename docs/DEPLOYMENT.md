@@ -101,17 +101,17 @@ Buka `https://pbk.sekolahanda.sch.id`. Masuk dengan akun seed di bawah — lalu
 
 | Email | Sandi | Peran |
 |---|---|---|
-| anggi.prawita@sman21sby.sch.id | pbk-demo-2026 | Bendahara |
+| admin@pbk.local | pbk-demo-2026 | Admin |
 
 ## 5. WAJIB sekarang juga: ganti sandi akun bawaan
 
 **Jangan lewati langkah ini.** Sandi di atas tercetak di README ini dan di
 riwayat repositori — siapa pun yang bisa membaca kode sumber tahu sandinya.
-Selama akun `anggi.prawita@sman21sby.sch.id` masih memakai `pbk-demo-2026`,
-siapa pun bisa masuk sebagai Bendahara di server produksi Anda.
+Selama akun `admin@pbk.local` masih memakai `pbk-demo-2026`,
+siapa pun bisa masuk sebagai Admin di server produksi Anda.
 
 > **Ganti sandinya, JANGAN hapus akunnya.** Naluri yang wajar setelah Anda
-> membuat akun sendiri adalah menghapus baris `anggi.prawita@sman21sby.sch.id`
+> membuat akun sendiri adalah menghapus baris `admin@pbk.local`
 > ini. Jangan — service `migrate` menjalankan `prisma db seed` di setiap
 > `docker compose up`, dan seed-nya meng-upsert akun ini (`update: {}`, dibuat
 > ulang bila hilang). Kalau barisnya dihapus, `git pull && docker compose
@@ -157,7 +157,7 @@ menggantikan `TEMPEL_HASH_DI_SINI`):
 ```bash
 docker compose -f docker-compose.prod.yml exec -T db psql -U pbk -d pbk -c '
 UPDATE "User" SET "passwordHash" = $h$TEMPEL_HASH_DI_SINI$h$
-WHERE email = $e$anggi.prawita@sman21sby.sch.id$e$;
+WHERE email = $e$admin@pbk.local$e$;
 '
 ```
 

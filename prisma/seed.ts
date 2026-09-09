@@ -22,14 +22,12 @@ async function main() {
   }
 
   await prisma.user.upsert({
-    where: { email: 'anggi.prawita@sman21sby.sch.id' },
+    where: { email: 'admin@pbk.local' },
     update: {},
     create: {
-      name: 'Anggi Prawita',
-      email: 'anggi.prawita@sman21sby.sch.id',
-      nip: '19870412 201003 2 004',
-      phone: '0812-3344-5566',
-      role: 'BENDAHARA',
+      name: 'Administrator',
+      email: 'admin@pbk.local',
+      role: 'ADMIN',
       passwordHash: await bcrypt.hash('pbk-demo-2026', 10),
     },
   });
