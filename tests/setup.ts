@@ -7,3 +7,5 @@
 // review). A real DATABASE_URL already set in the environment is left
 // untouched.
 process.env.DATABASE_URL ??= 'postgresql://test:test@localhost:5432/test?schema=public';
+process.env.ENCRYPTION_KEY ??= Buffer.alloc(32, 1).toString('base64');
+process.env.SEED_ADMIN_PASSWORD ??= 'test-only-password';
