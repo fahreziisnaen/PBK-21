@@ -29,7 +29,9 @@ export async function sendWhatsApp(config: WaConfig, to: string, message: string
       let jobId = 'unknown';
       try {
         const body = (await res.json()) as { jobId?: string };
-        if (body.jobId != null) jobId = String(body.jobId);
+        // Truthy, not != null: a present-but-empty jobId is exactly as
+        // untraceable in the security log as an absent one.
+        if (body.jobId) jobId = String(body.jobId);
       } catch {
         // keep the sentinel
       }

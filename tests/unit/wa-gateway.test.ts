@@ -68,6 +68,12 @@ describe('sendWhatsApp', () => {
     const r = await sendWhatsApp(config, '6281233445566', 'test');
     expect(r).toEqual({ ok: true, jobId: 'unknown' });
   });
+
+  it('memakai sentinel saat gateway mengirim jobId kosong', async () => {
+    stubFetch(202, { success: true, jobId: '' });
+    const r = await sendWhatsApp(config, '6281233445566', 'test');
+    expect(r).toEqual({ ok: true, jobId: 'unknown' });
+  });
 });
 
 describe('checkWaHealth', () => {
