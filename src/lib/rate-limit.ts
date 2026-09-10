@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/prisma';
+import { AUTH_EVENTS } from '@/lib/auth-event-names';
 
 const WINDOW_MINUTES = 15;
 const MAX_PER_USERNAME = 5;
@@ -23,7 +24,7 @@ export async function checkLoginRate(username: string, ip: string | null): Promi
   const since = new Date(Date.now() - WINDOW_MINUTES * 60_000);
   const [byUsername, byIp] = await Promise.all([
     prisma.authEvent.count({
-      where: { event: 'login.password_fail', username, createdAt: { gte: since } },
+      where: { event: AUTH_EVENTS.LOGIN_PASSWORD_FAIL, username, createdAt: { gte: since } },
     }),
     ip
       ? prisma.authEvent.count({
