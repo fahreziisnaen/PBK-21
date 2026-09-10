@@ -18,6 +18,17 @@ export function generateTotpSecret(): string {
   return new Secret({ size: 20 }).base32;
 }
 
+/**
+ * The exact shape `generateTotpSecret` produces: 20 bytes as 32 unpadded
+ * base32 characters. Enrolment takes the secret back from a hidden form
+ * field, so without this a user could post a one-character secret with a
+ * matching code and enrol it as their real second factor — the weakest
+ * possible 2FA on the account we force 2FA onto hardest.
+ */
+export function isValidTotpSecret(secret: string): boolean {
+  return /^[A-Z2-7]{32}$/.test(secret);
+}
+
 export function buildOtpauthUri(username: string, secret: string): string {
   // Reuse the same construction as verifyTotp — `label` is a plain mutable
   // property on TOTP, so there's no need for a second, separately-written

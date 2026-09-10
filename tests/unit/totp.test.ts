@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildOtpauthUri, generateTotpSecret, verifyTotp } from '@/lib/totp';
+import { buildOtpauthUri, generateTotpSecret, isValidTotpSecret, verifyTotp } from '@/lib/totp';
 
 // ASCII "12345678901234567890" in base32
 const RFC_SECRET = 'GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ';
@@ -72,5 +72,30 @@ describe('buildOtpauthUri', () => {
     // dropped, the library falls back to a default label and the three
     // assertions above would still pass while the QR code names nobody.
     expect(uri).toContain('PBK:admin');
+  });
+});
+
+describe('isValidTotpSecret', () => {
+  it('menerima secret yang dihasilkan generateTotpSecret', () => {
+    for (let i = 0; i < 20; i++) expect(isValidTotpSecret(generateTotpSecret())).toBe(true);
+  });
+
+  it('menolak secret kosong atau nyaris kosong', () => {
+    // A one-character secret passed the old `z.string().min(1)` check and
+    // would enrol as the user's real second factor.
+    expect(isValidTotpSecret('')).toBe(false);
+    expect(isValidTotpSecret('A')).toBe(false);
+  });
+
+  it('menolak karakter di luar alfabet base32 RFC 4648', () => {
+    expect(isValidTotpSecret('A'.repeat(31) + '0')).toBe(false); // 0 and 1 are
+    expect(isValidTotpSecret('A'.repeat(31) + '1')).toBe(false); // not in base32
+    expect(isValidTotpSecret('a'.repeat(32))).toBe(false); // lowercase
+    expect(isValidTotpSecret('A'.repeat(31) + '=')).toBe(false); // padding
+  });
+
+  it('menolak panjang yang salah', () => {
+    expect(isValidTotpSecret('A'.repeat(31))).toBe(false);
+    expect(isValidTotpSecret('A'.repeat(33))).toBe(false);
   });
 });

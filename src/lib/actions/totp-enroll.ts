@@ -5,7 +5,7 @@ import { redirect } from 'next/navigation';
 import { z } from 'zod';
 import { requireUser } from '@/lib/auth-guard';
 import { prisma } from '@/lib/prisma';
-import { buildOtpauthUri, generateTotpSecret, verifyTotp } from '@/lib/totp';
+import { buildOtpauthUri, generateTotpSecret, isValidTotpSecret, verifyTotp } from '@/lib/totp';
 import { encryptSecret } from '@/lib/crypto';
 import { recordAuthEvent } from '@/lib/auth-event';
 import { AUTH_EVENTS } from '@/lib/auth-event-names';
@@ -30,7 +30,11 @@ export async function beginEnrollment(): Promise<{ secret: string; otpauthUri: s
 }
 
 const schema = z.object({
-  secret: z.string().min(1),
+  // Shape-checked, not merely non-empty: verifyTotp happily accepts a
+  // one-character secret, and Secret.fromBase32 throws on a non-base32 one
+  // rather than returning false. Rejecting here turns both into the same
+  // ordinary Indonesian error instead of a weak enrolment or a 500.
+  secret: z.string().refine(isValidTotpSecret),
   code: z.string().min(1),
 });
 
@@ -60,15 +64,22 @@ export async function confirmEnrollment(
   // totpEnabledAt is set only now, after one correct code — enabling 2FA
   // without proving the authenticator app actually works would lock the
   // user out on their very next login.
-  await prisma.user.update({
+  const enrolled = await prisma.user.update({
     where: { id: user.id },
     data: {
       totpSecret: encryptSecret(parsed.data.secret),
       totpEnabledAt: new Date(),
     },
+    select: { username: true },
   });
 
-  await recordAuthEvent({ event: AUTH_EVENTS.TOTP_ENROLLED, userId: user.id });
+  // username included to match every other recordAuthEvent call site — the
+  // security log is read by a human, who should not have to resolve an id.
+  await recordAuthEvent({
+    event: AUTH_EVENTS.TOTP_ENROLLED,
+    userId: user.id,
+    username: enrolled.username,
+  });
 
   // Unlike change-password.ts, a flat redirect('/dashboard') is safe here:
   // TOTP is the last-checked gate (see nextGate), and nextGate('/ganti-sandi')
