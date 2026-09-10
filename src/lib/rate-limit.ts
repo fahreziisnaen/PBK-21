@@ -22,14 +22,17 @@ export function evaluateRate(failures: { byUsername: number; byIp: number }): Ra
  */
 export async function checkLoginRate(username: string, ip: string | null): Promise<RateVerdict> {
   const since = new Date(Date.now() - WINDOW_MINUTES * 60_000);
+  // Built once and spread into both counts. The two dimensions must agree on
+  // the event name and the window; naming either one twice is what lets them
+  // drift apart, and a drift here is silent — the limiter just counts zero.
+  const failuresInWindow = {
+    event: AUTH_EVENTS.LOGIN_PASSWORD_FAIL,
+    createdAt: { gte: since },
+  };
   const [byUsername, byIp] = await Promise.all([
-    prisma.authEvent.count({
-      where: { event: AUTH_EVENTS.LOGIN_PASSWORD_FAIL, username, createdAt: { gte: since } },
-    }),
+    prisma.authEvent.count({ where: { ...failuresInWindow, username } }),
     ip
-      ? prisma.authEvent.count({
-          where: { event: 'login.password_fail', ip, createdAt: { gte: since } },
-        })
+      ? prisma.authEvent.count({ where: { ...failuresInWindow, ip } })
       : Promise.resolve(0),
   ]);
   return evaluateRate({ byUsername, byIp });
