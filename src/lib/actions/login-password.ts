@@ -90,10 +90,13 @@ export async function startLogin(
       method: isBootstrap ? 'TOTP' : method,
       otpHash: otp ? hashOtp(otp) : null,
       expiresAt: new Date(Date.now() + CHALLENGE_TTL_MINUTES * 60_000),
-      // A bootstrap account has no second factor to present, so the challenge
-      // is created already satisfied; stage 2 lets it through and the layout
-      // gate then forces TOTP enrolment before anything else.
-      consumedAt: isBootstrap ? new Date() : null,
+      // Never pre-consumed, not even for bootstrap. A consumed challenge with
+      // no otpHash is indistinguishable from a legitimately consumed TOTP one
+      // (only WA_OTP challenges ever carry an otpHash), so pre-consuming here
+      // would let stage 2 mistake a spent TOTP challenge for a bootstrap and
+      // admit it with no second factor at all. Stage 2 identifies a bootstrap
+      // from the user's own capability instead, via chooseSecondFactor.
+      consumedAt: null,
     },
   });
 
