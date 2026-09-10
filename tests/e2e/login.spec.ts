@@ -21,11 +21,11 @@ test('kredensial benar menyelesaikan login', async ({ page }) => {
   await page.getByLabel('Kata Sandi').fill(PASSWORD);
   await page.getByRole('button', { name: 'Masuk' }).click();
   // The seed account has neither TOTP nor a phone, so it enters through the
-  // bootstrap exemption and lands on the dashboard. Task 11 adds the forced
-  // enrolment gate and updates this assertion to expect /keamanan/2fa —
-  // asserting that here would leave a test red across a task boundary for no
-  // benefit, since nothing in Task 10 can make it pass.
-  await expect(page).toHaveURL(/\/dashboard/);
+  // bootstrap exemption — but Task 11's post-login gate then takes over: a
+  // SUPERADMIN with no TOTP is always forced to enrol (nextGate does not
+  // depend on WhatsApp for the recovery role), so admin lands on the
+  // enrolment page instead of the dashboard.
+  await expect(page).toHaveURL(/\/keamanan\/2fa/);
 });
 
 test('mengarahkan tamu ke login', async ({ page }) => {

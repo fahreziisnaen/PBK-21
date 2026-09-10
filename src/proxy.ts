@@ -1,4 +1,5 @@
 import NextAuth from 'next-auth';
+import { NextResponse } from 'next/server';
 import { authConfig } from '@/lib/auth.config';
 
 const { auth } = NextAuth(authConfig);
@@ -22,6 +23,18 @@ export default auth((req) => {
   if (!isLoggedIn) {
     return Response.redirect(new URL('/login', req.nextUrl));
   }
+
+  // Task 11's post-login gate lives in `(app)/layout.tsx`, a Server
+  // Component. Layouts don't rerender on navigation and have no supported
+  // way to read the current pathname on their own (see Next's docs on
+  // Layouts > Caveats > Pathname) — stamping it here, on every request that
+  // reaches a real route, is the documented workaround. Without it the gate
+  // cannot tell "I am already rendering my own destination" from "I am
+  // not", which is exactly the difference between a normal redirect and an
+  // infinite one.
+  const requestHeaders = new Headers(req.headers);
+  requestHeaders.set('x-pathname', pathname);
+  return NextResponse.next({ request: { headers: requestHeaders } });
 });
 
 export const config = {

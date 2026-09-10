@@ -1,17 +1,21 @@
-// Loads .env into this test-runner process for SEED_ADMIN_PASSWORD below.
-import 'dotenv/config';
 import { expect, test } from '@playwright/test';
+import { createE2eUser, deleteE2eUser, loginAsFixture, type E2eUser } from './support/e2e-users';
 
-const PASSWORD = process.env.SEED_ADMIN_PASSWORD ?? 'pbk-lokal-2026';
+// A disposable, TOTP-enrolled BENDAHARA — passes the post-login gate
+// (nextGate returns null once totpEnabledAt is set) without ever touching
+// `admin`. See tests/e2e/support/e2e-users.ts for why.
+let user: E2eUser;
+
+test.beforeAll(async () => {
+  user = await createE2eUser();
+});
+
+test.afterAll(async () => {
+  await deleteE2eUser(user.id);
+});
 
 test.beforeEach(async ({ page }) => {
-  await page.goto('/login');
-  await page.getByLabel('Username').fill('admin');
-  await page.getByLabel('Kata Sandi').fill(PASSWORD);
-  await page.getByRole('button', { name: 'Masuk' }).click();
-  // The seed account is a bootstrap login (no TOTP, no phone), so it clears
-  // /login/verifikasi automatically without asking for a code.
-  await page.waitForURL(/\/dashboard/);
+  await loginAsFixture(page, user);
 });
 
 test('menampilkan tujuh grup nav', async ({ page }) => {

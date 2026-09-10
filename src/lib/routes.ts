@@ -19,6 +19,8 @@ export const ROUTES: Record<string, RouteMeta> = {
   '/profil': { title: 'Profil Pengguna', subtitle: 'Akun dan preferensi pengguna', crumbs: ['Akun', 'Profil'] },
   '/notifikasi': { title: 'Pusat Notifikasi', subtitle: 'Semua peristiwa keuangan dan kegiatan', crumbs: ['Akun', 'Notifikasi'] },
   '/states': { title: 'Status & Komponen', subtitle: 'Empty state, error state, dan dialog konfirmasi', crumbs: ['Sistem', 'Status & Komponen'] },
+  '/ganti-sandi': { title: 'Ganti Sandi', subtitle: 'Perbarui sandi akun sebelum melanjutkan', crumbs: ['Akun', 'Ganti Sandi'] },
+  '/keamanan/2fa': { title: 'Verifikasi Dua Langkah', subtitle: 'Daftarkan aplikasi authenticator untuk akun Anda', crumbs: ['Akun', 'Keamanan', 'Verifikasi Dua Langkah'] },
 };
 
 /**

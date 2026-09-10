@@ -1,25 +1,22 @@
-import 'dotenv/config';
-import { PrismaPg } from '@prisma/adapter-pg';
-import { PrismaClient } from '@prisma/client';
 import { expect, test, type Page } from '@playwright/test';
+import { createE2eUser, deleteE2eUser, loginAsFixture, prisma, type E2eUser } from './support/e2e-users';
 
-const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL });
-const prisma = new PrismaClient({ adapter });
-const PASSWORD = process.env.SEED_ADMIN_PASSWORD ?? 'pbk-lokal-2026';
+// A disposable, TOTP-enrolled BENDAHARA — passes the post-login gate
+// without ever touching `admin`. See tests/e2e/support/e2e-users.ts.
+let user: E2eUser;
 
-async function login(page: Page) {
-  await page.goto('/login');
-  await page.getByLabel('Username').fill('admin');
-  await page.getByLabel('Kata Sandi').fill(PASSWORD);
-  await page.getByRole('button', { name: 'Masuk' }).click();
-  // The seed account is a bootstrap login (no TOTP, no phone), so it clears
-  // /login/verifikasi automatically without asking for a code.
-  await page.waitForURL(/\/dashboard/);
-}
+test.beforeAll(async () => {
+  user = await createE2eUser();
+});
 
 test.afterAll(async () => {
+  await deleteE2eUser(user.id);
   await prisma.$disconnect();
 });
+
+async function login(page: Page) {
+  await loginAsFixture(page, user);
+}
 
 test('menampilkan kegiatan aktif di header', async ({ page }) => {
   await login(page);
