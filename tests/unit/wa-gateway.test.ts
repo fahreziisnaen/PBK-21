@@ -54,6 +54,20 @@ describe('sendWhatsApp', () => {
     const r = await sendWhatsApp(config, '6281233445566', 'x');
     expect(r).toMatchObject({ ok: false, reason: 'error' });
   });
+
+  it('melaporkan ok dengan jobId unknown saat 202 memiliki body tidak parseable', async () => {
+    const fn = vi.fn(async () => {
+      const res = new Response('', { status: 202 });
+      // Override json() to reject
+      res.json = vi.fn(async () => {
+        throw new SyntaxError('Unexpected token < in JSON');
+      });
+      return res;
+    });
+    vi.stubGlobal('fetch', fn);
+    const r = await sendWhatsApp(config, '6281233445566', 'test');
+    expect(r).toEqual({ ok: true, jobId: 'unknown' });
+  });
 });
 
 describe('checkWaHealth', () => {

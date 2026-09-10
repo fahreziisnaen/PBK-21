@@ -23,8 +23,17 @@ export async function sendWhatsApp(config: WaConfig, to: string, message: string
     });
 
     if (res.status === 202 || res.status === 200) {
-      const body = (await res.json()) as { jobId?: string };
-      return { ok: true, jobId: String(body.jobId ?? '') };
+      // The gateway has accepted the message by this point. A body we cannot
+      // parse must not turn an accepted send into a reported failure — the
+      // caller would retry and deliver a second OTP.
+      let jobId = 'unknown';
+      try {
+        const body = (await res.json()) as { jobId?: string };
+        if (body.jobId != null) jobId = String(body.jobId);
+      } catch {
+        // keep the sentinel
+      }
+      return { ok: true, jobId };
     }
 
     const detail = `HTTP ${res.status}`;
