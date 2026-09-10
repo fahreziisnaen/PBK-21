@@ -3,20 +3,20 @@
 import { AuthError } from 'next-auth';
 import { signIn } from '@/lib/auth';
 
-export async function authenticate(
+export async function submitOtp(
   _prevState: string | undefined,
   formData: FormData,
 ): Promise<string | undefined> {
   try {
-    await signIn('credentials', {
-      email: formData.get('email'),
-      password: formData.get('password'),
+    await signIn('otp', {
+      challengeId: formData.get('challengeId'),
+      code: formData.get('code'),
       redirectTo: '/dashboard',
     });
   } catch (error) {
     if (error instanceof AuthError) {
       return error.type === 'CredentialsSignin'
-        ? 'Email atau kata sandi salah.'
+        ? 'Kode salah, sudah kedaluwarsa, atau sudah dipakai.'
         : 'Terjadi kesalahan saat masuk. Coba lagi.';
     }
     throw error; // redirect Next.js dilempar sebagai error — jangan ditelan

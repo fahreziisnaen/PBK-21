@@ -1,10 +1,16 @@
+// Loads .env into this test-runner process for SEED_ADMIN_PASSWORD below.
+import 'dotenv/config';
 import { expect, test } from '@playwright/test';
+
+const PASSWORD = process.env.SEED_ADMIN_PASSWORD ?? 'pbk-lokal-2026';
 
 test('memperagakan badge, toast, dan dialog', async ({ page }) => {
   await page.goto('/login');
-  await page.getByLabel('Email / NIP').fill('admin@pbk.local');
-  await page.getByLabel('Kata Sandi').fill('pbk-demo-2026');
+  await page.getByLabel('Username').fill('admin');
+  await page.getByLabel('Kata Sandi').fill(PASSWORD);
   await page.getByRole('button', { name: 'Masuk' }).click();
+  // The seed account is a bootstrap login (no TOTP, no phone), so it clears
+  // /login/verifikasi automatically without asking for a code.
   await page.waitForURL(/\/dashboard/);
 
   await page.getByRole('link', { name: 'Status & Komponen', exact: true }).click();

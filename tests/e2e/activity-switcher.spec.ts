@@ -5,12 +5,15 @@ import { expect, test, type Page } from '@playwright/test';
 
 const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL });
 const prisma = new PrismaClient({ adapter });
+const PASSWORD = process.env.SEED_ADMIN_PASSWORD ?? 'pbk-lokal-2026';
 
 async function login(page: Page) {
   await page.goto('/login');
-  await page.getByLabel('Email / NIP').fill('admin@pbk.local');
-  await page.getByLabel('Kata Sandi').fill('pbk-demo-2026');
+  await page.getByLabel('Username').fill('admin');
+  await page.getByLabel('Kata Sandi').fill(PASSWORD);
   await page.getByRole('button', { name: 'Masuk' }).click();
+  // The seed account is a bootstrap login (no TOTP, no phone), so it clears
+  // /login/verifikasi automatically without asking for a code.
   await page.waitForURL(/\/dashboard/);
 }
 
