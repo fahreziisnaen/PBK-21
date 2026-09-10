@@ -17,8 +17,13 @@ export function evaluateChallenge(
   return 'usable';
 }
 
+/** Separate from the draw so the padding contract is testable without mocking. */
+export function formatOtp(n: number): string {
+  return String(n).padStart(6, '0');
+}
+
 export function generateOtpCode(): string {
-  return String(randomInt(0, 1_000_000)).padStart(6, '0');
+  return formatOtp(randomInt(0, 1_000_000));
 }
 
 function otpKey(): string {

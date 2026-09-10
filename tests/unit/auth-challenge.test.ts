@@ -1,5 +1,5 @@
 import { beforeAll, describe, expect, it } from 'vitest';
-import { evaluateChallenge, generateOtpCode, hashOtp, verifyOtpHash } from '@/lib/auth-challenge';
+import { evaluateChallenge, formatOtp, generateOtpCode, hashOtp, verifyOtpHash } from '@/lib/auth-challenge';
 
 beforeAll(() => {
   process.env.AUTH_SECRET = 'test-auth-secret-32-chars-min-12345';
@@ -29,6 +29,14 @@ describe('evaluateChallenge', () => {
   it('memeriksa terpakai sebelum kedaluwarsa', () => {
     expect(evaluateChallenge({ expiresAt: past, consumedAt: past, attempts: 0 }, now)).toBe('consumed');
   });
+
+  it('memeriksa habis sebelum kedaluwarsa', () => {
+    expect(evaluateChallenge({ expiresAt: past, consumedAt: null, attempts: 5 }, now)).toBe('exhausted');
+  });
+
+  it('memeriksa terpakai sebelum habis', () => {
+    expect(evaluateChallenge({ expiresAt: future, consumedAt: past, attempts: 5 }, now)).toBe('consumed');
+  });
 });
 
 describe('kode OTP', () => {
@@ -49,5 +57,33 @@ describe('kode OTP', () => {
 
   it('tidak menyimpan kode dalam bentuk polos', () => {
     expect(hashOtp('123456')).not.toContain('123456');
+  });
+});
+
+describe('formatOtp', () => {
+  it('angka nol menjadi enam nol', () => {
+    expect(formatOtp(0)).toBe('000000');
+  });
+
+  it('angka dua digit diisi depan', () => {
+    expect(formatOtp(42)).toBe('000042');
+  });
+
+  it('angka maksimal enam digit', () => {
+    expect(formatOtp(999999)).toBe('999999');
+  });
+});
+
+describe('verifyOtpHash', () => {
+  it('hash kosong menghasilkan false', () => {
+    expect(verifyOtpHash('123456', '')).toBe(false);
+  });
+
+  it('hash hex tidak valid menghasilkan false', () => {
+    expect(verifyOtpHash('123456', 'zz')).toBe(false);
+  });
+
+  it('hash hex pendek menghasilkan false', () => {
+    expect(verifyOtpHash('123456', 'abc')).toBe(false);
   });
 });
