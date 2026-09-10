@@ -1,10 +1,10 @@
 'use client';
 
 import { useActionState } from 'react';
-import { authenticate } from '@/lib/actions/login';
+import { startLogin } from '@/lib/actions/login-password';
 
 export function LoginForm() {
-  const [error, formAction, pending] = useActionState(authenticate, undefined);
+  const [error, formAction, pending] = useActionState(startLogin, undefined);
 
   return (
     <form action={formAction} className="w-full max-w-[376px]">
@@ -13,13 +13,14 @@ export function LoginForm() {
         Gunakan akun bendahara atau administrator yang terdaftar di sekolah Anda.
       </p>
 
-      <label htmlFor="email" className="mb-1.5 block text-xs font-semibold text-gray-700">
-        Email / NIP
+      <label htmlFor="username" className="mb-1.5 block text-xs font-semibold text-gray-700">
+        Username
       </label>
       <input
-        id="email"
-        name="email"
+        id="username"
+        name="username"
         type="text"
+        autoComplete="username"
         required
         className="mb-4 h-[42px] w-full rounded-lg border border-gray-300 px-3 text-[13.5px]"
       />
@@ -35,12 +36,8 @@ export function LoginForm() {
         className="mb-3.5 h-[42px] w-full rounded-lg border border-gray-300 px-3 text-[13.5px]"
       />
 
-      <div className="mb-5 flex items-center justify-between">
-        <label className="flex items-center gap-2 text-[12.5px] text-gray-600">
-          <input type="checkbox" name="remember" defaultChecked className="h-[15px] w-[15px] accent-brand-600" />
-          Ingat perangkat ini
-        </label>
-        <a href="#" className="text-[12.5px] font-semibold text-brand-600 hover:text-brand-700">
+      <div className="mb-5 flex items-center justify-end">
+        <a href="/lupa-sandi" className="text-[12.5px] font-semibold text-brand-600 hover:text-brand-700">
           Lupa sandi?
         </a>
       </div>
