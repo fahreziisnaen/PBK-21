@@ -8,12 +8,17 @@ import { Secret, TOTP } from 'otpauth';
 // Prisma client call.
 const authChallengeFindUnique = vi.fn();
 const authChallengeUpdate = vi.fn();
+const authChallengeUpdateMany = vi.fn();
 const userUpdate = vi.fn();
 const authEventCreate = vi.fn();
 
 vi.mock('@/lib/prisma', () => ({
   prisma: {
-    authChallenge: { findUnique: authChallengeFindUnique, update: authChallengeUpdate },
+    authChallenge: {
+      findUnique: authChallengeFindUnique,
+      update: authChallengeUpdate,
+      updateMany: authChallengeUpdateMany,
+    },
     user: { update: userUpdate },
     authEvent: { create: authEventCreate },
   },
@@ -114,6 +119,21 @@ beforeEach(() => {
       return { ...stored, user };
     },
   );
+  // Models the database's conditional write: the `consumedAt: null` filter
+  // is applied to the row itself, so a second caller racing the first sees
+  // count 0. Without honouring the filter here the test could not tell an
+  // atomic consume from a read-then-write one.
+  authChallengeUpdateMany.mockImplementation(
+    async ({ where, data }: { where: Record<string, unknown>; data: Record<string, unknown> }) => {
+      if ('consumedAt' in where && where.consumedAt === null && stored.consumedAt !== null) {
+        return { count: 0 };
+      }
+      for (const [key, value] of Object.entries(data)) {
+        (stored as unknown as Record<string, unknown>)[key] = value;
+      }
+      return { count: 1 };
+    },
+  );
   userUpdate.mockResolvedValue(user);
   authEventCreate.mockResolvedValue({});
 });
@@ -193,5 +213,34 @@ describe('authorizeOtp — purpose selain LOGIN', () => {
     const result = await authorizeOtp({ challengeId: stored.id, code });
 
     expect(result).toBeNull();
+  });
+});
+
+describe('authorizeOtp — ketahanan tepi', () => {
+  it('hanya satu dari dua pengiriman serentak dengan kode benar yang menerbitkan sesi', async () => {
+    resetChallenge({});
+    const code = currentTotpCode(plainSecret);
+
+    // Both start before either finishes, so a read-then-write consume would
+    // let both through — the single-use guarantee has to come from the
+    // conditional write itself.
+    const [a, b] = await Promise.all([
+      authorizeOtp({ challengeId: stored.id, code }),
+      authorizeOtp({ challengeId: stored.id, code }),
+    ]);
+
+    const issued = [a, b].filter((r) => r !== null);
+    expect(issued).toHaveLength(1);
+  });
+
+  it('menghitung kegagalan saat rahasia TOTP rusak, bukan melempar keluar', async () => {
+    resetChallenge({});
+    user.totpSecret = 'bukan-payload-terenkripsi-yang-sah';
+    const before = stored.attempts;
+
+    const result = await authorizeOtp({ challengeId: stored.id, code: '123456' });
+
+    expect(result).toBeNull();
+    expect(stored.attempts).toBe(before + 1);
   });
 });

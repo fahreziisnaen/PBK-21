@@ -32,6 +32,21 @@ const otpCredentialsSchema = z.object({
  * carry an otpHash), turning a spent TOTP challenge into an unlimited
  * passwordless login. Do not reintroduce that shape.
  */
+/**
+ * Marks a challenge consumed, and reports whether THIS call is the one that
+ * did it. Single use is enforced by the `consumedAt: null` filter inside the
+ * write, not by a separate read: two concurrent submissions of the same
+ * still-valid code would both pass a read-then-write check before either
+ * wrote, and both would mint a session from one single-use challenge.
+ */
+async function consumeOnce(challengeId: string): Promise<boolean> {
+  const { count } = await prisma.authChallenge.updateMany({
+    where: { id: challengeId, consumedAt: null },
+    data: { consumedAt: new Date() },
+  });
+  return count === 1;
+}
+
 export async function authorizeOtp(raw: unknown) {
   const parsed = otpCredentialsSchema.safeParse(raw);
   if (!parsed.success) return null;
@@ -72,14 +87,24 @@ export async function authorizeOtp(raw: unknown) {
 
   if (!isBootstrap) {
     const code = parsed.data.code ?? '';
-    const ok =
-      challenge.method === 'TOTP'
-        ? challenge.user.totpSecret
-          ? verifyTotp(decryptSecret(challenge.user.totpSecret), code)
-          : false
-        : challenge.otpHash
-          ? verifyOtpHash(code, challenge.otpHash)
-          : false;
+    let ok = false;
+    try {
+      ok =
+        challenge.method === 'TOTP'
+          ? challenge.user.totpSecret
+            ? verifyTotp(decryptSecret(challenge.user.totpSecret), code)
+            : false
+          : challenge.otpHash
+            ? verifyOtpHash(code, challenge.otpHash)
+            : false;
+    } catch {
+      // A corrupted totpSecret or a rotated ENCRYPTION_KEY makes
+      // decryptSecret throw. Treat that as a failed attempt rather than
+      // letting it escape: an escaping throw skips both the attempts
+      // increment and the audit record, so the operator gets no trace of
+      // the one failure they most need to see.
+      ok = false;
+    }
 
     if (!ok) {
       await prisma.authChallenge.update({
@@ -93,10 +118,7 @@ export async function authorizeOtp(raw: unknown) {
       });
       return null;
     }
-    await prisma.authChallenge.update({
-      where: { id: challenge.id },
-      data: { consumedAt: new Date() },
-    });
+    if (!(await consumeOnce(challenge.id))) return null;
     await recordAuthEvent({
       event: AUTH_EVENTS.LOGIN_OTP_OK,
       userId: challenge.userId,
@@ -105,12 +127,7 @@ export async function authorizeOtp(raw: unknown) {
   }
 
   // Consumed in both branches, so a bootstrap challenge is single-use too.
-  if (isBootstrap) {
-    await prisma.authChallenge.update({
-      where: { id: challenge.id },
-      data: { consumedAt: new Date() },
-    });
-  }
+  if (isBootstrap && !(await consumeOnce(challenge.id))) return null;
 
   if (!challenge.user.isActive) {
     await recordAuthEvent({
