@@ -8,6 +8,7 @@ import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
 import { MIN_PASSWORD_LENGTH } from '@/lib/password-policy';
 import { canSelfReset } from '@/lib/auth-gates';
+import { findUsableChallenge } from '@/lib/rate-limit';
 import { chooseSecondFactor } from '@/lib/actions/choose-second-factor';
 import {
   CHALLENGE_TTL_MINUTES,
@@ -31,6 +32,19 @@ import { AUTH_EVENTS } from '@/lib/auth-event-names';
  * response time turns a public form into a way to discover which usernames
  * exist and which of them have a second factor configured.
  */
+/** Names the challenge this browser is answering. Same attributes for every
+ *  challenge cookie, so the reuse path and the fresh path cannot drift. */
+async function setChallengeCookie(name: string, challengeId: string): Promise<void> {
+  const store = await cookies();
+  store.set(name, challengeId, {
+    httpOnly: true,
+    sameSite: 'lax',
+    path: '/',
+    secure: process.env.NODE_ENV === 'production',
+    maxAge: CHALLENGE_TTL_MINUTES * 60,
+  });
+}
+
 const requestSchema = z.object({ username: z.string().min(1).max(64) });
 
 export async function requestReset(
@@ -68,6 +82,17 @@ export async function requestReset(
     redirect('/lupa-sandi/verifikasi');
   }
 
+  // Reuse a live challenge rather than minting another. Without this the
+  // 5-attempt cap bounds nothing: an attacker knowing only a username could
+  // loop this endpoint for fresh rows and grind the code space five guesses
+  // at a time, with no password at all. Reusing means attempts accumulate on
+  // one row for its whole five-minute life.
+  const live = await findUsableChallenge(user.id, 'PASSWORD_RESET');
+  if (live) {
+    await setChallengeCookie(RESET_COOKIE, live.id);
+    redirect('/lupa-sandi/verifikasi');
+  }
+
   const method = chooseSecondFactor(user);
   // Redundant after canSelfReset above, and kept anyway: SecondFactor has no
   // BOOTSTRAP member, so this is what lets the compiler prove a bootstrap
@@ -87,14 +112,7 @@ export async function requestReset(
     },
   });
 
-  const store = await cookies();
-  store.set(RESET_COOKIE, challenge.id, {
-    httpOnly: true,
-    sameSite: 'lax',
-    path: '/',
-    secure: process.env.NODE_ENV === 'production',
-    maxAge: CHALLENGE_TTL_MINUTES * 60,
-  });
+  await setChallengeCookie(RESET_COOKIE, challenge.id);
 
   if (otp && user.phone) {
     const phone = user.phone;

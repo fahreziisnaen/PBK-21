@@ -1,6 +1,7 @@
 import NextAuth from 'next-auth';
 import { NextResponse } from 'next/server';
 import { authConfig } from '@/lib/auth.config';
+import { clearSessionCookies } from '@/lib/session-cookie';
 
 const { auth } = NextAuth(authConfig);
 
@@ -29,9 +30,7 @@ export default auth((req) => {
     // one. The layout signals the case with ?reset=1.
     if (isLoggedIn && req.nextUrl.searchParams.get('reset') === '1') {
       const cleared = NextResponse.next();
-      for (const name of ['authjs.session-token', '__Secure-authjs.session-token']) {
-        cleared.cookies.delete(name);
-      }
+      clearSessionCookies(cleared);
       return cleared;
     }
     if (isLoggedIn) return Response.redirect(new URL('/dashboard', req.nextUrl));

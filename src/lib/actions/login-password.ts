@@ -7,7 +7,7 @@ import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
 import { recordAuthEvent } from '@/lib/auth-event';
 import { AUTH_EVENTS } from '@/lib/auth-event-names';
-import { checkLoginRate } from '@/lib/rate-limit';
+import { checkLoginRate, findUsableChallenge } from '@/lib/rate-limit';
 import {
   CHALLENGE_COOKIE,
   CHALLENGE_TTL_MINUTES,
@@ -81,6 +81,24 @@ export async function startLogin(
   });
 
   const isBootstrap = method === 'BOOTSTRAP';
+
+  // Reuse a live challenge rather than issuing another. Each new row reset
+  // the 5-attempt counter, so someone who knew the password but not the
+  // second factor could re-submit it repeatedly and get unlimited OTP
+  // guesses — the cap only bounds anything if the attempts stay on one row.
+  const live = await findUsableChallenge(user.id, 'LOGIN');
+  if (live) {
+    const store = await cookies();
+    store.set(CHALLENGE_COOKIE, live.id, {
+      httpOnly: true,
+      sameSite: 'lax',
+      path: '/',
+      secure: process.env.NODE_ENV === 'production',
+      maxAge: CHALLENGE_TTL_MINUTES * 60,
+    });
+    redirect('/login/verifikasi');
+  }
+
   const otp = method === 'WA_OTP' ? generateOtpCode() : null;
 
   const challenge = await prisma.authChallenge.create({
