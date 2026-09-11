@@ -73,6 +73,31 @@ describe('docker-compose.prod.yml', () => {
     const dbBlock = dc.slice(dc.indexOf('db:'), dc.indexOf('migrate:'));
     expect(dbBlock).not.toMatch(/^\s+ports:/m);
   });
+
+  // Compose passes a variable into a container only if that service names it.
+  // Filling .env is not enough, and the failure is invisible until someone
+  // actually deploys: the seed aborts, or 2FA throws on first use. These pin
+  // the forwarding so it cannot be dropped again.
+  it('meneruskan SEED_ADMIN_PASSWORD ke service migrate, yang menjalankan seed', () => {
+    const migrateBlock = dc.slice(dc.indexOf('migrate:'), dc.indexOf('app:'));
+    expect(migrateBlock).toMatch(/^\s+SEED_ADMIN_PASSWORD:/m);
+  });
+
+  it('meneruskan ENCRYPTION_KEY ke service app, yang memakainya untuk secret TOTP', () => {
+    const appBlock = dc.slice(dc.indexOf('app:'), dc.indexOf('caddy:'));
+    expect(appBlock).toMatch(/^\s+ENCRYPTION_KEY:/m);
+  });
+
+  it('menjadikan rahasia wajib gagal cepat, bukan menyala lalu error saat dipakai', () => {
+    expect(dc).toMatch(/ENCRYPTION_KEY:\s*\$\{ENCRYPTION_KEY:\?/);
+    expect(dc).toMatch(/SEED_ADMIN_PASSWORD:\s*\$\{SEED_ADMIN_PASSWORD:\?/);
+  });
+
+  it('tidak mewajibkan setelan WhatsApp — sekolah tanpa gateway tetap bisa deploy', () => {
+    // `:-` not `:?` — an empty value must be allowed, leaving TOTP as the
+    // only second factor rather than blocking the whole deployment.
+    expect(dc).toMatch(/WA_BASE_URL:\s*\$\{WA_BASE_URL:-\}/);
+  });
 });
 
 describe('.dockerignore', () => {
