@@ -9,7 +9,7 @@ import { prisma } from '@/lib/prisma';
 import { clientIpFrom } from '@/lib/client-ip';
 import { MIN_PASSWORD_LENGTH } from '@/lib/password-policy';
 import { canSelfReset } from '@/lib/auth-gates';
-import { findUsableChallenge } from '@/lib/rate-limit';
+import { checkChallengeBudget, findUsableChallenge } from '@/lib/rate-limit';
 import { chooseSecondFactor } from '@/lib/actions/choose-second-factor';
 import {
   CHALLENGE_TTL_MINUTES,
@@ -91,6 +91,16 @@ export async function requestReset(
   const live = await findUsableChallenge(user.id, 'PASSWORD_RESET');
   if (live) {
     await setChallengeCookie(RESET_COOKIE, live.id);
+    redirect('/lupa-sandi/verifikasi');
+  }
+
+  // Reuse alone is not a bound: it skips a row whose attempts are spent, so
+  // the next request would mint a fresh row at zero. The issuance cap is what
+  // actually stops someone grinding the code space from a username alone.
+  // Refused silently — the visitor still lands on the same page as everyone
+  // else, or the refusal would reveal that the account exists.
+  const budget = await checkChallengeBudget(user.id, 'PASSWORD_RESET');
+  if (!budget.allowed) {
     redirect('/lupa-sandi/verifikasi');
   }
 

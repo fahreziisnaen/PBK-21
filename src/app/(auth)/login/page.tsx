@@ -8,9 +8,11 @@ import { LoginForm } from './login-form';
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ reset?: string }>;
+  searchParams: Promise<{ reset?: string; ended?: string }>;
 }) {
-  const wasReset = (await searchParams).reset === '1';
+  const params = await searchParams;
+  const wasReset = params.reset === '1';
+  const wasEnded = params.ended === '1';
   return (
     <div className="grid min-h-screen bg-white lg:grid-cols-[1.05fr_0.95fr]">
       <div className="flex flex-col justify-between gap-10 px-8 py-10 lg:px-14 lg:py-13">
@@ -28,6 +30,11 @@ export default async function LoginPage({
           {wasReset ? (
             <p role="status" className="mb-4 rounded-lg bg-success-50 px-3 py-2 text-[12.5px] text-success-700">
               Sandi Anda berhasil diperbarui. Silakan masuk kembali dengan sandi baru.
+            </p>
+          ) : null}
+          {wasEnded ? (
+            <p role="status" className="mb-4 rounded-lg bg-gray-100 px-3 py-2 text-[12.5px] text-gray-600">
+              Sesi Anda telah berakhir. Silakan masuk kembali.
             </p>
           ) : null}
           <LoginForm />

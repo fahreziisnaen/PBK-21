@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { evaluateRate } from '@/lib/rate-limit';
+import { evaluateChallengeBudget, evaluateRate } from '@/lib/rate-limit';
 import { AUTH_EVENTS } from '@/lib/auth-event-names';
 
 describe('evaluateRate', () => {
@@ -28,5 +28,24 @@ describe('AUTH_EVENTS', () => {
 
   it('LOGIN_PASSWORD_FAIL bernilai login.password_fail untuk memastikan limiter menghitung dengan benar', () => {
     expect(AUTH_EVENTS.LOGIN_PASSWORD_FAIL).toBe('login.password_fail');
+  });
+});
+
+describe('evaluateChallengeBudget', () => {
+  it('mengizinkan di bawah batas', () => {
+    expect(evaluateChallengeBudget(0)).toEqual({ allowed: true });
+    expect(evaluateChallengeBudget(2)).toEqual({ allowed: true });
+  });
+
+  it('menolak saat batas tercapai', () => {
+    // Counts challenges ISSUED, not attempts left on them. Reusing a live
+    // challenge is not a bound on its own: it skips a row whose attempts are
+    // spent, so without this cap the next request minted a fresh row at zero
+    // and the five-guess limit meant nothing.
+    expect(evaluateChallengeBudget(3)).toEqual({ allowed: false, retryAfterMinutes: 15 });
+  });
+
+  it('tetap menolak di atas batas', () => {
+    expect(evaluateChallengeBudget(99)).toMatchObject({ allowed: false });
   });
 });

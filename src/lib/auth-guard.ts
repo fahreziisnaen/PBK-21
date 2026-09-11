@@ -48,13 +48,11 @@ export async function requireUser(
     },
   });
   if (!fresh || !fresh.isActive) {
-    // ?reset=1 so the proxy CLEARS the cookie, exactly as for a stale
-    // session. Redirecting without it left a deactivated user in an infinite
-    // loop: the proxy still decodes a valid JWT on /login and bounces them to
-    // /dashboard, whose layout sends them straight back. The browser becomes
-    // unusable for signing in as anyone else until cookies are cleared by
-    // hand.
-    redirect('/login?reset=1');
+    // `ended`, not `reset`: the proxy clears the cookie for either, which is
+    // what breaks the redirect loop, but the login page words them
+    // differently. Telling a deactivated user "sandi Anda berhasil
+    // diperbarui" and then refusing their login would be a plain lie.
+    redirect('/login?ended=1');
   }
   if (isSessionStale(fresh.passwordChangedAt, session.user.passwordStamp)) {
     redirect('/login?reset=1');

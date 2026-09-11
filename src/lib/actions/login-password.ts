@@ -8,7 +8,7 @@ import { prisma } from '@/lib/prisma';
 import { clientIpFrom } from '@/lib/client-ip';
 import { recordAuthEvent } from '@/lib/auth-event';
 import { AUTH_EVENTS } from '@/lib/auth-event-names';
-import { checkLoginRate, findUsableChallenge } from '@/lib/rate-limit';
+import { checkChallengeBudget, checkLoginRate, findUsableChallenge } from '@/lib/rate-limit';
 import {
   CHALLENGE_COOKIE,
   CHALLENGE_TTL_MINUTES,
@@ -98,6 +98,14 @@ export async function startLogin(
       maxAge: CHALLENGE_TTL_MINUTES * 60,
     });
     redirect('/login/verifikasi');
+  }
+
+  // checkLoginRate counts only failed PASSWORDS, so a caller who knows the
+  // password could re-submit it forever and collect five fresh OTP guesses
+  // each time. This caps the challenges themselves.
+  const budget = await checkChallengeBudget(user.id, 'LOGIN');
+  if (!budget.allowed) {
+    return `Terlalu banyak percobaan. Coba lagi dalam ${budget.retryAfterMinutes} menit.`;
   }
 
   const otp = method === 'WA_OTP' ? generateOtpCode() : null;

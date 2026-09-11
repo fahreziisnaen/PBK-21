@@ -28,7 +28,10 @@ export default auth((req) => {
     // to /dashboard and loops until the browser gives up. The cookie has to
     // actually be cleared, and only here — a Server Component cannot write
     // one. The layout signals the case with ?reset=1.
-    if (isLoggedIn && req.nextUrl.searchParams.get('reset') === '1') {
+    const sessionEnded =
+      req.nextUrl.searchParams.get('reset') === '1' ||
+      req.nextUrl.searchParams.get('ended') === '1';
+    if (isLoggedIn && sessionEnded) {
       const cleared = NextResponse.next();
       clearSessionCookies(cleared);
       return cleared;

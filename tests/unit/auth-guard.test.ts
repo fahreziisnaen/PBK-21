@@ -112,16 +112,16 @@ describe('requireUser — sesi yang sudah tidak sah', () => {
       role: 'BENDAHARA',
     });
 
-    // ?reset=1, not a bare /login: without it the proxy still sees a valid
-    // JWT and bounces them back, looping forever.
-    await expect(requireUser()).rejects.toThrow('REDIRECT:/login?reset=1');
+    // ?ended=1: the proxy clears the cookie for this too (breaking the
+    // loop), but the login page must not claim their password was updated.
+    await expect(requireUser()).rejects.toThrow('REDIRECT:/login?ended=1');
   });
 
   it('menolak sesi yang penggunanya sudah tidak ada', async () => {
     authMock.mockResolvedValue({ user: { id: 'u1', role: 'BENDAHARA', name: 'A', email: 'a@b.c', passwordStamp: 0 } });
     userFindUnique.mockResolvedValue(null);
 
-    await expect(requireUser()).rejects.toThrow('REDIRECT:/login?reset=1');
+    await expect(requireUser()).rejects.toThrow('REDIRECT:/login?ended=1');
   });
 });
 

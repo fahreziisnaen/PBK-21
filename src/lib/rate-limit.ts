@@ -71,3 +71,38 @@ export async function findUsableChallenge(
     select: { id: true },
   });
 }
+
+/** Challenges one account may be issued per window, per purpose. */
+const MAX_CHALLENGES_PER_WINDOW = 3;
+
+/** Pure, so the bound is testable without a database. */
+export function evaluateChallengeBudget(recentChallenges: number): RateVerdict {
+  if (recentChallenges >= MAX_CHALLENGES_PER_WINDOW) {
+    return { allowed: false, retryAfterMinutes: WINDOW_MINUTES };
+  }
+  return { allowed: true };
+}
+
+/**
+ * Caps how many challenges an account can be ISSUED in a window, counting
+ * every row regardless of its state.
+ *
+ * Reusing a live challenge (findUsableChallenge) is not a bound on its own,
+ * and believing it was is how this shipped broken once already: that helper
+ * skips a row whose attempts are spent, so a sixth request simply minted a
+ * fresh row at zero attempts. Five guesses per request, forever — exactly the
+ * hole it was meant to close.
+ *
+ * Counting issuance is the bound that actually holds, because it does not
+ * care what state the earlier rows ended in.
+ */
+export async function checkChallengeBudget(
+  userId: string,
+  purpose: ChallengePurpose,
+): Promise<RateVerdict> {
+  const since = new Date(Date.now() - WINDOW_MINUTES * 60_000);
+  const recent = await prisma.authChallenge.count({
+    where: { userId, purpose, createdAt: { gte: since } },
+  });
+  return evaluateChallengeBudget(recent);
+}
