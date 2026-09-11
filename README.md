@@ -45,19 +45,38 @@ terpisah, `docker-compose.prod.yml`, dipakai saat deploy — lihat
 npm install
 cp .env.example .env                          # sesuaikan DATABASE_URL bila perlu
 echo "AUTH_SECRET=$(openssl rand -base64 32)" >> .env
+echo "ENCRYPTION_KEY=$(openssl rand -base64 32)" >> .env
+```
+
+Lalu isi **`SEED_ADMIN_PASSWORD`** di `.env` dengan sandi pilihan Anda untuk
+login pertama — `prisma/seed.ts` menolak berjalan tanpanya, sengaja, supaya
+tidak ada satu pun sandi baku yang pernah tersimpan di kode. `ENCRYPTION_KEY`
+yang dibuat di atas dipakai mengenkripsi secret TOTP setiap pengguna; harus
+base64 yang benar-benar mendekode ke 32 byte — `openssl rand -base64 32`
+menjaminnya, sedangkan frasa hasil ketikan sendiri yang kebetulan 32 karakter
+**bukan** base64 yang sah dan akan ditolak aplikasi.
+
+```bash
 npm run db:migrate
 npm run db:seed
 npm run dev
 ```
 
-Buka http://localhost:3000. Akun awal dari seed:
+Buka http://localhost:3000. **Login memakai username, bukan email.** Masuk
+sebagai `admin` (peran **SUPERADMIN**) dengan sandi yang Anda isi ke
+`SEED_ADMIN_PASSWORD` di atas — tidak ada sandi baku di repositori ini.
+Login pertama langsung memaksa ganti sandi, lalu memaksa pendaftaran TOTP
+(aplikasi authenticator) sebelum dashboard terbuka; akun `admin` adalah
+jalur pemulihan tertinggi sehingga 2FA-nya wajib TOTP, tidak boleh
+bergantung pada nomor telepon.
 
-| Email | Sandi | Peran |
-|---|---|---|
-| admin@pbk.local | pbk-demo-2026 | Admin |
-
-**Ganti sandi ini sebelum dipakai sungguhan** — lihat peringatan di
-[docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
+Sebelum TOTP terdaftar, akun ini tidak punya faktor kedua sama sekali —
+halaman lupa-sandi menolaknya dengan sengaja (`canSelfReset` di
+`src/lib/auth-gates.ts`), supaya tidak ada jalan mengatur ulang sandi `admin`
+hanya dengan mengetik usernamenya. Satu-satunya jalan masuk saat itu, atau
+kapan pun akses ke authenticator hilang setelahnya, adalah
+`npm run auth:recover -- --username=admin` lewat SSH ke server. Lihat
+[docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) untuk detailnya.
 
 > **Prisma dipin ke `^7.10.0` di `package.json`.** Jangan pernah menjalankan
 > `npm install prisma`, `npm install @prisma/client`, atau
@@ -85,6 +104,7 @@ Buka http://localhost:3000. Akun awal dari seed:
 | `npm run db:migrate` | Terapkan migrasi (dev) |
 | `npm run db:seed` | Isi master data |
 | `npm run db:studio` | Prisma Studio |
+| `npm run auth:recover -- --username=<u>` | Pemulihan akun terkunci lewat SSH (nonaktifkan 2FA, terbitkan sandi sementara) |
 | `scripts/db.sh {setup\|start\|stop}` | Kelola PostgreSQL portabel (tanpa Docker) |
 
 ## Deploy produksi
