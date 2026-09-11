@@ -1,6 +1,7 @@
 'use server';
 
 import bcrypt from 'bcryptjs';
+import { after } from 'next/server';
 import { cookies, headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { z } from 'zod';
@@ -93,28 +94,34 @@ export async function requestReset(
   });
 
   if (otp && user.phone) {
-    const result = await sendWhatsApp(
-      {
-        baseUrl: process.env.WA_BASE_URL ?? '',
-        apiKey: process.env.WA_API_KEY ?? '',
-        instance: process.env.WA_INSTANCE || undefined,
-      },
-      user.phone,
-      `Kode atur ulang sandi PBK Anda: ${otp}. Berlaku 5 menit.`,
-    );
-    // Logged, but never surfaced: telling the visitor the send failed would
-    // confirm the account exists and has a phone number.
-    if (!result.ok) {
+    const phone = user.phone;
+    const userId = user.id;
+    // Deferred with after(), deliberately NOT awaited. Awaiting made the
+    // response measurably slower for exactly the accounts that have a phone,
+    // which is a timing oracle: it tells an attacker both that a username
+    // exists and that it uses WhatsApp — the very thing the uniform wording
+    // exists to hide. The message is still sent; it just stops being
+    // observable in how long the response takes.
+    after(async () => {
+      const result = await sendWhatsApp(
+        {
+          baseUrl: process.env.WA_BASE_URL ?? '',
+          apiKey: process.env.WA_API_KEY ?? '',
+          instance: process.env.WA_INSTANCE || undefined,
+        },
+        phone,
+        `Kode atur ulang sandi PBK Anda: ${otp}. Berlaku 5 menit.`,
+      );
+      // Logged, never surfaced: telling the visitor the send failed would
+      // confirm the account exists and has a phone number.
       await recordAuthEvent({
-        event: AUTH_EVENTS.WA_SEND_FAIL,
-        userId: user.id,
+        event: result.ok ? AUTH_EVENTS.WA_SEND_OK : AUTH_EVENTS.WA_SEND_FAIL,
+        userId,
         username,
         ip,
-        meta: { reason: result.reason, detail: result.detail },
+        meta: result.ok ? undefined : { reason: result.reason, detail: result.detail },
       });
-    } else {
-      await recordAuthEvent({ event: AUTH_EVENTS.WA_SEND_OK, userId: user.id, username, ip });
-    }
+    });
   }
 
   redirect('/lupa-sandi/verifikasi');

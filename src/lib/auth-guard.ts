@@ -2,6 +2,8 @@ import { redirect } from 'next/navigation';
 import type { Role } from '@prisma/client';
 import type { Session } from 'next-auth';
 import { auth } from '@/lib/auth';
+import { prisma } from '@/lib/prisma';
+import { isSessionStale } from '@/lib/auth-gates';
 
 export type SessionUser = Session['user'];
 
@@ -21,6 +23,28 @@ export async function requireUser(): Promise<SessionUser> {
   if (!session?.user) {
     redirect('/login');
   }
+
+  // A valid cookie is not enough. This check used to live only in the (app)
+  // layout, which is not a security boundary: a Server Action never renders
+  // a layout, so changePassword and confirmEnrollment stayed callable from a
+  // session that a password reset was supposed to kill — an attacker holding
+  // a stolen session could re-enrol their own TOTP after the owner locked
+  // them out. It belongs here, at the one door every authenticated path
+  // already goes through.
+  //
+  // isActive is re-read for the same reason: deactivating a user must end
+  // their session, not merely block their next login.
+  const fresh = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: { passwordChangedAt: true, isActive: true },
+  });
+  if (!fresh || !fresh.isActive) {
+    redirect('/login');
+  }
+  if (isSessionStale(fresh.passwordChangedAt, session.user.passwordStamp)) {
+    redirect('/login?reset=1');
+  }
+
   return session.user;
 }
 

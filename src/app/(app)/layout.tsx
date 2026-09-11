@@ -5,7 +5,7 @@ import { Header } from '@/components/shell/Header';
 import { ToastProvider } from '@/components/ui/Toast';
 import { requireUser } from '@/lib/auth-guard';
 import { prisma } from '@/lib/prisma';
-import { isSessionStale, nextGate } from '@/lib/auth-gates';
+import { nextGate } from '@/lib/auth-gates';
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const sessionUser = await requireUser();
@@ -20,15 +20,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       totpEnabledAt: true,
       phone: true,
       role: true,
-      passwordChangedAt: true,
     },
   });
-
-  // Checked before the gate: a session issued before its owner's last
-  // password change must not reach the app at all, gated or otherwise.
-  if (gateUser && isSessionStale(gateUser.passwordChangedAt, sessionUser.passwordStamp)) {
-    redirect('/login?reset=1');
-  }
 
   if (gateUser) {
     const gate = nextGate(gateUser);
