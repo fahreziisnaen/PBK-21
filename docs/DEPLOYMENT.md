@@ -152,6 +152,12 @@ manajemen pengguna di dalam aplikasi (menyusul di Plan 03); sampai saat itu
 ada, baris `User` baru dibuat langsung di database dengan hash bcrypt cost
 10 — tekniknya sama dengan Langkah 5a di bawah.
 
+> **Username wajib huruf kecil semua.** Aplikasi meng-`lowercase` username
+> sebelum mencarinya saat login, sehingga baris yang disisipkan sebagai
+> `Budi.Santoso` menghasilkan akun yang **tidak akan pernah bisa masuk** —
+> dan pesan gagalnya sama persis dengan sandi salah, jadi penyebabnya tidak
+> kelihatan. Pakai `budi.santoso`.
+
 ## 5. Reset sandi tanpa lewat aplikasi, dan pemulihan akun terkunci
 
 Bagian ini untuk dua situasi yang jarang tapi nyata: mengubah sandi langsung

@@ -3,7 +3,7 @@ import type { Role } from '@prisma/client';
 import type { Session } from 'next-auth';
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
-import { isSessionStale } from '@/lib/auth-gates';
+import { isSessionStale, nextGate } from '@/lib/auth-gates';
 
 export type SessionUser = Session['user'];
 
@@ -18,7 +18,9 @@ export type SessionUser = Session['user'];
  *
  * Redirect ke /login bila tidak ada sesi.
  */
-export async function requireUser(): Promise<SessionUser> {
+export async function requireUser(
+  opts: { allowGated?: boolean } = {},
+): Promise<SessionUser> {
   const session = await auth();
   if (!session?.user) {
     redirect('/login');
@@ -36,13 +38,47 @@ export async function requireUser(): Promise<SessionUser> {
   // their session, not merely block their next login.
   const fresh = await prisma.user.findUnique({
     where: { id: session.user.id },
-    select: { passwordChangedAt: true, isActive: true },
+    select: {
+      passwordChangedAt: true,
+      isActive: true,
+      mustChangePassword: true,
+      totpEnabledAt: true,
+      phone: true,
+      role: true,
+    },
   });
   if (!fresh || !fresh.isActive) {
-    redirect('/login');
+    // ?reset=1 so the proxy CLEARS the cookie, exactly as for a stale
+    // session. Redirecting without it left a deactivated user in an infinite
+    // loop: the proxy still decodes a valid JWT on /login and bounces them to
+    // /dashboard, whose layout sends them straight back. The browser becomes
+    // unusable for signing in as anyone else until cookies are cleared by
+    // hand.
+    redirect('/login?reset=1');
   }
   if (isSessionStale(fresh.passwordChangedAt, session.user.passwordStamp)) {
     redirect('/login?reset=1');
+  }
+
+  // The post-login gate, enforced here for the same reason isSessionStale is:
+  // a Server Action never renders a layout, so a user still owing a password
+  // change or TOTP enrolment could invoke actions directly. Only two actions
+  // are gated today and both defend themselves, but every write action the
+  // next plan adds would inherit the hole silently — the wrong default to
+  // hand forward.
+  //
+  // `allowGated` is for the callers that SERVE the gate: the (app) layout
+  // (which does its own pathname-aware check, so /ganti-sandi can render) and
+  // the two actions behind those pages. Without it they would redirect to the
+  // page they are already on.
+  if (!opts.allowGated) {
+    const gate = nextGate({
+      mustChangePassword: fresh.mustChangePassword,
+      totpEnabledAt: fresh.totpEnabledAt,
+      phone: fresh.phone,
+      role: fresh.role,
+    });
+    if (gate) redirect(gate);
   }
 
   return session.user;

@@ -8,7 +8,7 @@ import { prisma } from '@/lib/prisma';
 import { nextGate } from '@/lib/auth-gates';
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
-  const sessionUser = await requireUser();
+  const sessionUser = await requireUser({ allowGated: true });
   // nextGate needs fields the JWT session never carries (see
   // src/types/next-auth.d.ts) — re-read them fresh from the database rather
   // than trusting a stale session, so a password change or TOTP enrolment

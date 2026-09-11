@@ -5,6 +5,7 @@ import { redirect } from 'next/navigation';
 import bcrypt from 'bcryptjs';
 import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
+import { clientIpFrom } from '@/lib/client-ip';
 import { recordAuthEvent } from '@/lib/auth-event';
 import { AUTH_EVENTS } from '@/lib/auth-event-names';
 import { checkLoginRate, findUsableChallenge } from '@/lib/rate-limit';
@@ -43,7 +44,7 @@ export async function startLogin(
 
   const username = parsed.data.username.trim().toLowerCase();
   const h = await headers();
-  const ip = h.get('x-forwarded-for')?.split(',')[0]?.trim() ?? null;
+  const ip = clientIpFrom(h);
   const userAgent = h.get('user-agent');
 
   const rate = await checkLoginRate(username, ip);

@@ -62,7 +62,12 @@ class RecoveryError extends Error {}
 
 function parseUsername(argv: string[]): string {
   const arg = argv.find((a) => a.startsWith('--username='));
-  const username = arg?.slice('--username='.length).trim();
+  // Lower-cased to match login, which does `.trim().toLowerCase()` before
+  // looking the user up. Without this, recovering an account someone created
+  // as `Budi.Santoso` by hand would fail with "not found" while that account
+  // also could not log in — the operator would have two mysteries instead of
+  // one.
+  const username = arg?.slice('--username='.length).trim().toLowerCase();
   if (!username) {
     throw new RecoveryError(
       'Pemakaian: npm run auth:recover -- --username=<username>',

@@ -1,12 +1,15 @@
+# `.env*` rather than a list of names: enumerating them left .env.vps and
+# .env.prod unprotected, and DEPLOYMENT.md tells the reader to copy from
+# .env.production.example, so a differently-named env file is likely. Same
+# fix already applied to .gitignore.
+#
 # Heavy, git-ignored working directories that must never enter the build
 # context — .postgres/ alone is a fully extracted portable PostgreSQL
 # install (hundreds of MB) living inside the repo.
 node_modules
 .next
 .git
-.env
-.env.local
-.env.production
+.env*
 .postgres
 .pgdata
 .superpowers

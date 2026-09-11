@@ -6,6 +6,7 @@ import { cookies, headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
+import { clientIpFrom } from '@/lib/client-ip';
 import { MIN_PASSWORD_LENGTH } from '@/lib/password-policy';
 import { canSelfReset } from '@/lib/auth-gates';
 import { findUsableChallenge } from '@/lib/rate-limit';
@@ -59,7 +60,7 @@ export async function requestReset(
 
   const username = parsed.data.username.trim().toLowerCase();
   const h = await headers();
-  const ip = h.get('x-forwarded-for')?.split(',')[0]?.trim() ?? null;
+  const ip = clientIpFrom(h);
 
   const user = await prisma.user.findUnique({ where: { username } });
 

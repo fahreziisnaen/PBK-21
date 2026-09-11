@@ -24,7 +24,7 @@ export async function changePassword(
   _prev: string | undefined,
   formData: FormData,
 ): Promise<string | undefined> {
-  const sessionUser = await requireUser();
+  const sessionUser = await requireUser({ allowGated: true });
 
   const parsed = schema.safeParse({
     oldPassword: formData.get('oldPassword'),

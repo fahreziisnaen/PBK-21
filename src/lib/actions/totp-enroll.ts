@@ -16,11 +16,22 @@ import { AUTH_EVENTS } from '@/lib/auth-event-names';
  * is only set after the user proves the code actually works.
  */
 export async function beginEnrollment(): Promise<{ secret: string; otpauthUri: string; qrDataUri: string }> {
-  const sessionUser = await requireUser();
+  const sessionUser = await requireUser({ allowGated: true });
   const dbUser = await prisma.user.findUniqueOrThrow({
     where: { id: sessionUser.id },
-    select: { username: true },
+    select: { username: true, totpEnabledAt: true },
   });
+
+  // Enrolment is once. Spec §2.1 rests on TOTP being removable only by a
+  // SUPERADMIN or over SSH, "keduanya tercatat di AuthEvent" — silently
+  // re-pointing it at a new authenticator would be a third path that is
+  // neither, and the real owner's app would simply stop working with no
+  // event naming a removal. changePassword already refuses to trust a live
+  // session alone for exactly this reason; an unattended browser must not be
+  // enough to take over the second factor.
+  if (dbUser.totpEnabledAt) {
+    throw new Error('2FA sudah aktif untuk akun ini. Hubungi administrator untuk mengubahnya.');
+  }
 
   const secret = generateTotpSecret();
   const otpauthUri = buildOtpauthUri(dbUser.username, secret);
@@ -42,7 +53,18 @@ export async function confirmEnrollment(
   _prev: string | undefined,
   formData: FormData,
 ): Promise<string | undefined> {
-  const user = await requireUser();
+  const user = await requireUser({ allowGated: true });
+
+  // Same rule as beginEnrollment, re-checked here because the action is
+  // reachable on its own: a form POST does not have to come from a page
+  // render that passed the check above.
+  const current = await prisma.user.findUniqueOrThrow({
+    where: { id: user.id },
+    select: { totpEnabledAt: true },
+  });
+  if (current.totpEnabledAt) {
+    return '2FA sudah aktif untuk akun ini. Hubungi administrator untuk mengubahnya.';
+  }
 
   const parsed = schema.safeParse({
     secret: formData.get('secret'),

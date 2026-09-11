@@ -24,7 +24,15 @@ beforeEach(() => {
   authMock.mockReset();
   redirectMock.mockClear();
   userFindUnique.mockReset();
-  userFindUnique.mockResolvedValue({ passwordChangedAt: null, isActive: true });
+  userFindUnique.mockResolvedValue({
+    passwordChangedAt: null,
+    isActive: true,
+    // Passes nextGate: password not flagged, TOTP already enrolled.
+    mustChangePassword: false,
+    totpEnabledAt: new Date(),
+    phone: null,
+    role: 'BENDAHARA',
+  });
 });
 
 describe('requireUser', () => {
@@ -81,22 +89,74 @@ describe('requireUser — sesi yang sudah tidak sah', () => {
     // checking staleness only there left confirmEnrollment callable from a
     // session a password reset was supposed to kill.
     authMock.mockResolvedValue({ user: { id: 'u1', role: 'BENDAHARA', name: 'A', email: 'a@b.c', passwordStamp: 0 } });
-    userFindUnique.mockResolvedValue({ passwordChangedAt: new Date(), isActive: true });
+    userFindUnique.mockResolvedValue({
+      passwordChangedAt: new Date(),
+      isActive: true,
+      mustChangePassword: false,
+      totpEnabledAt: new Date(),
+      phone: null,
+      role: 'BENDAHARA',
+    });
 
     await expect(requireUser()).rejects.toThrow('REDIRECT:/login?reset=1');
   });
 
   it('menolak pengguna yang sudah dinonaktifkan', async () => {
     authMock.mockResolvedValue({ user: { id: 'u1', role: 'BENDAHARA', name: 'A', email: 'a@b.c', passwordStamp: 0 } });
-    userFindUnique.mockResolvedValue({ passwordChangedAt: null, isActive: false });
+    userFindUnique.mockResolvedValue({
+      passwordChangedAt: null,
+      isActive: false,
+      mustChangePassword: false,
+      totpEnabledAt: new Date(),
+      phone: null,
+      role: 'BENDAHARA',
+    });
 
-    await expect(requireUser()).rejects.toThrow('REDIRECT:/login');
+    // ?reset=1, not a bare /login: without it the proxy still sees a valid
+    // JWT and bounces them back, looping forever.
+    await expect(requireUser()).rejects.toThrow('REDIRECT:/login?reset=1');
   });
 
   it('menolak sesi yang penggunanya sudah tidak ada', async () => {
     authMock.mockResolvedValue({ user: { id: 'u1', role: 'BENDAHARA', name: 'A', email: 'a@b.c', passwordStamp: 0 } });
     userFindUnique.mockResolvedValue(null);
 
-    await expect(requireUser()).rejects.toThrow('REDIRECT:/login');
+    await expect(requireUser()).rejects.toThrow('REDIRECT:/login?reset=1');
+  });
+});
+
+describe('requireUser — gerbang pasca-login', () => {
+  const gated = {
+    passwordChangedAt: null,
+    isActive: true,
+    mustChangePassword: true,
+    totpEnabledAt: null,
+    phone: null,
+    role: 'BENDAHARA' as const,
+  };
+
+  it('menahan pengguna yang masih wajib ganti sandi', async () => {
+    // The point: a Server Action never renders a layout, so enforcing the
+    // gate only there let a gated user invoke actions directly.
+    authMock.mockResolvedValue({ user: { id: 'u1', role: 'BENDAHARA', passwordStamp: 0 } });
+    userFindUnique.mockResolvedValue(gated);
+
+    await expect(requireUser()).rejects.toThrow('REDIRECT:/ganti-sandi');
+  });
+
+  it('menahan pengguna yang belum mendaftarkan TOTP', async () => {
+    authMock.mockResolvedValue({ user: { id: 'u1', role: 'SUPERADMIN', passwordStamp: 0 } });
+    userFindUnique.mockResolvedValue({ ...gated, mustChangePassword: false, role: 'SUPERADMIN' });
+
+    await expect(requireUser()).rejects.toThrow('REDIRECT:/keamanan/2fa');
+  });
+
+  it('meloloskan pemanggil yang justru melayani gerbang itu sendiri', async () => {
+    // The layout and the two actions behind /ganti-sandi and /keamanan/2fa
+    // must not be redirected to the page they are already serving.
+    authMock.mockResolvedValue({ user: { id: 'u1', role: 'BENDAHARA', passwordStamp: 0 } });
+    userFindUnique.mockResolvedValue(gated);
+
+    await expect(requireUser({ allowGated: true })).resolves.toBeTruthy();
   });
 });
