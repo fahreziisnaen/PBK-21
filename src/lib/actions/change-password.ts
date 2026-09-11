@@ -5,13 +5,14 @@ import { redirect } from 'next/navigation';
 import { z } from 'zod';
 import { requireUser } from '@/lib/auth-guard';
 import { prisma } from '@/lib/prisma';
+import { MIN_PASSWORD_LENGTH } from '@/lib/password-policy';
 import { recordAuthEvent } from '@/lib/auth-event';
 import { AUTH_EVENTS } from '@/lib/auth-event-names';
 
 const schema = z
   .object({
     oldPassword: z.string().min(1, 'Sandi lama wajib diisi.'),
-    newPassword: z.string().min(8, 'Sandi baru minimal 8 karakter.'),
+    newPassword: z.string().min(MIN_PASSWORD_LENGTH, `Sandi baru minimal ${MIN_PASSWORD_LENGTH} karakter.`),
     confirmPassword: z.string().min(1),
   })
   .refine((d) => d.newPassword === d.confirmPassword, {

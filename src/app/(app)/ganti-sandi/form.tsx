@@ -1,5 +1,6 @@
 'use client';
 
+import { MIN_PASSWORD_LENGTH } from '@/lib/password-policy';
 import { useActionState } from 'react';
 import { changePassword } from '@/lib/actions/change-password';
 
@@ -29,7 +30,7 @@ export function ChangePasswordForm() {
         type="password"
         autoComplete="new-password"
         required
-        minLength={8}
+        minLength={MIN_PASSWORD_LENGTH}
         className="mb-4 h-[42px] w-full rounded-lg border border-gray-300 px-3 text-[13.5px]"
       />
 
@@ -42,7 +43,7 @@ export function ChangePasswordForm() {
         type="password"
         autoComplete="new-password"
         required
-        minLength={8}
+        minLength={MIN_PASSWORD_LENGTH}
         className="mb-3.5 h-[42px] w-full rounded-lg border border-gray-300 px-3 text-[13.5px]"
       />
 

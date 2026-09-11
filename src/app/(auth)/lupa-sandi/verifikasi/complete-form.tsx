@@ -1,5 +1,6 @@
 'use client';
 
+import { MIN_PASSWORD_LENGTH } from '@/lib/password-policy';
 import { useActionState } from 'react';
 import { completeReset } from '@/lib/actions/forgot-password';
 
@@ -33,7 +34,7 @@ export function CompleteResetForm({ hint }: { hint: string }) {
         type="password"
         autoComplete="new-password"
         required
-        minLength={10}
+        minLength={MIN_PASSWORD_LENGTH}
         className="mb-4 h-[42px] w-full rounded-lg border border-gray-300 px-3 text-[13.5px]"
       />
 
@@ -46,7 +47,7 @@ export function CompleteResetForm({ hint }: { hint: string }) {
         type="password"
         autoComplete="new-password"
         required
-        minLength={10}
+        minLength={MIN_PASSWORD_LENGTH}
         className="mb-4 h-[42px] w-full rounded-lg border border-gray-300 px-3 text-[13.5px]"
       />
 

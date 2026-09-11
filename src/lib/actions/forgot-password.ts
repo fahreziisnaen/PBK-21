@@ -6,6 +6,7 @@ import { cookies, headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
+import { MIN_PASSWORD_LENGTH } from '@/lib/password-policy';
 import { canSelfReset } from '@/lib/auth-gates';
 import { chooseSecondFactor } from '@/lib/actions/choose-second-factor';
 import {
@@ -23,14 +24,13 @@ import { recordAuthEvent } from '@/lib/auth-event';
 import { AUTH_EVENTS } from '@/lib/auth-event-names';
 
 /**
- * Returned for every outcome: username unknown, account inactive, account
- * unable to receive a second factor, and code genuinely sent. Any divergence
- * — in wording, in redirect, or in how long the request takes — turns this
- * public form into a way to discover which usernames exist and which of them
- * have a second factor configured.
+ * Every outcome — unknown username, inactive account, an account with no
+ * second factor, and a code genuinely sent — leaves this action the same
+ * way: a redirect to the verification page. There is deliberately no
+ * message to return, because any divergence in wording, destination, or
+ * response time turns a public form into a way to discover which usernames
+ * exist and which of them have a second factor configured.
  */
-const SENT = 'Jika username terdaftar, kode telah dikirim.';
-
 const requestSchema = z.object({ username: z.string().min(1).max(64) });
 
 export async function requestReset(
@@ -38,7 +38,10 @@ export async function requestReset(
   formData: FormData,
 ): Promise<string | undefined> {
   const parsed = requestSchema.safeParse({ username: formData.get('username') });
-  if (!parsed.success) return SENT;
+  // Same destination as every other outcome. This case cannot leak anything
+  // about accounts, but leaving one path that does not redirect invites a
+  // future reader to treat the uniformity as optional.
+  if (!parsed.success) redirect('/lupa-sandi/verifikasi');
 
   const username = parsed.data.username.trim().toLowerCase();
   const h = await headers();
@@ -130,7 +133,7 @@ export async function requestReset(
 const completeSchema = z
   .object({
     code: z.string().min(1),
-    newPassword: z.string().min(10, 'Sandi baru minimal 10 karakter.'),
+    newPassword: z.string().min(MIN_PASSWORD_LENGTH, `Sandi baru minimal ${MIN_PASSWORD_LENGTH} karakter.`),
     confirmPassword: z.string().min(1),
   })
   .refine((v) => v.newPassword === v.confirmPassword, {
@@ -177,6 +180,9 @@ export async function completeReset(
   // LOGIN, and this refuses anything that is not PASSWORD_RESET, so neither
   // kind of challenge can ever be spent as the other.
   if (!challenge || challenge.purpose !== 'PASSWORD_RESET') return INVALID;
+  // Re-checked here, not just at request time: an account deactivated during
+  // the five-minute window must not be able to finish setting a new password.
+  if (!challenge.user.isActive) return INVALID;
   if (evaluateChallenge(challenge, new Date()) !== 'usable') return INVALID;
 
   let ok = false;
@@ -200,11 +206,12 @@ export async function completeReset(
       where: { id: challenge.id },
       data: { attempts: { increment: 1 } },
     });
-    await recordAuthEvent({
-      event: AUTH_EVENTS.LOGIN_OTP_FAIL,
-      userId: challenge.userId,
-      username: challenge.user.username,
-    });
+    // No AuthEvent: the fixed §3.3 vocabulary has no name for a failed
+    // RESET code, and logging it as `login.otp_fail` would tell a superadmin
+    // reading the security log that someone failed a LOGIN. Misleading the
+    // human who reads the log is worse than a gap they can see. The attempts
+    // counter still rises, and password.reset_requested already records the
+    // attempt series. A proper name belongs in the next plan's vocabulary.
     return INVALID;
   }
 
