@@ -16,7 +16,7 @@ test.afterEach(async () => {
   await deleteE2eUser(user.id);
 });
 
-test('mengganti sandi wajib lalu berlanjut ke pendaftaran TOTP', async ({ page }) => {
+test('mengganti sandi wajib lalu diminta masuk kembali dengan sandi baru', async ({ page }) => {
   await page.goto('/login');
   await page.getByLabel('Username').fill(user.username);
   await page.getByLabel('Kata Sandi').fill(user.password);
@@ -28,10 +28,18 @@ test('mengganti sandi wajib lalu berlanjut ke pendaftaran TOTP', async ({ page }
   await page.getByLabel('Konfirmasi Sandi Baru').fill('Sandi-Baru-Aman-123');
   await page.getByRole('button', { name: 'Simpan Sandi Baru' }).click();
 
-  // mustChangePassword is now false, but this account still has no TOTP —
-  // nextGate carries it straight on to enrolment. Landing anywhere other
-  // than /ganti-sandi itself is direct proof the redirect is not a loop.
-  await page.waitForURL(/\/keamanan\/2fa/);
+  // Changing the password ends every session for the account, this one
+  // included — see isSessionStale. So the user lands back on /login, and the
+  // page says why rather than leaving them to guess. Landing anywhere other
+  // than /ganti-sandi is also direct proof the redirect is not a loop.
+  await page.waitForURL(/\/login/);
+  await expect(page.getByText('Sandi Anda berhasil diperbarui', { exact: false })).toBeVisible();
+
+  // And the new password genuinely works.
+  await page.getByLabel('Username').fill(user.username);
+  await page.getByLabel('Kata Sandi').fill('Sandi-Baru-Aman-123');
+  await page.getByRole('button', { name: 'Masuk' }).click();
+  await page.waitForURL(/\/keamanan\/2fa|\/login\/verifikasi/);
 });
 
 test('menolak sandi lama yang salah, tanpa mengubah apa pun', async ({ page }) => {

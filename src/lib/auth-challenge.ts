@@ -1,6 +1,10 @@
 import { createHmac, randomInt, timingSafeEqual } from 'node:crypto';
 
 export const CHALLENGE_COOKIE = 'pbk_chal';
+/** Names the PASSWORD_RESET challenge. Lives here rather than in
+ *  forgot-password.ts because a 'use server' file may only export async
+ *  functions. */
+export const RESET_COOKIE = 'pbk_reset';
 export const CHALLENGE_TTL_MINUTES = 5;
 export const MAX_CHALLENGE_ATTEMPTS = 5;
 

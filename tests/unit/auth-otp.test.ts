@@ -149,7 +149,15 @@ describe('authorizeOtp — TOTP: replay of a consumed challenge (regression)', (
     const code = currentTotpCode(plainSecret);
 
     const first = await authorizeOtp({ challengeId: stored.id, code });
-    expect(first).toEqual({ id: user.id, name: user.name, email: user.email, role: user.role });
+    expect(first).toEqual({
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      // Frozen into the JWT so a later password change invalidates this
+      // session; 0 because this fixture has never changed its password.
+      passwordChangedAt: 0,
+    });
     expect(stored.consumedAt).not.toBeNull();
 
     const second = await authorizeOtp({ challengeId: stored.id, code });
@@ -197,7 +205,15 @@ describe('authorizeOtp — bootstrap (tanpa TOTP maupun telepon)', () => {
 
   it('diterima tanpa kode, lalu ditolak saat challenge yang sama dipakai ulang', async () => {
     const first = await authorizeOtp({ challengeId: stored.id, code: '' });
-    expect(first).toEqual({ id: user.id, name: user.name, email: user.email, role: user.role });
+    expect(first).toEqual({
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      // Frozen into the JWT so a later password change invalidates this
+      // session; 0 because this fixture has never changed its password.
+      passwordChangedAt: 0,
+    });
     expect(stored.consumedAt).not.toBeNull();
 
     const second = await authorizeOtp({ challengeId: stored.id, code: '' });

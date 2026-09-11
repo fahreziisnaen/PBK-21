@@ -9,13 +9,31 @@ const { auth } = NextAuth(authConfig);
 // exemption the guard below sends every guest straight back to /login before
 // the OTP/TOTP/bootstrap step can ever run — the two-stage flow could not
 // complete for anyone.
-const GUEST_PATHS = new Set(['/login', '/login/verifikasi']);
+const GUEST_PATHS = new Set([
+  '/login',
+  '/login/verifikasi',
+  // Password reset is by definition reached by someone who cannot log in.
+  '/lupa-sandi',
+  '/lupa-sandi/verifikasi',
+]);
 
 export default auth((req) => {
   const isLoggedIn = !!req.auth;
   const { pathname } = req.nextUrl;
 
   if (GUEST_PATHS.has(pathname)) {
+    // A session the (app) layout judged stale still carries a valid cookie,
+    // so without this the layout's redirect to /login bounces straight back
+    // to /dashboard and loops until the browser gives up. The cookie has to
+    // actually be cleared, and only here — a Server Component cannot write
+    // one. The layout signals the case with ?reset=1.
+    if (isLoggedIn && req.nextUrl.searchParams.get('reset') === '1') {
+      const cleared = NextResponse.next();
+      for (const name of ['authjs.session-token', '__Secure-authjs.session-token']) {
+        cleared.cookies.delete(name);
+      }
+      return cleared;
+    }
     if (isLoggedIn) return Response.redirect(new URL('/dashboard', req.nextUrl));
     return;
   }

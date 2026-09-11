@@ -9,6 +9,8 @@ export const authConfig = {
       if (user) {
         token.sub = user.id;
         token.role = user.role;
+        // Frozen at sign-in — see isSessionStale.
+        token.pwc = user.passwordChangedAt ?? 0;
       }
       return token;
     },
@@ -16,6 +18,12 @@ export const authConfig = {
       if (session.user) {
         session.user.id = token.sub as string;
         session.user.role = token.role as typeof session.user.role;
+        // Carried through so the (app) layout can tell whether this token
+        // predates the owner's last password change. JWT sessions cannot be
+        // revoked server-side; comparing this frozen stamp against the live
+        // column is what makes a password reset actually end sessions
+        // elsewhere.
+        session.user.passwordStamp = token.pwc as number | undefined;
       }
       return session;
     },

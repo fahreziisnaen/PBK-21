@@ -7,7 +7,6 @@ import { requireUser } from '@/lib/auth-guard';
 import { prisma } from '@/lib/prisma';
 import { recordAuthEvent } from '@/lib/auth-event';
 import { AUTH_EVENTS } from '@/lib/auth-event-names';
-import { nextGate } from '@/lib/auth-gates';
 
 const schema = z
   .object({
@@ -59,24 +58,17 @@ export async function changePassword(
     username: user.username,
   });
 
-  // Compute the destination ourselves instead of always redirecting to
-  // /dashboard and trusting the (app) layout to carry a still-gated user
-  // the rest of the way: a second redirect() thrown from deep inside that
-  // layout, while it renders THIS action's own response target, is not
-  // honoured there (the same nested-redirect trap worked around in
-  // submitOtp) — a user who changed their password but still needs TOTP
-  // would otherwise get stuck on /dashboard instead of reaching
-  // /keamanan/2fa. mustChangePassword is hardcoded true->false here rather
-  // than re-read, since that is exactly the field this update just changed.
-  const gate = nextGate({
-    mustChangePassword: false,
-    totpEnabledAt: user.totpEnabledAt,
-    phone: user.phone,
-    role: user.role,
-  });
-
+  // This action just set passwordChangedAt, which makes the caller's OWN
+  // session stale (see isSessionStale) — deliberately, because a password
+  // change should end every session, and singling out this one would mean
+  // the device most likely to be compromised is the one that keeps working.
+  // So there is no point computing a gate destination: the (app) layout
+  // would bounce them to /login anyway. Sending them there directly, with a
+  // flag the login page turns into an explanation, keeps it from looking
+  // like a silent failure.
+  //
   // redirect() throws NEXT_REDIRECT to unwind the render — never wrap this
   // in try/catch, or the throw is swallowed and the user sits on the form
   // with no feedback.
-  redirect(gate ?? '/dashboard');
+  redirect('/login?reset=1');
 }

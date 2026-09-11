@@ -148,5 +148,8 @@ export async function authorizeOtp(raw: unknown) {
     name: challenge.user.name,
     email: challenge.user.email ?? '',
     role: challenge.user.role,
+    // Frozen into the JWT by the jwt callback so a later password change can
+    // be detected and the session refused — see isSessionStale.
+    passwordChangedAt: challenge.user.passwordChangedAt?.getTime() ?? 0,
   };
 }
