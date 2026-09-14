@@ -1,12 +1,5 @@
-import { PageHead } from '@/components/shell/PageHead';
+import { CategoryPage } from '@/components/master/CategoryPage';
 
 export default function Page() {
-  return (
-    <>
-      <PageHead pathname="/master/kategori-kegiatan" />
-      <div className="rounded-xl border border-gray-200 bg-white p-8 text-center text-[13px] text-gray-500">
-        Halaman ini dibangun pada plan berikutnya.
-      </div>
-    </>
-  );
+  return <CategoryPage kind="activity" />;
 }
