@@ -43,6 +43,49 @@ export async function checkLoginRate(username: string, ip: string | null): Promi
   return evaluateRate({ byUsername, byIp });
 }
 
+/** Requests one username, and one address, may make to the reset page per window. */
+const MAX_RESET_REQUESTS_PER_USERNAME = 5;
+const MAX_RESET_REQUESTS_PER_IP = 20;
+
+/**
+ * Pure. The counts INCLUDE the request being judged, because the caller
+ * records its event before counting — hence `<=` rather than `<`.
+ */
+export function evaluateResetRequestRate(counts: { byUsername: number; byIp: number }): boolean {
+  return (
+    counts.byUsername <= MAX_RESET_REQUESTS_PER_USERNAME &&
+    counts.byIp <= MAX_RESET_REQUESTS_PER_IP
+  );
+}
+
+/**
+ * Whether a password-reset request may proceed. MUST be called after this
+ * request's own `password.reset_requested` event has been recorded.
+ *
+ * The reset page needs only a username, so without a cap a flood aimed at one
+ * account reaches that account's challenge lock. The lock keeps the flood from
+ * minting challenges, but every request queued behind it holds a pooled
+ * database connection while it waits: a reviewer's 60-way flood on one account
+ * raised a DIFFERENT account's login latency about 25-fold on the shared pool.
+ *
+ * Why record first and count second: counting first is the same check-then-act
+ * race the challenge lock exists to close. Measured against PostgreSQL with a
+ * 60-request burst for one username: count-then-record let 59 through a cap of
+ * five. Record-then-count let none through — every request's count already
+ * included the rest of the burst. A burst is therefore refused whole rather
+ * than over-admitted, which is the right way for a flood guard to fail; a
+ * person making one request at a time still counts only themselves.
+ */
+export async function checkResetRequestRate(username: string, ip: string | null): Promise<boolean> {
+  const since = new Date(Date.now() - WINDOW_MINUTES * 60_000);
+  const recent = { event: AUTH_EVENTS.PASSWORD_RESET_REQUESTED, createdAt: { gte: since } };
+  const [byUsername, byIp] = await Promise.all([
+    prisma.authEvent.count({ where: { ...recent, username } }),
+    ip ? prisma.authEvent.count({ where: { ...recent, ip } }) : Promise.resolve(0),
+  ]);
+  return evaluateResetRequestRate({ byUsername, byIp });
+}
+
 /**
  * An existing challenge that is still usable for this user and purpose, or
  * null.

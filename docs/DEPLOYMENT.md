@@ -414,6 +414,11 @@ docker compose -f docker-compose.prod.yml start
   bisa mencoba ribuan kode per hari lewat halaman lupa-sandi. Kode yang
   benar tidak pernah dihitung, jadi pengguna yang login berkali-kali sehari
   tidak terkena.
+  - Halaman **lupa-sandi** juga dibatasi sebelum semua itu: maksimum **5
+    permintaan per username dan 20 per alamat IP per 15 menit**. Tanpa ini,
+    banjir permintaan ke satu akun akan antre di database dan ikut
+    memperlambat login semua orang. Serbuan permintaan serentak ditolak
+    seluruhnya, bukan diloloskan sebagian.
   - Di **lupa-sandi**, penolakan sengaja **tidak diberitahukan** — halaman
     tetap tampil sama, supaya tidak membocorkan username mana yang ada.
     Pengguna yang melapor "kode saya selalu ditolak" setelah beberapa kali

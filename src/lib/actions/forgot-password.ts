@@ -7,6 +7,7 @@ import { redirect } from 'next/navigation';
 import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
 import { clientIpFrom } from '@/lib/client-ip';
+import { checkResetRequestRate } from '@/lib/rate-limit';
 import { MIN_PASSWORD_LENGTH } from '@/lib/password-policy';
 import { canSelfReset } from '@/lib/auth-gates';
 import { issueChallenge, spendChallenge } from '@/lib/challenge-lock';
@@ -63,6 +64,16 @@ export async function requestReset(
     username,
     ip,
   });
+
+  // Capped per username and per address BEFORE anything takes the account's
+  // challenge lock, so a flood cannot pile up pooled connections behind it and
+  // slow everyone else's login. Checked only after the event above is written,
+  // so parallel requests see each other — see checkResetRequestRate. Refused
+  // silently, and for existing and unknown usernames alike, like every other
+  // refusal on this page.
+  if (!(await checkResetRequestRate(username, ip))) {
+    redirect('/lupa-sandi/verifikasi');
+  }
 
   // canSelfReset is the guard that keeps this page from being an account
   // takeover: a bootstrap account has no second factor to prove ownership

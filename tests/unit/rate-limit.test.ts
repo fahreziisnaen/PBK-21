@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { evaluateChallengeBudget, evaluateRate } from '@/lib/rate-limit';
+import { evaluateChallengeBudget, evaluateRate, evaluateResetRequestRate } from '@/lib/rate-limit';
 import { AUTH_EVENTS } from '@/lib/auth-event-names';
 
 describe('evaluateRate', () => {
@@ -68,5 +68,23 @@ describe('evaluateChallengeBudget', () => {
     // issued stays under the cap and nothing failed: a treasurer signing in
     // many times a day is never refused.
     expect(evaluateChallengeBudget({ issued: 1, failedToday: 0 })).toEqual({ allowed: true });
+  });
+});
+
+describe('evaluateResetRequestRate', () => {
+  // The counts include the request being judged, since the caller records its
+  // own event first: five from one username is still allowed, the sixth not.
+  it('mengizinkan sampai lima permintaan per username', () => {
+    expect(evaluateResetRequestRate({ byUsername: 5, byIp: 5 })).toBe(true);
+  });
+
+  it('menolak permintaan keenam dari username yang sama', () => {
+    expect(evaluateResetRequestRate({ byUsername: 6, byIp: 6 })).toBe(false);
+  });
+
+  it('menolak saat alamat melampaui dua puluh walau tiap username masih bersih', () => {
+    // Rotating usernames from one address must not dodge the cap.
+    expect(evaluateResetRequestRate({ byUsername: 1, byIp: 21 })).toBe(false);
+    expect(evaluateResetRequestRate({ byUsername: 1, byIp: 20 })).toBe(true);
   });
 });
