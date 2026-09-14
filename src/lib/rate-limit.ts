@@ -74,35 +74,67 @@ export async function findUsableChallenge(
 
 /** Challenges one account may be issued per window, per purpose. */
 const MAX_CHALLENGES_PER_WINDOW = 3;
+/** Wrong codes one account may submit per purpose in a trailing day. */
+const MAX_FAILED_CODES_PER_DAY = 10;
+const FAILURE_WINDOW_MINUTES = 24 * 60;
 
-/** Pure, so the bound is testable without a database. */
-export function evaluateChallengeBudget(recentChallenges: number): RateVerdict {
-  if (recentChallenges >= MAX_CHALLENGES_PER_WINDOW) {
-    return { allowed: false, retryAfterMinutes: WINDOW_MINUTES };
+export type ChallengeBudgetVerdict =
+  | { allowed: true }
+  | { allowed: false; reason: 'issuance' | 'failures'; retryAfterMinutes: number };
+
+/** Pure, so both bounds are testable without a database. */
+export function evaluateChallengeBudget(recent: {
+  issued: number;
+  failedToday: number;
+}): ChallengeBudgetVerdict {
+  if (recent.failedToday >= MAX_FAILED_CODES_PER_DAY) {
+    return { allowed: false, reason: 'failures', retryAfterMinutes: FAILURE_WINDOW_MINUTES };
+  }
+  if (recent.issued >= MAX_CHALLENGES_PER_WINDOW) {
+    return { allowed: false, reason: 'issuance', retryAfterMinutes: WINDOW_MINUTES };
   }
   return { allowed: true };
 }
 
 /**
- * Caps how many challenges an account can be ISSUED in a window, counting
- * every row regardless of its state.
+ * Whether an account may be issued another challenge. Two bounds, because
+ * each one alone was shipped and each one alone failed:
  *
- * Reusing a live challenge (findUsableChallenge) is not a bound on its own,
- * and believing it was is how this shipped broken once already: that helper
- * skips a row whose attempts are spent, so a sixth request simply minted a
- * fresh row at zero attempts. Five guesses per request, forever — exactly the
- * hole it was meant to close.
+ * - Reusing a live challenge (findUsableChallenge) bounds nothing: it skips a
+ *   row whose attempts are spent, so the next request minted a fresh row at
+ *   zero attempts.
+ * - Capping issuance at 3 per 15 minutes still allowed 1,440 guesses a day.
+ *   With three TOTP codes valid at any instant, that is a 79% chance of
+ *   taking over an account within a year, from a username alone.
  *
- * Counting issuance is the bound that actually holds, because it does not
- * care what state the earlier rows ended in.
+ * The bound that matters is wrong codes over a long window: fewer than 10 per
+ * account per purpose per trailing day, which brings the same attack under
+ * 2% a year. It is measured from the `attempts` already recorded on each
+ * challenge row, so a user who types the right code is never counted and
+ * never locked out — a plain per-day issuance cap would lock out a treasurer
+ * who simply signs in four times.
+ *
+ * Purposes are counted separately. Someone burning a victim's PASSWORD_RESET
+ * budget (possible from a username) cannot touch their LOGIN budget, which
+ * requires the password to reach at all.
  */
 export async function checkChallengeBudget(
   userId: string,
   purpose: ChallengePurpose,
-): Promise<RateVerdict> {
-  const since = new Date(Date.now() - WINDOW_MINUTES * 60_000);
-  const recent = await prisma.authChallenge.count({
-    where: { userId, purpose, createdAt: { gte: since } },
-  });
-  return evaluateChallengeBudget(recent);
+): Promise<ChallengeBudgetVerdict> {
+  const now = Date.now();
+  const [issued, failures] = await Promise.all([
+    prisma.authChallenge.count({
+      where: { userId, purpose, createdAt: { gte: new Date(now - WINDOW_MINUTES * 60_000) } },
+    }),
+    prisma.authChallenge.aggregate({
+      where: {
+        userId,
+        purpose,
+        createdAt: { gte: new Date(now - FAILURE_WINDOW_MINUTES * 60_000) },
+      },
+      _sum: { attempts: true },
+    }),
+  ]);
+  return evaluateChallengeBudget({ issued, failedToday: failures._sum.attempts ?? 0 });
 }

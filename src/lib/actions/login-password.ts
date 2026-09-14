@@ -105,7 +105,9 @@ export async function startLogin(
   // each time. This caps the challenges themselves.
   const budget = await checkChallengeBudget(user.id, 'LOGIN');
   if (!budget.allowed) {
-    return `Terlalu banyak percobaan. Coba lagi dalam ${budget.retryAfterMinutes} menit.`;
+    return budget.reason === 'failures'
+      ? 'Terlalu banyak kode verifikasi salah hari ini. Coba lagi besok, atau hubungi administrator.'
+      : `Terlalu banyak percobaan. Coba lagi dalam ${budget.retryAfterMinutes} menit.`;
   }
 
   const otp = method === 'WA_OTP' ? generateOtpCode() : null;

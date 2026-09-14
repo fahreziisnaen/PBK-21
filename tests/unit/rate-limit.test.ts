@@ -32,20 +32,41 @@ describe('AUTH_EVENTS', () => {
 });
 
 describe('evaluateChallengeBudget', () => {
-  it('mengizinkan di bawah batas', () => {
-    expect(evaluateChallengeBudget(0)).toEqual({ allowed: true });
-    expect(evaluateChallengeBudget(2)).toEqual({ allowed: true });
+  const clean = { issued: 0, failedToday: 0 };
+
+  it('mengizinkan akun yang bersih', () => {
+    expect(evaluateChallengeBudget(clean)).toEqual({ allowed: true });
+    expect(evaluateChallengeBudget({ issued: 2, failedToday: 9 })).toEqual({ allowed: true });
   });
 
-  it('menolak saat batas tercapai', () => {
-    // Counts challenges ISSUED, not attempts left on them. Reusing a live
-    // challenge is not a bound on its own: it skips a row whose attempts are
-    // spent, so without this cap the next request minted a fresh row at zero
-    // and the five-guess limit meant nothing.
-    expect(evaluateChallengeBudget(3)).toEqual({ allowed: false, retryAfterMinutes: 15 });
+  it('menolak saat penerbitan mencapai batas 15 menit', () => {
+    expect(evaluateChallengeBudget({ ...clean, issued: 3 })).toEqual({
+      allowed: false,
+      reason: 'issuance',
+      retryAfterMinutes: 15,
+    });
   });
 
-  it('tetap menolak di atas batas', () => {
-    expect(evaluateChallengeBudget(99)).toMatchObject({ allowed: false });
+  it('menolak saat kode salah mencapai batas harian', () => {
+    // The bound that actually holds against grinding. Capping issuance alone
+    // still allowed 1,440 guesses a day — a 79% chance of breaking a TOTP
+    // account within a year, from a username alone.
+    expect(evaluateChallengeBudget({ ...clean, failedToday: 10 })).toEqual({
+      allowed: false,
+      reason: 'failures',
+      retryAfterMinutes: 24 * 60,
+    });
+  });
+
+  it('mendahulukan batas harian, karena itu yang lebih lama ditunggu', () => {
+    // Telling someone to retry in 15 minutes when they are really blocked for
+    // a day would send them round in circles.
+    expect(evaluateChallengeBudget({ issued: 3, failedToday: 10 })).toMatchObject({ reason: 'failures' });
+  });
+
+  it('tidak pernah menghitung login yang berhasil', () => {
+    // issued stays under the cap and nothing failed: a treasurer signing in
+    // many times a day is never refused.
+    expect(evaluateChallengeBudget({ issued: 1, failedToday: 0 })).toEqual({ allowed: true });
   });
 });

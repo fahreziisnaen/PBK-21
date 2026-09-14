@@ -407,6 +407,27 @@ docker compose -f docker-compose.prod.yml start
   proses, supaya bertahan lewat restart: maksimum 5 sandi gagal per
   username dan 20 per alamat IP, dalam jendela 15 menit berjalan
   (`src/lib/rate-limit.ts`).
+- **Pembatasan kode verifikasi**, terpisah untuk login dan untuk lupa-sandi:
+  maksimum 3 kode diterbitkan per akun per 15 menit, dan **kurang dari 10
+  kode salah per akun per 24 jam**. Batas harian itulah yang benar-benar
+  menahan penebakan kode — tanpanya, seseorang yang hanya tahu username
+  bisa mencoba ribuan kode per hari lewat halaman lupa-sandi. Kode yang
+  benar tidak pernah dihitung, jadi pengguna yang login berkali-kali sehari
+  tidak terkena.
+  - Di **lupa-sandi**, penolakan sengaja **tidak diberitahukan** — halaman
+    tetap tampil sama, supaya tidak membocorkan username mana yang ada.
+    Pengguna yang melapor "kode saya selalu ditolak" setelah beberapa kali
+    salah kemungkinan besar sedang terkena batas harian ini; ia tetap bisa
+    login biasa, atau administrator menjalankan `npm run auth:recover`.
+  - Jika **kode WhatsApp tidak masuk**, meminta ulang dalam 5 menit tidak
+    mengirim kode baru — tantangan yang sama dipakai ulang agar batas
+    percobaan bermakna. Tunggu 5 menit sampai kedaluwarsa, lalu minta lagi.
+- **Header `X-Forwarded-For` dibaca dari hop paling kanan**, yaitu alamat
+  yang ditambahkan Caddy sendiri. Ini benar selama Caddy adalah
+  satu-satunya pintu masuk. **Bila kelak Anda memasang CDN atau proxy lain
+  di depan Caddy** (mis. Cloudflare), hop paling kanan menjadi alamat CDN,
+  sehingga batas per-IP dan kolom `ip` di log keamanan menjadi salah —
+  atur `trusted_proxies` di Caddyfile saat itu.
 - **Tidak ada pembersihan otomatis untuk `AuthEvent` maupun
   `AuthChallenge`.** Setiap percobaan login, setiap kode OTP/TOTP yang
   diminta, dan setiap tantangan yang sudah dipakai maupun kedaluwarsa
