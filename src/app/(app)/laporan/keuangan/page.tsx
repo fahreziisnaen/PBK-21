@@ -45,7 +45,12 @@ export default async function LaporanKeuanganPage({ searchParams }: { searchPara
   for (const r of rows) if (r.expense) perCategory.set(r.category, (perCategory.get(r.category) ?? 0) + r.expense);
 
   const periodLabel = `${from ? fdateLong(isoDate(from)) : fdateLong(isoDate(activity.startDate))} s.d. ${to ? fdateLong(isoDate(to)) : 'saat ini'}`;
-  let running = opening;
+  const balances: number[] = [];
+  rows.reduce((prev, r) => {
+    const next = prev + r.income - r.expense;
+    balances.push(next);
+    return next;
+  }, opening);
 
   return (
     <>
@@ -118,8 +123,7 @@ export default async function LaporanKeuanganPage({ searchParams }: { searchPara
               {rows.length === 0 && (
                 <tr><td className={`${td} py-8 text-center text-gray-500`} colSpan={7}>Tidak ada transaksi pada filter ini.</td></tr>
               )}
-              {rows.map((r) => {
-                running += r.income - r.expense;
+              {rows.map((r, i) => {
                 return (
                   <tr key={r.key}>
                     <td className={`${td} whitespace-nowrap`}>{fdate(isoDate(r.date))}</td>
@@ -128,7 +132,7 @@ export default async function LaporanKeuanganPage({ searchParams }: { searchPara
                     <td className={td}>{r.category}</td>
                     <td className={tdNum}>{r.income ? rp(r.income) : ''}</td>
                     <td className={tdNum}>{r.expense ? rp(r.expense) : ''}</td>
-                    {!type && !categoryName && <td className={`${tdNum} font-semibold`}>{rp(running)}</td>}
+                    {!type && !categoryName && <td className={`${tdNum} font-semibold`}>{rp(balances[i]!)}</td>}
                   </tr>
                 );
               })}

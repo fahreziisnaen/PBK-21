@@ -134,9 +134,9 @@ export async function ledgerRows(
   ].sort((a, b) => a.date.getTime() - b.date.getTime() || a.sort - b.sort);
 
   let balance = 0;
-  return rows.map(({ sort: _sort, ...r }) => {
+  return rows.map((r) => {
     balance += r.income - r.expense;
-    return { ...r, balance };
+    return { key: r.key, date: r.date, ref: r.ref, description: r.description, category: r.category, income: r.income, expense: r.expense, href: r.href, balance };
   });
 }
 

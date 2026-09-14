@@ -22,13 +22,17 @@ const AUDIT_TITLES: Record<string, string> = {
   'user.totp_reset': '2FA pengguna direset',
 };
 
+function daysAgo(days: number): Date {
+  return new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+}
+
 /**
  * Umpan peristiwa keuangan dan kegiatan, disusun dari transaksi dan jejak
  * audit yang sudah tercatat — tidak ada tabel terpisah yang bisa tertinggal.
  */
 export default async function NotifikasiPage() {
   await requireUser();
-  const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+  const since = daysAgo(30);
   const [payments, expenses, audits] = await Promise.all([
     prisma.payment.findMany({
       where: { createdAt: { gte: since } },

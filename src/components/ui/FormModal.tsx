@@ -1,6 +1,6 @@
 'use client';
 
-import { useActionState, useEffect, useState } from 'react';
+import { useActionState, useState } from 'react';
 import { useToast } from '@/components/ui/Toast';
 import { btnPrimary, btnSecondary } from '@/lib/ui';
 import type { ActionResult } from '@/lib/action-result';
@@ -31,15 +31,15 @@ export function FormModal({
   wide,
 }: Props) {
   const [open, setOpen] = useState(false);
-  const [state, formAction, pending] = useActionState(action, undefined);
   const toast = useToast();
-
-  useEffect(() => {
-    if (state?.ok) {
+  const [state, formAction, pending] = useActionState(async (prev: ActionResult, fd: FormData) => {
+    const result = await action(prev, fd);
+    if (result?.ok) {
       setOpen(false);
-      if (state.message) toast(state.message);
+      if (result.message) toast(result.message);
     }
-  }, [state, toast]);
+    return result;
+  }, undefined);
 
   return (
     <>
