@@ -9,16 +9,9 @@ import { prisma } from '@/lib/prisma';
 import { clientIpFrom } from '@/lib/client-ip';
 import { MIN_PASSWORD_LENGTH } from '@/lib/password-policy';
 import { canSelfReset } from '@/lib/auth-gates';
-import { checkChallengeBudget, findUsableChallenge } from '@/lib/rate-limit';
+import { issueChallenge, spendChallenge } from '@/lib/challenge-lock';
 import { chooseSecondFactor } from '@/lib/actions/choose-second-factor';
-import {
-  CHALLENGE_TTL_MINUTES,
-  RESET_COOKIE,
-  evaluateChallenge,
-  generateOtpCode,
-  hashOtp,
-  verifyOtpHash,
-} from '@/lib/auth-challenge';
+import { CHALLENGE_TTL_MINUTES, RESET_COOKIE, verifyOtpHash } from '@/lib/auth-challenge';
 import { decryptSecret } from '@/lib/crypto';
 import { verifyTotp } from '@/lib/totp';
 import { sendWhatsApp } from '@/lib/wa-gateway';
@@ -83,27 +76,6 @@ export async function requestReset(
     redirect('/lupa-sandi/verifikasi');
   }
 
-  // Reuse a live challenge rather than minting another. Without this the
-  // 5-attempt cap bounds nothing: an attacker knowing only a username could
-  // loop this endpoint for fresh rows and grind the code space five guesses
-  // at a time, with no password at all. Reusing means attempts accumulate on
-  // one row for its whole five-minute life.
-  const live = await findUsableChallenge(user.id, 'PASSWORD_RESET');
-  if (live) {
-    await setChallengeCookie(RESET_COOKIE, live.id);
-    redirect('/lupa-sandi/verifikasi');
-  }
-
-  // Reuse alone is not a bound: it skips a row whose attempts are spent, so
-  // the next request would mint a fresh row at zero. The issuance cap is what
-  // actually stops someone grinding the code space from a username alone.
-  // Refused silently — the visitor still lands on the same page as everyone
-  // else, or the refusal would reveal that the account exists.
-  const budget = await checkChallengeBudget(user.id, 'PASSWORD_RESET');
-  if (!budget.allowed) {
-    redirect('/lupa-sandi/verifikasi');
-  }
-
   const method = chooseSecondFactor(user);
   // Redundant after canSelfReset above, and kept anyway: SecondFactor has no
   // BOOTSTRAP member, so this is what lets the compiler prove a bootstrap
@@ -111,19 +83,18 @@ export async function requestReset(
   // check that is currently enforcing the security rule.
   if (method === 'BOOTSTRAP') redirect('/lupa-sandi/verifikasi');
 
-  const otp = method === 'WA_OTP' ? generateOtpCode() : null;
+  // Reuse, the issuance cap and the daily wrong-code cap run under one
+  // per-account lock — see issueChallenge for why each of the three alone
+  // failed. A refusal is silent: the visitor lands on the same page as
+  // everyone else, or the refusal would reveal that the account exists.
+  const issued = await issueChallenge({ userId: user.id, purpose: 'PASSWORD_RESET', method });
+  if (issued.kind === 'refused') redirect('/lupa-sandi/verifikasi');
 
-  const challenge = await prisma.authChallenge.create({
-    data: {
-      userId: user.id,
-      purpose: 'PASSWORD_RESET',
-      method,
-      otpHash: otp ? hashOtp(otp) : null,
-      expiresAt: new Date(Date.now() + CHALLENGE_TTL_MINUTES * 60_000),
-    },
-  });
+  await setChallengeCookie(RESET_COOKIE, issued.challengeId);
 
-  await setChallengeCookie(RESET_COOKIE, challenge.id);
+  // Only a newly created WA_OTP challenge has a code to send; a reused one
+  // already sent its code, and a new code would need a new row.
+  const otp = issued.kind === 'created' ? issued.otp : null;
 
   if (otp && user.phone) {
     const phone = user.phone;
@@ -172,20 +143,6 @@ const completeSchema = z
 
 const INVALID = 'Kode salah atau sudah kedaluwarsa. Ulangi dari awal.';
 
-/**
- * Marks the challenge consumed and reports whether THIS call did it. The
- * `consumedAt: null` filter lives inside the write, so two concurrent
- * submissions of the same valid code cannot both reset the password — the
- * same guarantee authorizeOtp needs, for the same reason.
- */
-async function consumeOnce(challengeId: string): Promise<boolean> {
-  const { count } = await prisma.authChallenge.updateMany({
-    where: { id: challengeId, consumedAt: null },
-    data: { consumedAt: new Date() },
-  });
-  return count === 1;
-}
-
 export async function completeReset(
   _prev: string | undefined,
   formData: FormData,
@@ -201,50 +158,29 @@ export async function completeReset(
   const challengeId = store.get(RESET_COOKIE)?.value;
   if (!challengeId) return INVALID;
 
-  const challenge = await prisma.authChallenge.findUnique({
-    where: { id: challengeId },
-    include: { user: true },
+  // Purpose is checked both ways: authorizeOtp spends only LOGIN challenges
+  // and this spends only PASSWORD_RESET ones, so neither kind can ever be
+  // spent as the other. spendChallenge also enforces the daily wrong-code
+  // limit on this guess, under the account's lock.
+  const spent = await spendChallenge({
+    challengeId,
+    purpose: 'PASSWORD_RESET',
+    verify: (c) =>
+      c.method === 'TOTP'
+        ? !!c.user.totpSecret && verifyTotp(decryptSecret(c.user.totpSecret), parsed.data.code)
+        : !!c.otpHash && verifyOtpHash(parsed.data.code, c.otpHash),
   });
-  // Purpose is checked both ways: authorizeOtp refuses anything that is not
-  // LOGIN, and this refuses anything that is not PASSWORD_RESET, so neither
-  // kind of challenge can ever be spent as the other.
-  if (!challenge || challenge.purpose !== 'PASSWORD_RESET') return INVALID;
+  // No AuthEvent for a failed reset code: the fixed §3.3 vocabulary has no
+  // name for it, and logging it as `login.otp_fail` would tell a superadmin
+  // reading the security log that someone failed a LOGIN. The attempts
+  // counter still rises, and password.reset_requested already records the
+  // attempt series. A proper name belongs in the next plan's vocabulary.
+  if (spent.kind === 'rejected') return INVALID;
+
+  const { challenge } = spent;
   // Re-checked here, not just at request time: an account deactivated during
   // the five-minute window must not be able to finish setting a new password.
   if (!challenge.user.isActive) return INVALID;
-  if (evaluateChallenge(challenge, new Date()) !== 'usable') return INVALID;
-
-  let ok = false;
-  try {
-    ok =
-      challenge.method === 'TOTP'
-        ? challenge.user.totpSecret
-          ? verifyTotp(decryptSecret(challenge.user.totpSecret), parsed.data.code)
-          : false
-        : challenge.otpHash
-          ? verifyOtpHash(parsed.data.code, challenge.otpHash)
-          : false;
-  } catch {
-    // A corrupted secret or a rotated ENCRYPTION_KEY must count as a failed
-    // attempt, not escape as a 500 that skips the increment and the log.
-    ok = false;
-  }
-
-  if (!ok) {
-    await prisma.authChallenge.update({
-      where: { id: challenge.id },
-      data: { attempts: { increment: 1 } },
-    });
-    // No AuthEvent: the fixed §3.3 vocabulary has no name for a failed
-    // RESET code, and logging it as `login.otp_fail` would tell a superadmin
-    // reading the security log that someone failed a LOGIN. Misleading the
-    // human who reads the log is worse than a gap they can see. The attempts
-    // counter still rises, and password.reset_requested already records the
-    // attempt series. A proper name belongs in the next plan's vocabulary.
-    return INVALID;
-  }
-
-  if (!(await consumeOnce(challenge.id))) return INVALID;
 
   await prisma.user.update({
     where: { id: challenge.userId },

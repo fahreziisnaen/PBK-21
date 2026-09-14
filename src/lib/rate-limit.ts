@@ -1,7 +1,10 @@
-import type { ChallengePurpose } from '@prisma/client';
+import type { ChallengePurpose, Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { MAX_CHALLENGE_ATTEMPTS } from '@/lib/auth-challenge';
 import { AUTH_EVENTS } from '@/lib/auth-event-names';
+
+/** The global client, or a transaction's — so these checks can run under a lock. */
+type Db = Prisma.TransactionClient;
 
 const WINDOW_MINUTES = 15;
 const MAX_PER_USERNAME = 5;
@@ -58,8 +61,9 @@ export async function checkLoginRate(username: string, ip: string | null): Promi
 export async function findUsableChallenge(
   userId: string,
   purpose: ChallengePurpose,
+  db: Db = prisma,
 ): Promise<{ id: string } | null> {
-  return prisma.authChallenge.findFirst({
+  return db.authChallenge.findFirst({
     where: {
       userId,
       purpose,
@@ -75,7 +79,7 @@ export async function findUsableChallenge(
 /** Challenges one account may be issued per window, per purpose. */
 const MAX_CHALLENGES_PER_WINDOW = 3;
 /** Wrong codes one account may submit per purpose in a trailing day. */
-const MAX_FAILED_CODES_PER_DAY = 10;
+export const MAX_FAILED_CODES_PER_DAY = 10;
 const FAILURE_WINDOW_MINUTES = 24 * 60;
 
 export type ChallengeBudgetVerdict =
@@ -121,20 +125,42 @@ export function evaluateChallengeBudget(recent: {
 export async function checkChallengeBudget(
   userId: string,
   purpose: ChallengePurpose,
+  db: Db = prisma,
 ): Promise<ChallengeBudgetVerdict> {
-  const now = Date.now();
-  const [issued, failures] = await Promise.all([
-    prisma.authChallenge.count({
-      where: { userId, purpose, createdAt: { gte: new Date(now - WINDOW_MINUTES * 60_000) } },
-    }),
-    prisma.authChallenge.aggregate({
+  const [issued, failedToday] = await Promise.all([
+    db.authChallenge.count({
       where: {
         userId,
         purpose,
-        createdAt: { gte: new Date(now - FAILURE_WINDOW_MINUTES * 60_000) },
+        createdAt: { gte: new Date(Date.now() - WINDOW_MINUTES * 60_000) },
       },
-      _sum: { attempts: true },
     }),
+    countFailedCodesToday(userId, purpose, db),
   ]);
-  return evaluateChallengeBudget({ issued, failedToday: failures._sum.attempts ?? 0 });
+  return evaluateChallengeBudget({ issued, failedToday });
+}
+
+/**
+ * Wrong codes submitted for this account and purpose in the trailing day,
+ * read from the `attempts` recorded on each challenge row.
+ *
+ * Exposed on its own because guessing must be checked against it too, not
+ * only issuance. Checking only when a challenge is issued left every guess
+ * on an already-issued row unmetered — and a burst of parallel requests
+ * could issue rows faster than the check could see them.
+ */
+export async function countFailedCodesToday(
+  userId: string,
+  purpose: ChallengePurpose,
+  db: Db = prisma,
+): Promise<number> {
+  const result = await db.authChallenge.aggregate({
+    where: {
+      userId,
+      purpose,
+      createdAt: { gte: new Date(Date.now() - FAILURE_WINDOW_MINUTES * 60_000) },
+    },
+    _sum: { attempts: true },
+  });
+  return result._sum.attempts ?? 0;
 }

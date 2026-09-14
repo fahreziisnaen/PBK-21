@@ -9,20 +9,31 @@ import { Secret, TOTP } from 'otpauth';
 const authChallengeFindUnique = vi.fn();
 const authChallengeUpdate = vi.fn();
 const authChallengeUpdateMany = vi.fn();
+const authChallengeAggregate = vi.fn();
 const userUpdate = vi.fn();
 const authEventCreate = vi.fn();
+const executeRaw = vi.fn();
 
-vi.mock('@/lib/prisma', () => ({
-  prisma: {
+// spendChallenge runs inside prisma.$transaction and takes an advisory lock
+// with $executeRaw. The mock hands the same client back as the transaction
+// client, so the stateful stubs below see every write. It does NOT serialize
+// concurrent callers — the real lock is proven against PostgreSQL in
+// tests/e2e/challenge-concurrency.spec.ts, which a mock cannot do.
+vi.mock('@/lib/prisma', () => {
+  const client: Record<string, unknown> = {
     authChallenge: {
       findUnique: authChallengeFindUnique,
       update: authChallengeUpdate,
       updateMany: authChallengeUpdateMany,
+      aggregate: authChallengeAggregate,
     },
     user: { update: userUpdate },
     authEvent: { create: authEventCreate },
-  },
-}));
+    $executeRaw: executeRaw,
+  };
+  client.$transaction = async (fn: (tx: unknown) => unknown) => fn(client);
+  return { prisma: client };
+});
 
 beforeAll(() => {
   process.env.AUTH_SECRET ??= 'test-auth-secret-32-chars-min-12345';
@@ -103,6 +114,9 @@ beforeEach(() => {
   resetChallenge();
 
   authChallengeFindUnique.mockImplementation(async () => ({ ...stored, user }));
+  executeRaw.mockResolvedValue(1);
+  // The trailing-day wrong-code sum, drawn from the one stored challenge.
+  authChallengeAggregate.mockImplementation(async () => ({ _sum: { attempts: stored.attempts } }));
   // Faithful enough to real Prisma semantics for this test's purposes:
   // applies a plain field assignment, or a numeric `{ increment }` update.
   authChallengeUpdate.mockImplementation(
@@ -258,5 +272,36 @@ describe('authorizeOtp — ketahanan tepi', () => {
 
     expect(result).toBeNull();
     expect(stored.attempts).toBe(before + 1);
+  });
+});
+
+describe('authorizeOtp — batas kode salah harian', () => {
+  it('menolak kode yang BENAR bila jatah kode salah hari ini sudah habis', async () => {
+    // The daily limit is enforced on every guess, not only when a challenge
+    // is issued. Otherwise a burst of parallel requests could issue rows past
+    // the budget and every guess on them would go unmetered.
+    resetChallenge({});
+    authChallengeAggregate.mockResolvedValue({ _sum: { attempts: 10 } });
+    const before = stored.attempts;
+
+    const result = await authorizeOtp({ challengeId: stored.id, code: currentTotpCode(plainSecret) });
+
+    expect(result).toBeNull();
+    // Refused before verification: no attempt spent, nothing consumed.
+    expect(stored.attempts).toBe(before);
+    expect(stored.consumedAt).toBeNull();
+    const logged = authEventCreate.mock.calls.map((c) => c[0]?.data);
+    expect(logged).toContainEqual(
+      expect.objectContaining({ event: 'login.otp_exhausted', meta: { scope: 'daily' } }),
+    );
+  });
+
+  it('masih menerima kode benar selama jatah belum habis', async () => {
+    resetChallenge({});
+    authChallengeAggregate.mockResolvedValue({ _sum: { attempts: 9 } });
+
+    const result = await authorizeOtp({ challengeId: stored.id, code: currentTotpCode(plainSecret) });
+
+    expect(result).not.toBeNull();
   });
 });

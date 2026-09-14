@@ -8,13 +8,9 @@ import { prisma } from '@/lib/prisma';
 import { clientIpFrom } from '@/lib/client-ip';
 import { recordAuthEvent } from '@/lib/auth-event';
 import { AUTH_EVENTS } from '@/lib/auth-event-names';
-import { checkChallengeBudget, checkLoginRate, findUsableChallenge } from '@/lib/rate-limit';
-import {
-  CHALLENGE_COOKIE,
-  CHALLENGE_TTL_MINUTES,
-  generateOtpCode,
-  hashOtp,
-} from '@/lib/auth-challenge';
+import { checkLoginRate } from '@/lib/rate-limit';
+import { issueChallenge } from '@/lib/challenge-lock';
+import { CHALLENGE_COOKIE, CHALLENGE_TTL_MINUTES } from '@/lib/auth-challenge';
 import { sendWhatsApp } from '@/lib/wa-gateway';
 import { chooseSecondFactor } from '@/lib/actions/choose-second-factor';
 
@@ -83,60 +79,41 @@ export async function startLogin(
 
   const isBootstrap = method === 'BOOTSTRAP';
 
-  // Reuse a live challenge rather than issuing another. Each new row reset
-  // the 5-attempt counter, so someone who knew the password but not the
-  // second factor could re-submit it repeatedly and get unlimited OTP
-  // guesses — the cap only bounds anything if the attempts stay on one row.
-  const live = await findUsableChallenge(user.id, 'LOGIN');
-  if (live) {
-    const store = await cookies();
-    store.set(CHALLENGE_COOKIE, live.id, {
-      httpOnly: true,
-      sameSite: 'lax',
-      path: '/',
-      secure: process.env.NODE_ENV === 'production',
-      maxAge: CHALLENGE_TTL_MINUTES * 60,
-    });
-    redirect('/login/verifikasi');
-  }
-
-  // checkLoginRate counts only failed PASSWORDS, so a caller who knows the
-  // password could re-submit it forever and collect five fresh OTP guesses
-  // each time. This caps the challenges themselves.
-  const budget = await checkChallengeBudget(user.id, 'LOGIN');
-  if (!budget.allowed) {
-    return budget.reason === 'failures'
-      ? 'Terlalu banyak kode verifikasi salah hari ini. Coba lagi besok, atau hubungi administrator.'
-      : `Terlalu banyak percobaan. Coba lagi dalam ${budget.retryAfterMinutes} menit.`;
-  }
-
-  const otp = method === 'WA_OTP' ? generateOtpCode() : null;
-
-  const challenge = await prisma.authChallenge.create({
-    data: {
-      userId: user.id,
-      purpose: 'LOGIN',
-      method: isBootstrap ? 'TOTP' : method,
-      otpHash: otp ? hashOtp(otp) : null,
-      expiresAt: new Date(Date.now() + CHALLENGE_TTL_MINUTES * 60_000),
-      // Never pre-consumed, not even for bootstrap. A consumed challenge with
-      // no otpHash is indistinguishable from a legitimately consumed TOTP one
-      // (only WA_OTP challenges ever carry an otpHash), so pre-consuming here
-      // would let stage 2 mistake a spent TOTP challenge for a bootstrap and
-      // admit it with no second factor at all. Stage 2 identifies a bootstrap
-      // from the user's own capability instead, via chooseSecondFactor.
-      consumedAt: null,
-    },
+  // Reuse, the issuance cap and the daily wrong-code cap all run under one
+  // per-account lock. checkLoginRate above counts only failed PASSWORDS, so
+  // without this a caller who knows the password could re-submit it and
+  // collect fresh OTP guesses; and without the lock, a burst of parallel
+  // submissions could issue rows faster than the budget check could see.
+  const issued = await issueChallenge({
+    userId: user.id,
+    purpose: 'LOGIN',
+    // A bootstrap account has no factor; SecondFactor has no BOOTSTRAP member,
+    // so its challenge is recorded as TOTP. It is NEVER pre-consumed: a
+    // consumed challenge with no otpHash is indistinguishable from a spent
+    // TOTP one, so pre-consuming would let stage 2 admit a replayed TOTP
+    // challenge with no second factor. Stage 2 identifies bootstrap from the
+    // user's own capability instead, via chooseSecondFactor.
+    method: isBootstrap ? 'TOTP' : method,
   });
+  if (issued.kind === 'refused') {
+    return issued.verdict.reason === 'failures'
+      ? 'Terlalu banyak kode verifikasi salah hari ini. Coba lagi besok, atau hubungi administrator.'
+      : `Terlalu banyak percobaan. Coba lagi dalam ${issued.verdict.retryAfterMinutes} menit.`;
+  }
 
   const store = await cookies();
-  store.set(CHALLENGE_COOKIE, challenge.id, {
+  store.set(CHALLENGE_COOKIE, issued.challengeId, {
     httpOnly: true,
     sameSite: 'lax',
     path: '/',
     secure: process.env.NODE_ENV === 'production',
     maxAge: CHALLENGE_TTL_MINUTES * 60,
   });
+
+  // Only a newly created WA_OTP challenge carries a code to send. A reused
+  // challenge sends nothing: its code was sent when it was created, and a
+  // new code would need a new row, which would reset the attempts count.
+  const otp = issued.kind === 'created' ? issued.otp : null;
 
   if (otp && user.phone) {
     const config = {
