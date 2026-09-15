@@ -1,0 +1,25 @@
+# Untuk Cloudflare Tunnel (Zero Trust → Tunnels → Published application).
+#
+# Di belakang tunnel, HTTPS sudah diurus Cloudflare di tepi jaringan. Caddy
+# cukup melayani HTTP biasa di port 80 dan TIDAK mencoba mengambil sertifikat
+# sendiri — verifikasi Let's Encrypt selalu gagal di sini, karena domainnya
+# mengarah ke tunnel, bukan ke IP server, dan tanpa sertifikat tunnel
+# yang diarahkan ke https://IP:443 hanya menghasilkan error 502.
+#
+# Aktifkan dengan CADDYFILE=Caddyfile.tunnel di .env, lalu arahkan
+# service tunnel ke:  http://localhost:80
+{
+	auto_https off
+	servers {
+		# cloudflared di server yang sama terlihat datang dari jaringan privat
+		# Docker. Mempercayainya membuat header X-Forwarded-Proto: https dari
+		# Cloudflare diteruskan ke aplikasi, sehingga login dan cookie tahu
+		# bahwa pengunjung sebenarnya memakai HTTPS.
+		trusted_proxies static private_ranges
+	}
+}
+
+:80 {
+	encode gzip
+	reverse_proxy app:3000
+}

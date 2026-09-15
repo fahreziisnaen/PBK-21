@@ -76,7 +76,9 @@ services:
     environment:
       DOMAIN: ${DOMAIN:?wajib diisi di .env}
     volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      # Caddyfile (bawaan) mengambil sertifikat HTTPS sendiri, untuk DNS yang
+      # langsung mengarah ke server. Caddyfile.tunnel untuk Cloudflare Tunnel.
+      - ./${CADDYFILE:-Caddyfile}:/etc/caddy/Caddyfile:ro
       - caddy-data:/data
       - caddy-config:/config
     depends_on:
