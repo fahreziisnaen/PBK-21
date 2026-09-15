@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import type { SchoolClass } from '@prisma/client';
 import { PageHead } from '@/components/shell/PageHead';
 import { Badge } from '@/components/ui/Badge';
 import { FormModal } from '@/components/ui/FormModal';
@@ -8,6 +9,7 @@ import { PaymentFormModal } from '@/components/finance/PaymentFormModal';
 import { requireUser } from '@/lib/auth-guard';
 import { canWrite } from '@/lib/roles';
 import { getActiveActivity } from '@/lib/activity-context';
+import { prisma } from '@/lib/prisma';
 import { participantRows, todayIso } from '@/lib/finance';
 import { addStudent, enrollGrade, importStudents, removeParticipant, updateParticipant } from '@/lib/actions/students';
 import { formatPhoneLocal } from '@/lib/phone';
@@ -16,7 +18,7 @@ import { btnGhost, btnSecondary, input, label, mono, table, tableWrap, td, tdNum
 
 type Search = { q?: string; grade?: string; status?: string };
 
-function StudentFields({ contribution, row }: { contribution: number; row?: Awaited<ReturnType<typeof participantRows>>[number] }) {
+function StudentFields({ contribution, classes, row }: { contribution: number; classes: SchoolClass[]; row?: Awaited<ReturnType<typeof participantRows>>[number] }) {
   return (
     <>
       {row && <input type="hidden" name="participantId" value={row.id} />}
@@ -30,7 +32,7 @@ function StudentFields({ contribution, row }: { contribution: number; row?: Awai
           <input id="name" name="name" required defaultValue={row?.name} className={input} />
         </div>
         <div>
-          <label className={label} htmlFor="grade">Tingkat</label>
+          <label className={label} htmlFor="grade">Tingkat <span className="font-normal text-gray-400">(mengikuti kelas bila dipilih)</span></label>
           <select id="grade" name="grade" required defaultValue={row?.grade ?? 'X'} className={input}>
             <option value="X">X</option>
             <option value="XI">XI</option>
@@ -39,7 +41,17 @@ function StudentFields({ contribution, row }: { contribution: number; row?: Awai
         </div>
         <div>
           <label className={label} htmlFor="className">Kelas</label>
-          <input id="className" name="className" defaultValue={row?.className ?? ''} placeholder="mis. X-3" className={input} />
+          <select id="className" name="className" defaultValue={row?.className ?? ''} className={input}>
+            <option value="">— Tanpa kelas —</option>
+            {classes.map((c) => (
+              <option key={c.id} value={c.name}>{c.name} (tingkat {c.grade})</option>
+            ))}
+          </select>
+          {classes.length === 0 && (
+            <p className="mt-1 text-[11.5px] text-gray-500">
+              Belum ada kelas. <a href="/master/kelas" className="font-semibold text-brand-600">Tambah di Master Data › Kelas</a>
+            </p>
+          )}
         </div>
         <div>
           <label className={label} htmlFor="phone">Telepon Orang Tua</label>
@@ -69,7 +81,10 @@ export default async function SiswaPage({ searchParams }: { searchParams: Promis
   const archived = activity.status === 'ARSIP';
   const { q = '', grade = '', status = '' } = await searchParams;
 
-  const all = await participantRows(activity.id);
+  const [all, classes] = await Promise.all([
+    participantRows(activity.id),
+    prisma.schoolClass.findMany({ orderBy: [{ grade: 'asc' }, { name: 'asc' }] }),
+  ]);
   const needle = q.trim().toLowerCase();
   const rows = all.filter(
     (r) =>
@@ -112,7 +127,7 @@ export default async function SiswaPage({ searchParams }: { searchParams: Promis
                 </div>
               </FormModal>
               <FormModal trigger="+ Tambah Siswa" title="Tambah Siswa" action={addStudent} wide>
-                <StudentFields contribution={activity.contribution} />
+                <StudentFields contribution={activity.contribution} classes={classes} />
               </FormModal>
             </>
           )
@@ -188,7 +203,7 @@ export default async function SiswaPage({ searchParams }: { searchParams: Promis
                       />
                     )}
                     <FormModal trigger="Edit" triggerClassName={btnGhost} title="Edit Siswa" action={updateParticipant} wide>
-                      <StudentFields contribution={activity.contribution} row={r} />
+                      <StudentFields contribution={activity.contribution} classes={classes} row={r} />
                     </FormModal>
                     {r.paid === 0 && (
                       <ConfirmAction

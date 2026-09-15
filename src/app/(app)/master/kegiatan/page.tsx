@@ -6,7 +6,7 @@ import { ConfirmAction } from '@/components/ui/ConfirmAction';
 import { requireUser } from '@/lib/auth-guard';
 import { canWrite, isAdmin } from '@/lib/roles';
 import { prisma } from '@/lib/prisma';
-import { archiveActivity, saveActivity } from '@/lib/actions/master';
+import { archiveActivity, deleteActivity, saveActivity } from '@/lib/actions/master';
 import { activityFinance, isoDate } from '@/lib/finance';
 import { fdate, rp } from '@/lib/format';
 import { btnGhost, input, label, mono, table, tableWrap, td, tdNum, textarea, th, thNum } from '@/lib/ui';
@@ -81,7 +81,7 @@ export default async function KegiatanPage() {
   const admin = isAdmin(user.role);
 
   const [activities, categories] = await Promise.all([
-    prisma.activity.findMany({ include: { category: true }, orderBy: [{ year: 'desc' }, { startDate: 'desc' }] }),
+    prisma.activity.findMany({ include: { category: true, _count: { select: { participants: true, payments: true, expenses: true } } }, orderBy: [{ year: 'desc' }, { startDate: 'desc' }] }),
     prisma.activityCategory.findMany({ orderBy: { code: 'asc' } }),
   ]);
   const finances = await Promise.all(activities.map((a) => activityFinance(a.id)));
@@ -168,6 +168,16 @@ export default async function KegiatanPage() {
                           confirmLabel="Arsipkan"
                           tone="warn"
                           run={archiveActivity.bind(null, a.id)}
+                        />
+                      )}
+                      {admin && a._count.participants + a._count.payments + a._count.expenses === 0 && (
+                        <ConfirmAction
+                          label="Hapus"
+                          title="Hapus Kegiatan"
+                          body={`"${a.name}" akan dihapus permanen.`}
+                          bullets={['Hanya kegiatan tanpa peserta dan tanpa transaksi yang bisa dihapus.', 'Tindakan ini tidak bisa dibatalkan.']}
+                          confirmLabel="Hapus Permanen"
+                          run={deleteActivity.bind(null, a.id)}
                         />
                       )}
                     </td>

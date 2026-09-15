@@ -186,6 +186,15 @@ model Student {
   updatedAt      DateTime      @updatedAt
 }
 
+model SchoolClass {                  // KELAS — mis. X-1, XI IPA 2
+  id              String   @id @default(cuid())
+  name            String   @unique       // nilai yang disimpan di Student.className
+  grade           Grade
+  homeroomTeacher String?                 // wali kelas
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
 model Participant {
   id         String    @id @default(cuid())
   activityId String

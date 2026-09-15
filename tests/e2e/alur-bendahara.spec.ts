@@ -15,6 +15,8 @@ const ACTIVITY = `E2E Study Tour ${stamp}`;
 const PREFIX = `E2E-${stamp.slice(-4)}`;
 const STUDENT = `E2E Siswa ${stamp}`;
 const NIS = `E2E${stamp}`;
+const CLASS = `E2E-${stamp}`;
+const CLASS_DEL = `E2E-DEL-${stamp}`;
 
 let admin: E2eUser;
 
@@ -27,6 +29,7 @@ test.afterAll(async () => {
     await prisma.activity.delete({ where: { id: activity.id } });
   }
   await prisma.student.deleteMany({ where: { nis: NIS } });
+  await prisma.schoolClass.deleteMany({ where: { name: { in: [CLASS, CLASS_DEL] } } });
   if (admin) {
     await prisma.auditLog.deleteMany({ where: { userId: admin.id } });
     await deleteE2eUser(admin.id);
@@ -55,6 +58,20 @@ test('alur bendahara lengkap', async ({ page, context }) => {
   const activity = await prisma.activity.findFirstOrThrow({ where: { name: ACTIVITY } });
   await context.addCookies([{ name: 'pbk_activity', value: activity.id, domain: 'localhost', path: '/' }]);
 
+  // --- Kelas: tambah dua, hapus satu yang kosong ---
+  await page.goto('/master/kelas');
+  for (const name of [CLASS, CLASS_DEL]) {
+    await page.getByRole('button', { name: '+ Tambah Kelas' }).click();
+    const clDialog = page.getByRole('dialog', { name: 'Tambah Kelas' });
+    await clDialog.getByLabel('Nama Kelas').fill(name);
+    await clDialog.getByLabel('Tingkat').selectOption('X');
+    await clDialog.getByRole('button', { name: 'Simpan' }).click();
+    await expect(page.getByRole('cell', { name, exact: true })).toBeVisible();
+  }
+  await page.getByRole('row', { name: new RegExp(CLASS_DEL) }).getByRole('button', { name: 'Hapus' }).click();
+  await page.getByRole('button', { name: 'Hapus Permanen' }).click();
+  await expect(page.getByRole('cell', { name: CLASS_DEL, exact: true })).toHaveCount(0);
+
   // --- Siswa ---
   await page.goto('/siswa');
   await page.getByRole('button', { name: '+ Tambah Siswa' }).click();
@@ -62,7 +79,7 @@ test('alur bendahara lengkap', async ({ page, context }) => {
   await stDialog.getByLabel('NIS').fill(NIS);
   await stDialog.getByLabel('Nama Siswa').fill(STUDENT);
   await stDialog.getByLabel('Tingkat').selectOption('X');
-  await stDialog.getByLabel('Kelas').fill('X-1');
+  await stDialog.getByLabel('Kelas', { exact: true }).selectOption(CLASS);
   await stDialog.getByRole('button', { name: 'Simpan' }).click();
   const studentRow = page.getByRole('row', { name: new RegExp(STUDENT) });
   await expect(studentRow).toContainText('Belum Bayar');

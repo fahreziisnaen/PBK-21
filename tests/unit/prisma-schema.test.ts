@@ -18,7 +18,7 @@ describe('skema Prisma', () => {
     for (const m of [
       'model User', 'model School', 'model ActivityCategory', 'model ExpenseCategory',
       'model Activity', 'model Student', 'model Participant', 'model Payment',
-      'model Expense', 'model Notification', 'model AuditLog',
+      'model Expense', 'model Notification', 'model AuditLog', 'model SchoolClass',
     ]) {
       expect(schema).toContain(m);
     }

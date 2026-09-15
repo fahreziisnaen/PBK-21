@@ -12,10 +12,29 @@ import { fail, ok, type ActionResult } from '@/lib/action-result';
 const GRADES: Grade[] = ['X', 'XI', 'XII'];
 const str = (fd: FormData, key: string) => String(fd.get(key) ?? '').trim();
 
+/** Nama kelas dinormalkan sama seperti di master kelas: huruf besar, spasi tunggal. */
+function normalizeClassName(value: string): string {
+  return value.trim().toUpperCase().replace(/\s+/g, ' ');
+}
+
+/**
+ * Kelas yang dipilih di form harus terdaftar di master kelas, dan tingkat
+ * siswa mengikuti tingkat kelas itu — supaya "X-1" tidak pernah tercatat
+ * sebagai tingkat XI karena salah pilih.
+ */
+async function resolveClass(raw: string, grade: Grade): Promise<{ className: string | null; grade: Grade } | { error: string }> {
+  const name = normalizeClassName(raw);
+  if (!name) return { className: null, grade };
+  const found = await prisma.schoolClass.findUnique({ where: { name } });
+  if (!found) return { error: `Kelas "${name}" belum terdaftar. Tambahkan dulu di Master Data › Kelas.` };
+  return { className: found.name, grade: found.grade };
+}
+
 function refresh() {
   revalidatePath('/siswa');
   revalidatePath('/rekap');
   revalidatePath('/dashboard');
+  revalidatePath('/master/kelas');
 }
 
 /**
@@ -31,15 +50,16 @@ export async function addStudent(_: ActionResult, fd: FormData): Promise<ActionR
 
   const nis = str(fd, 'nis');
   const name = str(fd, 'name');
-  const grade = str(fd, 'grade') as Grade;
-  const className = str(fd, 'className') || null;
   const phoneRaw = str(fd, 'phone');
   const phone = phoneRaw ? normalizePhone(phoneRaw) : null;
   const billing = str(fd, 'billing') ? parseAmount(fd.get('billing')) : activity.contribution;
 
   if (!nis) return fail('NIS wajib diisi.');
   if (!name) return fail('Nama siswa wajib diisi.');
-  if (!GRADES.includes(grade)) return fail('Pilih tingkat X, XI, atau XII.');
+  if (!GRADES.includes(str(fd, 'grade') as Grade)) return fail('Pilih tingkat X, XI, atau XII.');
+  const cls = await resolveClass(str(fd, 'className'), str(fd, 'grade') as Grade);
+  if ('error' in cls) return fail(cls.error);
+  const { className, grade } = cls;
   if (phoneRaw && !phone) return fail('Nomor telepon tidak valid. Contoh: 081234567890.');
   if (!billing) return fail('Tagihan harus lebih dari nol.');
 
@@ -70,14 +90,15 @@ export async function updateParticipant(_: ActionResult, fd: FormData): Promise<
   if (participant.activity.status === 'ARSIP') return fail('Kegiatan ini sudah diarsipkan dan hanya bisa dibaca.');
 
   const name = str(fd, 'name');
-  const grade = str(fd, 'grade') as Grade;
-  const className = str(fd, 'className') || null;
   const phoneRaw = str(fd, 'phone');
   const phone = phoneRaw ? normalizePhone(phoneRaw) : null;
   const billing = parseAmount(fd.get('billing'));
 
   if (!name) return fail('Nama siswa wajib diisi.');
-  if (!GRADES.includes(grade)) return fail('Pilih tingkat X, XI, atau XII.');
+  if (!GRADES.includes(str(fd, 'grade') as Grade)) return fail('Pilih tingkat X, XI, atau XII.');
+  const cls = await resolveClass(str(fd, 'className'), str(fd, 'grade') as Grade);
+  if ('error' in cls) return fail(cls.error);
+  const { className, grade } = cls;
   if (phoneRaw && !phone) return fail('Nomor telepon tidak valid. Contoh: 081234567890.');
   if (!billing) return fail('Tagihan harus lebih dari nol.');
 
@@ -156,9 +177,23 @@ export async function importStudents(_: ActionResult, fd: FormData): Promise<Act
     const phone = phoneRaw ? normalizePhone(phoneRaw) : null;
     if (!nis || !name) errors.push(`Baris ${i + 1}: NIS dan nama wajib.`);
     else if (!GRADES.includes(grade)) errors.push(`Baris ${i + 1}: tingkat harus X, XI, atau XII.`);
-    else parsed.push({ nis, name, grade, className: className || null, phone });
+    else parsed.push({ nis, name, grade, className: className ? normalizeClassName(className) : null, phone });
   });
   if (errors.length > 0) return fail(errors.slice(0, 5).join(' '));
+
+  // Kelas yang belum ada di master dibuat otomatis dari data impor. Kelas yang
+  // sudah ada menentukan tingkat siswanya, sama seperti saat input manual.
+  const classNames = [...new Set(parsed.map((r) => r.className).filter((c): c is string => !!c))];
+  const existing = new Map((await prisma.schoolClass.findMany({ where: { name: { in: classNames } } })).map((c) => [c.name, c.grade]));
+  let createdClasses = 0;
+  for (const name of classNames) {
+    if (existing.has(name)) continue;
+    const grade = parsed.find((r) => r.className === name)!.grade;
+    await prisma.schoolClass.create({ data: { name, grade } });
+    existing.set(name, grade);
+    createdClasses++;
+  }
+  for (const row of parsed) if (row.className) row.grade = existing.get(row.className)!;
 
   let added = 0;
   for (const row of parsed) {
@@ -174,5 +209,8 @@ export async function importStudents(_: ActionResult, fd: FormData): Promise<Act
     added += result.count;
   }
   refresh();
-  return ok(`${parsed.length} siswa diproses, ${added} baru didaftarkan ke ${activity.name}.`);
+  return ok(
+    `${parsed.length} siswa diproses, ${added} baru didaftarkan ke ${activity.name}` +
+      (createdClasses ? `, ${createdClasses} kelas baru dibuat.` : '.'),
+  );
 }

@@ -3,8 +3,8 @@ import { getRouteMeta, ROUTES, type RouteMeta } from '@/lib/routes';
 import { NAV_GROUPS } from '@/lib/nav';
 
 describe('ROUTES', () => {
-  it('mendaftarkan 21 route', () => {
-    expect(Object.keys(ROUTES)).toHaveLength(21);
+  it('mendaftarkan 22 route', () => {
+    expect(Object.keys(ROUTES)).toHaveLength(22);
   });
 
   it('menyalin judul dan subjudul dari prototipe', () => {

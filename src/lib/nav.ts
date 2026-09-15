@@ -23,6 +23,7 @@ export const NAV_GROUPS: NavGroup[] = [
     items: [
       { label: 'Kategori Kegiatan', href: '/master/kategori-kegiatan' },
       { label: 'Kategori Pengeluaran', href: '/master/kategori-pengeluaran' },
+      { label: 'Kelas', href: '/master/kelas' },
       { label: 'Kegiatan', href: '/master/kegiatan' },
     ],
   },

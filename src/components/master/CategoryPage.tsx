@@ -6,6 +6,8 @@ import { requireUser } from '@/lib/auth-guard';
 import { isAdmin } from '@/lib/roles';
 import { prisma } from '@/lib/prisma';
 import {
+  deleteActivityCategory,
+  deleteExpenseCategory,
   saveActivityCategory,
   saveExpenseCategory,
   toggleActivityCategory,
@@ -43,6 +45,7 @@ export async function CategoryPage({ kind }: { kind: 'activity' | 'expense' }) {
   const pathname = kind === 'activity' ? '/master/kategori-kegiatan' : '/master/kategori-pengeluaran';
   const save = kind === 'activity' ? saveActivityCategory : saveExpenseCategory;
   const toggle = kind === 'activity' ? toggleActivityCategory : toggleExpenseCategory;
+  const remove = kind === 'activity' ? deleteActivityCategory : deleteExpenseCategory;
   const usedLabel = kind === 'activity' ? 'Kegiatan' : 'Transaksi';
 
   const rows: Row[] =
@@ -127,6 +130,16 @@ export async function CategoryPage({ kind }: { kind: 'activity' | 'expense' }) {
                         confirmLabel="Aktifkan"
                         tone="warn"
                         run={toggle.bind(null, row.id)}
+                      />
+                    )}
+                    {row.used === 0 && (
+                      <ConfirmAction
+                        label="Hapus"
+                        title="Hapus Kategori"
+                        body={`Kategori "${row.name}" akan dihapus permanen.`}
+                        bullets={['Hanya kategori yang belum pernah dipakai yang bisa dihapus.', 'Tindakan ini tidak bisa dibatalkan.']}
+                        confirmLabel="Hapus Permanen"
+                        run={remove.bind(null, row.id)}
                       />
                     )}
                   </td>

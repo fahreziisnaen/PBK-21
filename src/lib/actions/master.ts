@@ -140,3 +140,104 @@ export async function archiveActivity(id: string): Promise<ActionResult> {
   revalidatePath('/', 'layout');
   return ok('Kegiatan diarsipkan.');
 }
+
+// ---------- Hapus (hanya data yang belum dipakai) ----------
+//
+// Data yang sudah dipakai tidak dihapus: menghapusnya akan merusak riwayat
+// transaksi dan laporan. Untuk itu ada nonaktifkan (kategori) dan arsipkan
+// (kegiatan).
+
+export async function deleteActivityCategory(id: string): Promise<ActionResult> {
+  const user = await requireAdmin();
+  const category = await prisma.activityCategory.findUnique({
+    where: { id },
+    include: { _count: { select: { activities: true } } },
+  });
+  if (!category) return fail('Kategori tidak ditemukan.');
+  if (category._count.activities > 0)
+    return fail(`"${category.name}" dipakai ${category._count.activities} kegiatan, jadi tidak bisa dihapus. Nonaktifkan saja.`);
+  await prisma.activityCategory.delete({ where: { id } });
+  await writeAudit({ userId: user.id, action: 'category.delete', entity: 'ActivityCategory', entityId: id, meta: { code: category.code } });
+  revalidatePath('/master/kategori-kegiatan');
+  return ok(`Kategori "${category.name}" dihapus.`);
+}
+
+export async function deleteExpenseCategory(id: string): Promise<ActionResult> {
+  const user = await requireAdmin();
+  const category = await prisma.expenseCategory.findUnique({
+    where: { id },
+    include: { _count: { select: { expenses: true } } },
+  });
+  if (!category) return fail('Kategori tidak ditemukan.');
+  if (category._count.expenses > 0)
+    return fail(`"${category.name}" dipakai ${category._count.expenses} transaksi, jadi tidak bisa dihapus. Nonaktifkan saja.`);
+  await prisma.expenseCategory.delete({ where: { id } });
+  await writeAudit({ userId: user.id, action: 'category.delete', entity: 'ExpenseCategory', entityId: id, meta: { code: category.code } });
+  revalidatePath('/master/kategori-pengeluaran');
+  return ok(`Kategori "${category.name}" dihapus.`);
+}
+
+export async function deleteActivity(id: string): Promise<ActionResult> {
+  const user = await requireAdmin();
+  const activity = await prisma.activity.findUnique({
+    where: { id },
+    include: { _count: { select: { participants: true, payments: true, expenses: true } } },
+  });
+  if (!activity) return fail('Kegiatan tidak ditemukan.');
+  const { participants, payments, expenses } = activity._count;
+  if (participants + payments + expenses > 0)
+    return fail(`"${activity.name}" sudah punya peserta atau transaksi, jadi tidak bisa dihapus. Arsipkan saja.`);
+  await prisma.activity.delete({ where: { id } });
+  await writeAudit({ userId: user.id, action: 'activity.delete', entity: 'Activity', entityId: id, meta: { name: activity.name } });
+  revalidatePath('/', 'layout');
+  return ok(`Kegiatan "${activity.name}" dihapus.`);
+}
+
+// ---------- Kelas ----------
+
+const GRADES = ['X', 'XI', 'XII'] as const;
+
+export async function saveClass(_: ActionResult, fd: FormData): Promise<ActionResult> {
+  await requireWriter();
+  const id = str(fd, 'id');
+  const name = str(fd, 'name').toUpperCase().replace(/\s+/g, ' ');
+  const grade = str(fd, 'grade') as (typeof GRADES)[number];
+  const homeroomTeacher = opt(fd, 'homeroomTeacher');
+  if (!name || name.length > 20) return fail('Nama kelas wajib diisi, maksimal 20 karakter (mis. X-1).');
+  if (!GRADES.includes(grade)) return fail('Pilih tingkat X, XI, atau XII.');
+
+  try {
+    if (id) {
+      const existing = await prisma.schoolClass.findUnique({ where: { id } });
+      if (!existing) return fail('Kelas tidak ditemukan.');
+      // Nama kelas tersimpan di data siswa, jadi mengganti nama atau tingkat
+      // kelas ikut memperbarui semua siswanya dalam satu transaksi.
+      await prisma.$transaction([
+        prisma.schoolClass.update({ where: { id }, data: { name, grade, homeroomTeacher } }),
+        prisma.student.updateMany({ where: { className: existing.name }, data: { className: name, grade } }),
+      ]);
+    } else {
+      await prisma.schoolClass.create({ data: { name, grade, homeroomTeacher } });
+    }
+  } catch (e) {
+    if (isUniqueViolation(e)) return fail(`Kelas "${name}" sudah ada.`);
+    throw e;
+  }
+  revalidatePath('/master/kelas');
+  revalidatePath('/siswa');
+  revalidatePath('/rekap');
+  return ok(id ? 'Kelas diperbarui.' : `Kelas ${name} ditambahkan.`);
+}
+
+export async function deleteClass(id: string): Promise<ActionResult> {
+  const user = await requireWriter();
+  const schoolClass = await prisma.schoolClass.findUnique({ where: { id } });
+  if (!schoolClass) return fail('Kelas tidak ditemukan.');
+  const students = await prisma.student.count({ where: { className: schoolClass.name } });
+  if (students > 0)
+    return fail(`Kelas ${schoolClass.name} masih punya ${students} siswa. Pindahkan siswanya ke kelas lain dulu.`);
+  await prisma.schoolClass.delete({ where: { id } });
+  await writeAudit({ userId: user.id, action: 'class.delete', entity: 'SchoolClass', entityId: id, meta: { name: schoolClass.name } });
+  revalidatePath('/master/kelas');
+  return ok(`Kelas ${schoolClass.name} dihapus.`);
+}
