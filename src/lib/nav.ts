@@ -40,6 +40,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { label: 'Kuitansi', href: '/kuitansi' },
       { label: 'Pengaturan Kegiatan', href: '/pengaturan' },
       { label: 'Pengguna', href: '/pengguna' },
+      { label: 'Backup & Reset', href: '/pemeliharaan' },
     ],
   },
   { label: 'SISTEM', items: [{ label: 'Status & Komponen', href: '/states' }] },

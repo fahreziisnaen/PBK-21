@@ -4,12 +4,39 @@ import { createE2eUser, deleteE2eUser, loginAsFixture, prisma, type E2eUser } fr
 // A disposable, TOTP-enrolled BENDAHARA — passes the post-login gate
 // without ever touching `admin`. See tests/e2e/support/e2e-users.ts.
 let user: E2eUser;
+// Kategori dan kegiatan milik spec ini sendiri. Dulu spec ini membaca
+// "Outing Class X 2026" dari seeder — seeder tidak lagi membuatnya, dan
+// setelah factory reset data itu memang tidak ada.
+const stamp = Date.now().toString(36).toUpperCase();
+const MAIN = `E2E Switcher Utama ${stamp}`;
+let categoryId: string;
+let mainActivityId: string;
 
 test.beforeAll(async () => {
   user = await createE2eUser();
+  const category = await prisma.activityCategory.create({ data: { code: `E${stamp.slice(-8)}`, name: 'Kategori Uji Switcher' } });
+  categoryId = category.id;
+  // Tahun jauh ke depan: pilihan bawaan diurutkan year+startDate desc, jadi
+  // kegiatan ini pasti menjadi kegiatan aktif default selama spec berjalan.
+  const main = await prisma.activity.create({
+    data: {
+      name: MAIN,
+      categoryId,
+      year: 2099,
+      startDate: new Date('2099-01-10'),
+      endDate: new Date('2099-01-11'),
+      location: 'Lokasi Uji E2E',
+      contribution: 100_000,
+      status: 'AKTIF',
+      receiptPrefix: `E2E-M${stamp.slice(-4)}`,
+    },
+  });
+  mainActivityId = main.id;
 });
 
 test.afterAll(async () => {
+  await prisma.activity.deleteMany({ where: { categoryId } });
+  await prisma.activityCategory.delete({ where: { id: categoryId } }).catch(() => {});
   await deleteE2eUser(user.id);
   await prisma.$disconnect();
 });
@@ -22,7 +49,7 @@ test('menampilkan kegiatan aktif di header', async ({ page }) => {
   await login(page);
 
   await expect(page.getByLabel('KEGIATAN')).toBeVisible();
-  await expect(page.getByLabel('KEGIATAN')).toContainText('Outing Class X 2026');
+  await expect(page.getByLabel('KEGIATAN')).toHaveValue(mainActivityId);
 });
 
 test('mengganti kegiatan aktif dan tetap tersimpan setelah reload', async ({ page }) => {
@@ -30,11 +57,10 @@ test('mengganti kegiatan aktif dan tetap tersimpan setelah reload', async ({ pag
   // pilihan default (fallback mengurutkan year+startDate desc) — sehingga
   // pergantian yang kita uji benar-benar berasal dari cookie, bukan kebetulan
   // urutan fallback.
-  const category = await prisma.activityCategory.findUniqueOrThrow({ where: { code: 'OUT' } });
   const testActivity = await prisma.activity.create({
     data: {
       name: 'Kegiatan Uji E2E Switcher',
-      categoryId: category.id,
+      categoryId,
       year: 2020,
       startDate: new Date('2020-01-10'),
       endDate: new Date('2020-01-11'),
@@ -51,7 +77,7 @@ test('mengganti kegiatan aktif dan tetap tersimpan setelah reload', async ({ pag
 
     const select = page.getByLabel('KEGIATAN');
     // Default sebelum switch harus tetap kegiatan yang sudah AKTIF, bukan kegiatan uji.
-    await expect(select).toContainText('Outing Class X 2026');
+    await expect(select).toHaveValue(mainActivityId);
 
     await select.selectOption(testActivity.id);
     const [response] = await Promise.all([

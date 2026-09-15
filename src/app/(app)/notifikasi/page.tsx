@@ -20,6 +20,12 @@ const AUDIT_TITLES: Record<string, string> = {
   'user.activate': 'Pengguna diaktifkan',
   'user.deactivate': 'Pengguna dinonaktifkan',
   'user.totp_reset': '2FA pengguna direset',
+  'category.delete': 'Kategori dihapus',
+  'activity.delete': 'Kegiatan dihapus',
+  'class.delete': 'Kelas dihapus',
+  'system.backup': 'Backup data diunduh',
+  'system.restore': 'Data dipulihkan dari backup',
+  'system.factory_reset': 'Factory reset dijalankan',
 };
 
 function daysAgo(days: number): Date {
