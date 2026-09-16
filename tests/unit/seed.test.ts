@@ -19,6 +19,11 @@ const disconnectMock = vi.fn().mockResolvedValue(undefined);
 
 // Mocked at the module boundary — @prisma/client and @prisma/adapter-pg
 // never touch a real connection, so this test cannot reach the database.
+// prisma/seed.ts diawali `import 'dotenv/config'`. Tanpa mock ini, mengimpornya
+// menyuntikkan seluruh isi .env pengembang ke process.env yang dipakai bersama
+// semua berkas uji — termasuk mengisi ulang DATABASE_URL yang sengaja
+// dikosongkan prisma-guard.test.ts, sehingga ujinya gagal secara acak.
+vi.mock('dotenv/config', () => ({}));
 vi.mock('@prisma/adapter-pg', () => ({ PrismaPg: vi.fn() }));
 vi.mock('@prisma/client', () => ({
   PrismaClient: vi.fn().mockImplementation(function PrismaClientMock() {
