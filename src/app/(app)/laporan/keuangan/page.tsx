@@ -102,12 +102,12 @@ export default async function LaporanKeuanganPage({ searchParams }: { searchPara
           <Kpi label="Saldo Akhir" value={rp(opening + income - expense)} tone="brand" />
         </KpiRow>
 
-        <div className="mb-4 grid grid-cols-4 gap-3 max-[900px]:grid-cols-2 max-[520px]:grid-cols-1">
+        <KpiRow>
           <Kpi label="Pemasukan Tunai" value={rp(byMethod.income.TUNAI)} tone="success" />
           <Kpi label="Pemasukan Transfer" value={rp(byMethod.income.TRANSFER)} tone="success" />
           <Kpi label="Pengeluaran Tunai" value={rp(byMethod.expense.TUNAI)} tone="error" />
           <Kpi label="Pengeluaran Transfer" value={rp(byMethod.expense.TRANSFER)} tone="error" />
-        </div>
+        </KpiRow>
 
         {perCategory.size > 0 && (
           <>

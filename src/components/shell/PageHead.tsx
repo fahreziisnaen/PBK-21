@@ -17,7 +17,7 @@ export function PageHead({ pathname, actions }: { pathname: string; actions?: Re
         <h1 className="text-[22px] font-bold tracking-[-0.5px] text-gray-900">{meta.title}</h1>
         <p className="mt-0.5 text-[13px] text-gray-500">{meta.subtitle}</p>
       </div>
-      {actions && <div data-noprint className="flex items-center gap-2">{actions}</div>}
+      {actions && <div data-noprint className="flex flex-wrap items-center gap-2">{actions}</div>}
     </div>
   );
 }

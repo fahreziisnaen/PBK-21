@@ -14,7 +14,7 @@ export function ActivitySwitcher({ activities, active }: { activities: Activity[
   }
 
   return (
-    <form action={change} className="flex items-center gap-2">
+    <form action={change} className="flex min-w-0 flex-1 items-center gap-2 max-[900px]:w-full max-[900px]:flex-none">
       <label htmlFor="activityId" className="text-[11.5px] font-semibold text-gray-500">
         KEGIATAN
       </label>
@@ -22,7 +22,7 @@ export function ActivitySwitcher({ activities, active }: { activities: Activity[
         id="activityId"
         name="activityId"
         defaultValue={active.id}
-        className="h-9 rounded-lg border border-gray-300 bg-white px-2.5 text-[13px] font-semibold text-gray-900"
+        className="h-9 min-w-0 flex-1 rounded-lg border border-gray-300 bg-white px-2.5 text-[13px] font-semibold text-gray-900 md:max-w-[380px]"
       >
         {activities.map((a) => (
           <option key={a.id} value={a.id}>
@@ -32,7 +32,7 @@ export function ActivitySwitcher({ activities, active }: { activities: Activity[
       </select>
       <button
         type="submit"
-        className="rounded-lg bg-brand-600 px-3 py-1.5 text-[12.5px] font-semibold text-white hover:bg-brand-700"
+        className="flex-none rounded-lg bg-brand-600 px-3 py-1.5 text-[12.5px] font-semibold text-white hover:bg-brand-700"
       >
         Ganti
       </button>

@@ -41,7 +41,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         <Sidebar />
         <div className="flex min-w-0 flex-1 flex-col">
           <Header />
-          <main className="animate-pbkin flex-1 px-6 py-6">{children}</main>
+          <main className="animate-pbkin min-w-0 flex-1 px-6 py-6 max-[900px]:px-4 max-[900px]:py-5">{children}</main>
         </div>
       </div>
     </ToastProvider>

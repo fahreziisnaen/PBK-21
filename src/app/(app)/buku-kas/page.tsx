@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { PageHead } from '@/components/shell/PageHead';
-import { Kpi, NoActivity } from '@/components/ui/Kpi';
+import { Kpi, KpiRow, NoActivity } from '@/components/ui/Kpi';
 import { PrintButton } from '@/components/ui/PrintButton';
 import { requireUser } from '@/lib/auth-guard';
 import { getActiveActivity } from '@/lib/activity-context';
@@ -45,12 +45,12 @@ export default async function BukuKasPage({ searchParams }: { searchParams: Prom
         </div>
       </div>
 
-      <div className="mb-4 grid grid-cols-4 gap-3 max-[900px]:grid-cols-2 max-[520px]:grid-cols-1">
+      <KpiRow>
         <Kpi label="Saldo Awal" value={rp(opening)} />
         <Kpi label="Total Pemasukan" value={rp(income)} tone="success" />
         <Kpi label="Total Pengeluaran" value={rp(expense)} tone="error" />
         <Kpi label="Saldo Akhir" value={rp(opening + income - expense)} tone="brand" />
-      </div>
+      </KpiRow>
 
       <form className="mb-3 flex flex-wrap items-center gap-2" data-noprint>
         <span className="text-[12.5px] font-semibold text-gray-600">Periode</span>

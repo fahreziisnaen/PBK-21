@@ -11,7 +11,7 @@ export async function Header() {
   return (
     <header
       data-noprint
-      className="sticky top-0 z-10 flex h-16 items-center justify-between gap-4 border-b border-gray-200 bg-white px-6 max-[900px]:h-auto max-[900px]:flex-wrap max-[900px]:py-2"
+      className="sticky top-0 z-30 flex h-16 items-center justify-between gap-4 border-b border-gray-200 bg-white px-6 max-[900px]:h-auto max-[900px]:flex-wrap max-[900px]:gap-2 max-[900px]:px-4 max-[900px]:py-2.5"
     >
       <ActivitySwitcher activities={activities} active={active} />
 

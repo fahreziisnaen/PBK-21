@@ -38,7 +38,7 @@ export default async function KuitansiPage({ searchParams }: { searchParams: Pro
               </>
             }
           />
-          <div id="kuitansi" className="relative mx-auto max-w-[760px] overflow-hidden rounded-xl border border-gray-300 bg-white p-8 print:rounded-none print:border-gray-400">
+          <div id="kuitansi" className="relative mx-auto max-w-[760px] overflow-hidden rounded-xl border border-gray-300 bg-white p-8 max-[520px]:p-5 print:rounded-none print:border-gray-400">
             {cancelled && (
               <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
                 <span className="-rotate-12 rounded-lg border-4 border-error-600 px-6 py-2 text-[44px] font-extrabold tracking-widest text-error-600 opacity-40">
@@ -63,17 +63,17 @@ export default async function KuitansiPage({ searchParams }: { searchParams: Pro
             </div>
 
             <div className="mt-5 space-y-3 text-[13.5px]">
-              <div className="grid grid-cols-[170px_1fr] gap-2">
+              <div className="grid grid-cols-[170px_1fr] gap-2 max-[520px]:grid-cols-1 max-[520px]:gap-0.5">
                 <span className="text-gray-600">Telah terima dari</span>
                 <span className="border-b border-dotted border-gray-400 font-semibold text-gray-900">
                   {s.name} ({s.className ?? `Kelas ${s.grade}`}, NIS {s.nis})
                 </span>
               </div>
-              <div className="grid grid-cols-[170px_1fr] gap-2">
+              <div className="grid grid-cols-[170px_1fr] gap-2 max-[520px]:grid-cols-1 max-[520px]:gap-0.5">
                 <span className="text-gray-600">Uang sejumlah</span>
                 <span className="border-b border-dotted border-gray-400 font-semibold italic text-gray-900">{terbilang(payment.amount)}</span>
               </div>
-              <div className="grid grid-cols-[170px_1fr] gap-2">
+              <div className="grid grid-cols-[170px_1fr] gap-2 max-[520px]:grid-cols-1 max-[520px]:gap-0.5">
                 <span className="text-gray-600">Untuk pembayaran</span>
                 <span className="border-b border-dotted border-gray-400 text-gray-900">
                   Kontribusi {payment.activity.name} ({payment.method === 'TUNAI' ? 'tunai' : 'transfer'})
@@ -82,11 +82,14 @@ export default async function KuitansiPage({ searchParams }: { searchParams: Pro
               </div>
             </div>
 
-            <div className="mt-8 flex items-end justify-between gap-6">
-              <div className="rounded-lg border-2 border-gray-900 px-5 py-3 font-mono text-[22px] font-bold text-gray-900">
+            {/* Di layar sempit nominal dan blok tanda tangan ditumpuk: berdampingan
+                keduanya melebihi lebar kartu, dan `overflow-hidden` di atas akan
+                memangkas tanggal serta nama bendahara tanpa terlihat. */}
+            <div className="mt-8 flex items-end justify-between gap-6 max-[520px]:flex-col max-[520px]:items-stretch max-[520px]:gap-5">
+              <div className="rounded-lg border-2 border-gray-900 px-5 py-3 text-center font-mono text-[22px] font-bold text-gray-900 max-[520px]:text-[19px]">
                 {rp(payment.amount)}
               </div>
-              <div className="min-w-[220px] text-center text-[13px] text-gray-700">
+              <div className="min-w-[220px] text-center text-[13px] text-gray-700 max-[520px]:min-w-0">
                 <div>Surabaya, {fdateLong(isoDate(payment.date))}</div>
                 <div>Bendahara</div>
                 {creator?.signatureImage ? (
