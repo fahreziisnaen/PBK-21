@@ -33,7 +33,7 @@ export default async function PengaturanPage() {
 
   return (
     <>
-      <PageHead pathname="/pengaturan" />
+      <PageHead pathname="/pengaturan" activity={activity} />
       <div className="grid grid-cols-2 gap-4 max-[900px]:grid-cols-1">
         <div className={`${card} p-6`}>
           <h2 className="mb-1 text-[15px] font-bold text-gray-900">Identitas Sekolah</h2>

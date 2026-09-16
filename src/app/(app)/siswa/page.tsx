@@ -4,6 +4,7 @@ import { PageHead } from '@/components/shell/PageHead';
 import { Badge } from '@/components/ui/Badge';
 import { FormModal } from '@/components/ui/FormModal';
 import { ConfirmAction } from '@/components/ui/ConfirmAction';
+import { BulkSelect } from '@/components/ui/BulkSelect';
 import { Kpi, KpiRow, NoActivity } from '@/components/ui/Kpi';
 import { PaymentFormModal } from '@/components/finance/PaymentFormModal';
 import { requireUser } from '@/lib/auth-guard';
@@ -11,7 +12,7 @@ import { canWrite } from '@/lib/roles';
 import { getActiveActivity } from '@/lib/activity-context';
 import { prisma } from '@/lib/prisma';
 import { participantRows, todayIso } from '@/lib/finance';
-import { addStudent, enrollGrade, importStudents, removeParticipant, updateBillingBulk, updateParticipant } from '@/lib/actions/students';
+import { addStudent, enrollGrade, enrollStudents, importStudents, removeParticipant, removeParticipants, updateBillingBulk, updateParticipant } from '@/lib/actions/students';
 import { formatPhoneLocal } from '@/lib/phone';
 import { rp } from '@/lib/format';
 import { btnGhost, btnSecondary, input, label, mono, table, tableWrap, td, tdNum, textarea, th, thNum } from '@/lib/ui';
@@ -81,9 +82,13 @@ export default async function SiswaPage({ searchParams }: { searchParams: Promis
   const archived = activity.status === 'ARSIP';
   const { q = '', grade = '', status = '' } = await searchParams;
 
-  const [all, classes] = await Promise.all([
+  const [all, classes, unenrolled] = await Promise.all([
     participantRows(activity.id),
     prisma.schoolClass.findMany({ orderBy: [{ grade: 'asc' }, { name: 'asc' }] }),
+    prisma.student.findMany({
+      where: { participations: { none: { activityId: activity.id } } },
+      orderBy: [{ grade: 'asc' }, { className: 'asc' }, { name: 'asc' }],
+    }),
   ]);
   const needle = q.trim().toLowerCase();
   const rows = all.filter(
@@ -97,10 +102,11 @@ export default async function SiswaPage({ searchParams }: { searchParams: Promis
   const totalPaid = all.reduce((s, r) => s + r.paid, 0);
   const lunas = all.filter((r) => r.status === 'Lunas').length;
 
-  return (
+  const head = (
     <>
       <PageHead
         pathname="/siswa"
+        activity={activity}
         actions={
           writer &&
           !archived && (
@@ -112,6 +118,28 @@ export default async function SiswaPage({ searchParams }: { searchParams: Promis
                   <b>{activity.name}</b> dengan tagihan {rp(activity.contribution)}.
                 </p>
                 <textarea name="rows" rows={10} className={`${textarea} font-mono text-[12.5px]`} placeholder={'2026001\tAhmad Fauzi\tX\tX-1\t081234567890\n2026002\tBunga Lestari\tX\tX-1'} />
+              </FormModal>
+              <FormModal trigger="Daftarkan Siswa" triggerClassName={btnSecondary} title="Daftarkan Siswa ke Kegiatan" submitLabel="Daftarkan Terpilih" action={enrollStudents} wide>
+                {unenrolled.length === 0 ? (
+                  <p className="text-[12.5px] text-gray-600">Semua siswa di data sekolah sudah terdaftar di <b>{activity.name}</b>.</p>
+                ) : (
+                  <>
+                    <p className="text-[12.5px] text-gray-600">
+                      Centang siswa yang ikut <b>{activity.name}</b>. Tagihan awalnya {rp(activity.contribution)}, bisa diubah
+                      per siswa atau lewat Ubah Tagihan Massal.
+                    </p>
+                    <div className="max-h-[320px] overflow-y-auto rounded-lg border border-gray-200">
+                      {unenrolled.map((s) => (
+                        <label key={s.id} className="flex cursor-pointer items-center gap-3 border-b border-gray-100 px-3 py-2 text-[13px] last:border-0 hover:bg-gray-50">
+                          <input type="checkbox" name="studentIds" value={s.id} className="h-4 w-4 flex-none rounded border-gray-300" />
+                          <span className="min-w-0 flex-1 truncate font-semibold text-gray-900">{s.name}</span>
+                          <span className="flex-none font-mono text-[12px] text-gray-500">{s.nis}</span>
+                          <span className="w-16 flex-none text-right text-[12px] text-gray-500">{s.className ?? s.grade}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </>
+                )}
               </FormModal>
               <FormModal trigger="Daftarkan per Tingkat" triggerClassName={btnSecondary} title="Daftarkan Seluruh Siswa Satu Tingkat" submitLabel="Daftarkan" action={enrollGrade}>
                 <p className="text-[12.5px] text-gray-600">
@@ -179,11 +207,15 @@ export default async function SiswaPage({ searchParams }: { searchParams: Promis
         </select>
         <button className={btnSecondary}>Terapkan</button>
       </form>
+    </>
+  );
 
+  const tabel = (
       <div className={tableWrap}>
         <table className={`${table} min-w-[900px]`}>
           <thead>
             <tr>
+              {writer && !archived && <th className={`${th} w-10`}><span className="sr-only">Pilih</span></th>}
               <th className={th}>NIS</th>
               <th className={th}>Nama Siswa</th>
               <th className={th}>Kelas</th>
@@ -197,13 +229,24 @@ export default async function SiswaPage({ searchParams }: { searchParams: Promis
           <tbody>
             {rows.length === 0 && (
               <tr>
-                <td className={`${td} py-10 text-center text-gray-500`} colSpan={8}>
+                <td className={`${td} py-10 text-center text-gray-500`} colSpan={writer && !archived ? 9 : 8}>
                   {all.length === 0 ? 'Belum ada peserta. Tambah siswa, import dari Excel, atau daftarkan per tingkat.' : 'Tidak ada siswa yang cocok dengan filter.'}
                 </td>
               </tr>
             )}
             {rows.map((r) => (
               <tr key={r.id}>
+                {writer && !archived && (
+                  <td className={td}>
+                    <input
+                      type="checkbox"
+                      name="ids"
+                      value={r.id}
+                      aria-label={`Pilih ${r.name}`}
+                      className="h-4 w-4 rounded border-gray-300"
+                    />
+                  </td>
+                )}
                 <td className={`${td} ${mono}`}>{r.nis}</td>
                 <td className={td}>
                   <Link href={`/siswa/${r.studentId}`} className="font-semibold text-gray-900 hover:text-brand-600">{r.name}</Link>
@@ -244,6 +287,29 @@ export default async function SiswaPage({ searchParams }: { searchParams: Promis
           </tbody>
         </table>
       </div>
+  );
+
+  return (
+    <>
+      {head}
+      {writer && !archived ? (
+        <BulkSelect
+          action={removeParticipants}
+          actionLabel="Keluarkan Terpilih"
+          confirmTitle="Keluarkan dari Kegiatan"
+          confirmBody={`{n} siswa terpilih akan dikeluarkan dari ${activity.name}.`}
+          confirmBullets={[
+            'Data siswa tetap tersimpan dan bisa didaftarkan lagi.',
+            'Siswa yang sudah punya kuitansi akan dilewati, termasuk kuitansi yang dibatalkan.',
+          ]}
+          noun="siswa"
+          total={rows.length}
+        >
+          {tabel}
+        </BulkSelect>
+      ) : (
+        tabel
+      )}
     </>
   );
 }

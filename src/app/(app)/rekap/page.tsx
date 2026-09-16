@@ -116,7 +116,7 @@ export default async function RekapPage() {
 
   return (
     <>
-      <PageHead pathname="/rekap" actions={<PrintButton label="Cetak Rekap" />} />
+      <PageHead pathname="/rekap" activity={activity} actions={<PrintButton label="Cetak Rekap" />} />
       <KpiRow>
         <Kpi label="Total Siswa" value={String(t.count)} />
         <Kpi label="Lunas" value={String(t.lunas)} tone="success" hint={`${t.count ? Math.round((t.lunas / t.count) * 100) : 0}% peserta`} />

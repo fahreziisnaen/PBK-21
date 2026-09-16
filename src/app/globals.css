@@ -67,6 +67,21 @@
 }
 .animate-pbkin { animation: pbkin 0.18s ease-out; }
 
+/* Kerangka halaman selama data dimuat. Denyutnya dimatikan bagi pengguna yang
+   meminta gerak minimal lewat pengaturan sistemnya. */
+@keyframes pbkpulse {
+  50% { opacity: 0.45; }
+}
+.pbk-skeleton {
+  background: var(--color-gray-200);
+  border-radius: 8px;
+  animation: pbkpulse 1.2s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .animate-pbkin { animation: none; }
+  .pbk-skeleton { animation: none; }
+}
+
 @media print {
   body { background: #fff; }
   [data-noprint] { display: none !important; }

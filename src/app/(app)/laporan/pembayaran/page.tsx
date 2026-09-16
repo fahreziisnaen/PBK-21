@@ -56,7 +56,7 @@ export default async function LaporanPembayaranPage({ searchParams }: { searchPa
 
   return (
     <>
-      <PageHead pathname="/laporan/pembayaran" actions={<PrintButton label="Cetak Laporan" />} />
+      <PageHead pathname="/laporan/pembayaran" activity={activity} actions={<PrintButton label="Cetak Laporan" />} />
 
       <ReportFilters activities={activities} activityId={activity.id} from={sp.from} to={sp.to}>
         <select name="grade" defaultValue={sp.grade ?? ''} className={`${input} max-w-[140px]`} aria-label="Tingkat">

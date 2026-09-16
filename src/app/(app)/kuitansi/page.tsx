@@ -125,7 +125,7 @@ export default async function KuitansiPage({ searchParams }: { searchParams: Pro
 
   return (
     <>
-      <PageHead pathname="/kuitansi" />
+      <PageHead pathname="/kuitansi" activity={activity} />
       <p className="mb-3 text-[13px] text-gray-600">Pilih pembayaran untuk menampilkan kuitansi siap cetak.</p>
       <div className={tableWrap}>
         <table className={table}>

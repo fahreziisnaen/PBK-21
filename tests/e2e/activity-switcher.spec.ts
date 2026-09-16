@@ -79,12 +79,13 @@ test('mengganti kegiatan aktif dan tetap tersimpan setelah reload', async ({ pag
     // Default sebelum switch harus tetap kegiatan yang sudah AKTIF, bukan kegiatan uji.
     await expect(select).toHaveValue(mainActivityId);
 
-    await select.selectOption(testActivity.id);
+    // Memilih saja sudah memindahkan kegiatan — tidak ada tombol "Ganti" lagi.
     const [response] = await Promise.all([
       page.waitForResponse((res) => res.request().method() === 'POST'),
-      page.getByRole('button', { name: 'Ganti' }).click(),
+      select.selectOption(testActivity.id),
     ]);
     expect(response.ok()).toBeTruthy();
+    await expect(page.getByRole('button', { name: 'Ganti' })).toHaveCount(0);
     await expect(select).toHaveValue(testActivity.id);
 
     // Reload penuh (bukan navigasi client-side) — memaksa Server Component

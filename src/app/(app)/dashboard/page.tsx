@@ -28,7 +28,7 @@ export default async function DashboardPage() {
   if (!activity) {
     return (
       <>
-        <PageHead pathname="/dashboard" />
+        <PageHead pathname="/dashboard" activity={activity} />
         <NoActivity />
       </>
     );

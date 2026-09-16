@@ -255,3 +255,66 @@ export async function updateBillingBulk(_: ActionResult, fd: FormData): Promise<
   refresh();
   return ok('Tagihan ' + count + ' siswa (' + label + ') diubah menjadi ' + rp(amount) + '.');
 }
+
+/**
+ * Keluarkan beberapa peserta sekaligus dari kegiatan aktif. Peserta yang
+ * sudah punya kuitansi dilewati, bukan menggagalkan seluruh permintaan —
+ * memilih 40 siswa lalu ditolak semuanya karena satu di antaranya pernah
+ * membayar hanya memaksa pengguna menebak siswa mana penyebabnya.
+ */
+export async function removeParticipants(_: ActionResult, fd: FormData): Promise<ActionResult> {
+  await requireWriter();
+  const target = await getWritableActivity();
+  if ('error' in target) return fail(target.error);
+  const { activity } = target;
+
+  const ids = fd.getAll('ids').map((v) => String(v)).filter(Boolean);
+  if (ids.length === 0) return fail('Pilih dulu siswa yang akan dikeluarkan.');
+
+  const participants = await prisma.participant.findMany({
+    where: { id: { in: ids }, activityId: activity.id },
+    include: { student: { select: { name: true } }, _count: { select: { payments: true } } },
+  });
+  if (participants.length === 0) return fail('Peserta tidak ditemukan di kegiatan ini.');
+
+  const removable = participants.filter((p) => p._count.payments === 0);
+  const blocked = participants.filter((p) => p._count.payments > 0);
+  if (removable.length === 0)
+    return fail(
+      blocked.length === 1
+        ? `${blocked[0].student.name} sudah punya riwayat pembayaran, jadi tidak bisa dikeluarkan.`
+        : `${blocked.length} siswa terpilih sudah punya riwayat pembayaran, jadi tidak ada yang bisa dikeluarkan.`,
+    );
+
+  await prisma.participant.deleteMany({ where: { id: { in: removable.map((p) => p.id) } } });
+  refresh();
+  const note = blocked.length > 0 ? ` ${blocked.length} dilewati karena sudah ada pembayaran.` : '';
+  return ok(`${removable.length} siswa dikeluarkan dari ${activity.name}.` + note);
+}
+
+/**
+ * Daftarkan siswa terpilih ke kegiatan aktif. Siswa yang sudah terdaftar
+ * dilewati diam-diam, sehingga mencentang ulang tidak menimbulkan galat.
+ */
+export async function enrollStudents(_: ActionResult, fd: FormData): Promise<ActionResult> {
+  await requireWriter();
+  const target = await getWritableActivity();
+  if ('error' in target) return fail(target.error);
+  const { activity } = target;
+
+  const ids = fd.getAll('studentIds').map((v) => String(v)).filter(Boolean);
+  if (ids.length === 0) return fail('Pilih dulu siswa yang akan didaftarkan.');
+
+  const students = await prisma.student.findMany({
+    where: { id: { in: ids }, participations: { none: { activityId: activity.id } } },
+    select: { id: true },
+  });
+  if (students.length === 0) return fail('Semua siswa yang dipilih sudah terdaftar di kegiatan ini.');
+
+  await prisma.participant.createMany({
+    data: students.map((s) => ({ activityId: activity.id, studentId: s.id, billing: activity.contribution })),
+    skipDuplicates: true,
+  });
+  refresh();
+  return ok(`${students.length} siswa didaftarkan ke ${activity.name} dengan tagihan ${rp(activity.contribution)}.`);
+}

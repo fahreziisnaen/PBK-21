@@ -103,6 +103,7 @@ export default async function PengeluaranPage({ searchParams }: { searchParams: 
     <>
       <PageHead
         pathname="/pengeluaran"
+        activity={activity}
         actions={
           writable && (
             <FormModal trigger="+ Tambah Pengeluaran" title="Tambah Pengeluaran" action={saveExpense} wide>

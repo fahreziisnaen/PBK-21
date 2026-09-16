@@ -35,7 +35,7 @@ export default async function BukuKasPage({ searchParams }: { searchParams: Prom
 
   return (
     <>
-      <PageHead pathname="/buku-kas" actions={<PrintButton label="Cetak Buku Kas" />} />
+      <PageHead pathname="/buku-kas" activity={activity} actions={<PrintButton label="Cetak Buku Kas" />} />
 
       <div className="mb-4 hidden print:block">
         <div className="text-[16px] font-extrabold uppercase">{school?.name}</div>

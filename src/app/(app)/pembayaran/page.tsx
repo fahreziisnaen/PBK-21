@@ -64,6 +64,7 @@ export default async function PembayaranPage({ searchParams }: { searchParams: P
     <>
       <PageHead
         pathname="/pembayaran"
+        activity={activity}
         actions={writer && !archived && <PaymentFormModal participants={participants} today={todayIso()} />}
       />
 
