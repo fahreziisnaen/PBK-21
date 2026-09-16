@@ -7,13 +7,10 @@ import { requireAdmin, requireWriter } from '@/lib/roles';
 import { writeAudit } from '@/lib/audit';
 import { parseAmount, parseDateInput } from '@/lib/finance';
 import { fail, ok, type ActionResult } from '@/lib/action-result';
+import { isUniqueViolation } from '@/lib/prisma-errors';
 
 const str = (fd: FormData, key: string) => String(fd.get(key) ?? '').trim();
 const opt = (fd: FormData, key: string) => str(fd, key) || null;
-
-function isUniqueViolation(e: unknown): boolean {
-  return typeof e === 'object' && e !== null && 'code' in e && (e as { code: string }).code === 'P2002';
-}
 
 // ---------- Kategori (kegiatan & pengeluaran punya bentuk yang sama) ----------
 

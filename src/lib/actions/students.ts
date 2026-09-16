@@ -9,6 +9,7 @@ import { parseAmount } from '@/lib/finance';
 import { normalizePhone } from '@/lib/phone';
 import { rp } from '@/lib/format';
 import { fail, ok, type ActionResult } from '@/lib/action-result';
+import { isUniqueViolation } from '@/lib/prisma-errors';
 
 const GRADES: Grade[] = ['X', 'XI', 'XII'];
 const str = (fd: FormData, key: string) => String(fd.get(key) ?? '').trim();
@@ -317,4 +318,68 @@ export async function enrollStudents(_: ActionResult, fd: FormData): Promise<Act
   });
   refresh();
   return ok(`${students.length} siswa didaftarkan ke ${activity.name} dengan tagihan ${rp(activity.contribution)}.`);
+}
+
+/**
+ * Simpan siswa di data induk — lepas dari kegiatan mana pun.
+ *
+ * `addStudent` selalu sekaligus mendaftarkan siswa ke kegiatan aktif, jadi ia
+ * tidak bisa dipakai untuk membetulkan data siswa yang belum ikut kegiatan
+ * apa pun. Tanpa jalur ini, siswa seperti itu tidak terlihat dan tidak bisa
+ * disunting di mana pun.
+ */
+export async function saveStudentMaster(_: ActionResult, fd: FormData): Promise<ActionResult> {
+  await requireWriter();
+  const id = str(fd, 'id');
+  const nis = str(fd, 'nis');
+  const name = str(fd, 'name');
+  if (!nis) return fail('NIS wajib diisi.');
+  if (!name) return fail('Nama siswa wajib diisi.');
+  if (!GRADES.includes(str(fd, 'grade') as Grade)) return fail('Pilih tingkat X, XI, atau XII.');
+
+  const cls = await resolveClass(str(fd, 'className'), str(fd, 'grade') as Grade);
+  if ('error' in cls) return fail(cls.error);
+
+  const phoneRaw = str(fd, 'phone');
+  const phone = phoneRaw ? normalizePhone(phoneRaw) : null;
+  if (phoneRaw && !phone) return fail('Nomor telepon tidak valid. Contoh: 081234567890.');
+
+  try {
+    if (id) {
+      await prisma.student.update({
+        where: { id },
+        data: { nis, name, grade: cls.grade, className: cls.className, phone },
+      });
+    } else {
+      await prisma.student.create({
+        data: { nis, name, grade: cls.grade, className: cls.className, phone },
+      });
+    }
+  } catch (e) {
+    if (isUniqueViolation(e)) return fail(`NIS ${nis} sudah dipakai siswa lain.`);
+    throw e;
+  }
+  refresh();
+  revalidatePath('/master/siswa');
+  return ok(`Data ${name} disimpan.`);
+}
+
+/** Hapus siswa dari data induk — hanya bila ia belum pernah ikut kegiatan. */
+export async function deleteStudentMaster(id: string): Promise<ActionResult> {
+  await requireWriter();
+  const student = await prisma.student.findUnique({
+    where: { id },
+    include: { _count: { select: { participations: true } } },
+  });
+  if (!student) return fail('Siswa tidak ditemukan.');
+  if (student._count.participations > 0)
+    return fail(
+      `${student.name} sudah terdaftar di ${student._count.participations} kegiatan, jadi tidak bisa dihapus. ` +
+        'Keluarkan dulu dari kegiatannya.',
+    );
+
+  await prisma.student.delete({ where: { id } });
+  refresh();
+  revalidatePath('/master/siswa');
+  return ok(`${student.name} dihapus dari data induk siswa.`);
 }

@@ -117,7 +117,13 @@ export default async function KelasPage() {
                   <td className={td}>{c.homeroomTeacher ?? '—'}</td>
                   <td className={tdNum}>
                     {students > 0 ? (
-                      <Link href={`/rekap`} className="text-brand-700 hover:underline">{students}</Link>
+                      <Link
+                        href={`/master/siswa?kelas=${encodeURIComponent(c.name)}`}
+                        className="text-brand-700 hover:underline"
+                        title={`Lihat ${students} siswa di kelas ${c.name}`}
+                      >
+                        {students}
+                      </Link>
                     ) : (
                       0
                     )}

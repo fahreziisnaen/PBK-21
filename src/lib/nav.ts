@@ -21,6 +21,7 @@ export const NAV_GROUPS: NavGroup[] = [
   {
     label: 'MASTER DATA',
     items: [
+      { label: 'Induk Siswa', href: '/master/siswa' },
       { label: 'Kategori Kegiatan', href: '/master/kategori-kegiatan' },
       { label: 'Kategori Pengeluaran', href: '/master/kategori-pengeluaran' },
       { label: 'Kelas', href: '/master/kelas' },

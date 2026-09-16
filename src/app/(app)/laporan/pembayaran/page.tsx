@@ -10,13 +10,16 @@ import { prisma } from '@/lib/prisma';
 import { fdateLong, rp } from '@/lib/format';
 import { input, mono, table, tableWrap, td, tdNum, th, thNum } from '@/lib/ui';
 
-type Search = { activityId?: string; from?: string; to?: string; grade?: string; status?: string };
+type Search = { activityId?: string; from?: string; to?: string; grade?: string; status?: string; kelas?: string };
 
 export default async function LaporanPembayaranPage({ searchParams }: { searchParams: Promise<Search> }) {
   const user = await requireUser();
   const sp = await searchParams;
   const { activities, activity, from, to, school } = await resolveReport(sp);
-  const signer = await prisma.user.findUnique({ where: { id: user.id }, select: { signatureImage: true } });
+  const [signer, classes] = await Promise.all([
+    prisma.user.findUnique({ where: { id: user.id }, select: { signatureImage: true } }),
+    prisma.schoolClass.findMany({ orderBy: [{ grade: 'asc' }, { name: 'asc' }] }),
+  ]);
   if (!activity) {
     return (
       <>
@@ -30,7 +33,17 @@ export default async function LaporanPembayaranPage({ searchParams }: { searchPa
   // periode, seluruh pembayaran sah kegiatan.
   const [participants, sums] = await Promise.all([
     prisma.participant.findMany({
-      where: { activityId: activity.id, ...(sp.grade ? { student: { grade: sp.grade as 'X' | 'XI' | 'XII' } } : {}) },
+      where: {
+        activityId: activity.id,
+        ...(sp.grade || sp.kelas
+          ? {
+              student: {
+                ...(sp.grade ? { grade: sp.grade as 'X' | 'XI' | 'XII' } : {}),
+                ...(sp.kelas === '-' ? { className: null } : sp.kelas ? { className: sp.kelas } : {}),
+              },
+            }
+          : {}),
+      },
       include: { student: true },
       orderBy: [{ student: { grade: 'asc' } }, { student: { className: 'asc' } }, { student: { name: 'asc' } }],
     }),
@@ -65,6 +78,13 @@ export default async function LaporanPembayaranPage({ searchParams }: { searchPa
           <option value="XI">Tingkat XI</option>
           <option value="XII">Tingkat XII</option>
         </select>
+        <select name="kelas" defaultValue={sp.kelas ?? ''} className={`${input} max-w-[205px]`} aria-label="Kelas">
+          <option value="">Semua kelas</option>
+          <option value="-">— Tanpa kelas —</option>
+          {classes.map((c) => (
+            <option key={c.id} value={c.name}>{c.name}</option>
+          ))}
+        </select>
         <select name="status" defaultValue={sp.status ?? ''} className={`${input} max-w-[205px]`} aria-label="Status">
           <option value="">Semua status</option>
           <option>Lunas</option>
@@ -80,6 +100,7 @@ export default async function LaporanPembayaranPage({ searchParams }: { searchPa
           <div className="text-[13px] text-gray-700">
             {activity.name}
             {sp.grade ? ` · Tingkat ${sp.grade}` : ''}
+            {sp.kelas ? ` · Kelas ${sp.kelas === '-' ? 'belum diisi' : sp.kelas}` : ''}
             {sp.status ? ` · ${sp.status}` : ''}
           </div>
           <div className="text-[12px] text-gray-500">Periode pembayaran: {periodLabel}</div>

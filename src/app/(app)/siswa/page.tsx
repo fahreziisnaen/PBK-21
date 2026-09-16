@@ -17,7 +17,7 @@ import { formatPhoneLocal } from '@/lib/phone';
 import { rp } from '@/lib/format';
 import { btnGhost, btnSecondary, input, label, mono, table, tableWrap, td, tdNum, textarea, th, thNum } from '@/lib/ui';
 
-type Search = { q?: string; grade?: string; status?: string };
+type Search = { q?: string; grade?: string; status?: string; kelas?: string };
 
 function StudentFields({ contribution, classes, row }: { contribution: number; classes: SchoolClass[]; row?: Awaited<ReturnType<typeof participantRows>>[number] }) {
   return (
@@ -80,7 +80,7 @@ export default async function SiswaPage({ searchParams }: { searchParams: Promis
     );
   }
   const archived = activity.status === 'ARSIP';
-  const { q = '', grade = '', status = '' } = await searchParams;
+  const { q = '', grade = '', status = '', kelas = '' } = await searchParams;
 
   const [all, classes, unenrolled] = await Promise.all([
     participantRows(activity.id),
@@ -95,6 +95,8 @@ export default async function SiswaPage({ searchParams }: { searchParams: Promis
     (r) =>
       (!needle || r.name.toLowerCase().includes(needle) || r.nis.includes(needle)) &&
       (!grade || r.grade === grade) &&
+      // '-' menyaring peserta yang belum punya kelas.
+      (!kelas || (kelas === '-' ? !r.className : r.className === kelas)) &&
       (!status || r.status === status),
   );
 
@@ -198,6 +200,13 @@ export default async function SiswaPage({ searchParams }: { searchParams: Promis
           <option value="X">Tingkat X</option>
           <option value="XI">Tingkat XI</option>
           <option value="XII">Tingkat XII</option>
+        </select>
+        <select name="kelas" defaultValue={kelas} className={`${input} max-w-[205px]`} aria-label="Kelas">
+          <option value="">Semua kelas</option>
+          <option value="-">— Tanpa kelas —</option>
+          {classes.map((c) => (
+            <option key={c.id} value={c.name}>{c.name}</option>
+          ))}
         </select>
         <select name="status" defaultValue={status} className={`${input} max-w-[205px]`}>
           <option value="">Semua status</option>

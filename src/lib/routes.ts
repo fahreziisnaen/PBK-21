@@ -2,7 +2,7 @@ export type RouteMeta = { title: string; subtitle: string; crumbs: string[] };
 
 export const ROUTES: Record<string, RouteMeta> = {
   '/dashboard': { title: 'Dashboard', subtitle: 'Ringkasan keuangan kegiatan terpilih', crumbs: ['Dashboard'] },
-  '/siswa': { title: 'Data Siswa', subtitle: 'Peserta dan tagihan pada kegiatan aktif', crumbs: ['Data', 'Data Siswa'] },
+  '/siswa': { title: 'Data Siswa', subtitle: 'Peserta dan tagihan pada kegiatan aktif — daftar lengkap siswa ada di Master Data › Induk Siswa', crumbs: ['Data', 'Data Siswa'] },
   '/siswa/[id]': { title: 'Detail Siswa', subtitle: 'Riwayat tagihan dan pembayaran', crumbs: ['Data', 'Data Siswa', 'Detail'] },
   '/pembayaran': { title: 'Pembayaran', subtitle: 'Seluruh transaksi penerimaan kontribusi siswa', crumbs: ['Keuangan', 'Pembayaran'] },
   '/pembayaran/[id]': { title: 'Detail Pembayaran', subtitle: 'Rincian satu transaksi pembayaran', crumbs: ['Keuangan', 'Pembayaran', 'Detail'] },
@@ -12,6 +12,7 @@ export const ROUTES: Record<string, RouteMeta> = {
   '/rekap': { title: 'Rekap Pembayaran', subtitle: 'Rekapitulasi per tingkat dan status', crumbs: ['Data', 'Rekap Pembayaran'] },
   '/master/kategori-kegiatan': { title: 'Kategori Kegiatan', subtitle: 'Master kategori untuk pengelompokan kegiatan', crumbs: ['Master Data', 'Kategori Kegiatan'] },
   '/master/kategori-pengeluaran': { title: 'Kategori Pengeluaran', subtitle: 'Master kategori belanja kegiatan', crumbs: ['Master Data', 'Kategori Pengeluaran'] },
+  '/master/siswa': { title: 'Induk Siswa', subtitle: 'Seluruh siswa sekolah, lepas dari kegiatan', crumbs: ['Master Data', 'Induk Siswa'] },
   '/master/kelas': { title: 'Kelas', subtitle: 'Master kelas dan wali kelas per tingkat', crumbs: ['Master Data', 'Kelas'] },
   '/master/kegiatan': { title: 'Kegiatan', subtitle: 'Seluruh kegiatan sekolah yang dikelola PBK', crumbs: ['Master Data', 'Kegiatan'] },
   '/laporan/keuangan': { title: 'Laporan Keuangan', subtitle: 'Laporan pemasukan, pengeluaran, dan saldo', crumbs: ['Laporan', 'Laporan Keuangan'] },
