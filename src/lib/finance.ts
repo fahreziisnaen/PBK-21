@@ -45,23 +45,38 @@ export type ParticipantRow = {
   paid: number;
   remaining: number;
   status: PayStatus;
+  /**
+   * Jumlah baris pembayaran termasuk yang dibatalkan. `paid` hanya menghitung
+   * yang sah, jadi pembayaran yang dibatalkan mengembalikan `paid` ke nol —
+   * padahal barisnya masih ada dan menahan peserta dari penghapusan.
+   */
+  paymentCount: number;
 };
 
 /** Peserta satu kegiatan beserta total bayar sah dan status pelunasannya. */
 export async function participantRows(activityId: string): Promise<ParticipantRow[]> {
-  const [participants, sums] = await Promise.all([
+  const [participants, sums, counts] = await Promise.all([
     prisma.participant.findMany({
       where: { activityId },
       include: { student: true },
       orderBy: [{ student: { grade: 'asc' } }, { student: { name: 'asc' } }],
     }),
+    // Nominal hanya dari pembayaran sah …
     prisma.payment.groupBy({
       by: ['participantId'],
       where: { activityId, status: 'SAH' },
       _sum: { amount: true },
     }),
+    // … tetapi jumlah barisnya dari semua pembayaran, termasuk yang
+    // dibatalkan: baris itu tetap ada dan menahan peserta dari penghapusan.
+    prisma.payment.groupBy({
+      by: ['participantId'],
+      where: { activityId },
+      _count: { _all: true },
+    }),
   ]);
   const paidBy = new Map(sums.map((s) => [s.participantId, s._sum.amount ?? 0]));
+  const countBy = new Map(counts.map((c) => [c.participantId, c._count._all]));
   return participants.map((p) => {
     const paid = paidBy.get(p.id) ?? 0;
     return {
@@ -76,6 +91,7 @@ export async function participantRows(activityId: string): Promise<ParticipantRo
       paid,
       remaining: p.billing - paid,
       status: payStatus(p.billing, paid),
+      paymentCount: countBy.get(p.id) ?? 0,
     };
   });
 }

@@ -145,7 +145,10 @@ export async function removeParticipant(participantId: string): Promise<ActionRe
   if (!participant) return fail('Peserta tidak ditemukan.');
   if (participant.activity.status === 'ARSIP') return fail('Kegiatan ini sudah diarsipkan dan hanya bisa dibaca.');
   if (participant._count.payments > 0)
-    return fail(`${participant.student.name} sudah punya riwayat pembayaran, jadi tidak bisa dikeluarkan.`);
+    return fail(
+      `${participant.student.name} sudah punya riwayat pembayaran di kegiatan ini, jadi tidak bisa dikeluarkan. ` +
+        'Kuitansi yang dibatalkan pun tetap tersimpan sebagai catatan.',
+    );
   await prisma.participant.delete({ where: { id: participantId } });
   refresh();
   return ok(`${participant.student.name} dikeluarkan dari kegiatan.`);

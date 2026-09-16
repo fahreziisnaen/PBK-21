@@ -227,12 +227,12 @@ export default async function SiswaPage({ searchParams }: { searchParams: Promis
                     <FormModal trigger="Edit" triggerClassName={btnGhost} title="Edit Siswa" action={updateParticipant} wide>
                       <StudentFields contribution={activity.contribution} classes={classes} row={r} />
                     </FormModal>
-                    {r.paid === 0 && (
+                    {r.paymentCount === 0 && (
                       <ConfirmAction
                         label="Keluarkan"
                         title="Keluarkan dari Kegiatan"
                         body={`${r.name} akan dikeluarkan dari ${activity.name}.`}
-                        bullets={['Data siswa tetap tersimpan dan bisa didaftarkan lagi.', 'Hanya bisa dilakukan selama belum ada pembayaran.']}
+                        bullets={['Data siswa tetap tersimpan dan bisa didaftarkan lagi.', 'Hanya bisa dilakukan selama belum ada pembayaran, termasuk yang sudah dibatalkan.']}
                         confirmLabel="Keluarkan"
                         run={removeParticipant.bind(null, r.id)}
                       />
