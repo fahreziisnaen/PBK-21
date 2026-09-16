@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { BrandMark } from '@/components/shell/BrandMark';
 import { PageHead } from '@/components/shell/PageHead';
 import { NoActivity } from '@/components/ui/Kpi';
 import { PrintButton } from '@/components/ui/PrintButton';
@@ -47,7 +48,7 @@ export default async function KuitansiPage({ searchParams }: { searchParams: Pro
               </div>
             )}
             <div className="flex items-center gap-4 border-b-2 border-gray-900 pb-4">
-              <div className="grid h-14 w-14 place-items-center rounded-[9px] bg-brand-600 text-[15px] font-extrabold text-white">PBK</div>
+              <BrandMark size={56} />
               <div>
                 <div className="text-[17px] font-extrabold uppercase tracking-wide text-gray-900">{school?.name ?? 'Sekolah'}</div>
                 {school?.address && <div className="text-[12px] text-gray-600">{school.address}</div>}

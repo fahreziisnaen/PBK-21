@@ -56,7 +56,7 @@ export function ChangePasswordForm() {
       <button
         type="submit"
         disabled={pending}
-        className="h-11 w-full rounded-lg bg-brand-600 text-sm font-semibold text-white hover:bg-brand-700 disabled:opacity-60"
+        className="h-11 w-full rounded-lg bg-brand-500 text-sm font-semibold text-ink hover:bg-brand-600 disabled:opacity-60"
       >
         {pending ? 'Menyimpan…' : 'Simpan Sandi Baru'}
       </button>

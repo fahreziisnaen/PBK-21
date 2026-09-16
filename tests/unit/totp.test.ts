@@ -66,12 +66,12 @@ describe('buildOtpauthUri', () => {
   it('menyusun URI yang dikenali Google Authenticator', () => {
     const uri = buildOtpauthUri('admin', RFC_SECRET);
     expect(uri).toContain('otpauth://totp/');
-    expect(uri).toContain('issuer=PBK');
+    expect(uri).toContain('issuer=KASERA');
     expect(uri).toContain(`secret=${RFC_SECRET}`);
     // The label identifies which account the QR code enrols; if it were
     // dropped, the library falls back to a default label and the three
     // assertions above would still pass while the QR code names nobody.
-    expect(uri).toContain('PBK:admin');
+    expect(uri).toContain('KASERA:admin');
   });
 });
 

@@ -10,14 +10,14 @@ import Link from 'next/link';
 export default function NotFound() {
   return (
     <div className="flex min-h-screen flex-col items-center justify-center gap-4 px-6 text-center">
-      <p className="text-[13px] font-bold tracking-[0.06em] text-brand-600">404</p>
+      <p className="text-[13px] font-bold tracking-[0.06em] text-brand-700">404</p>
       <h1 className="text-[22px] font-bold tracking-[-0.3px] text-gray-900">Halaman Tidak Ditemukan</h1>
       <p className="max-w-md text-[13.5px] leading-relaxed text-gray-600">
         Halaman yang Anda cari tidak tersedia atau sudah dipindahkan.
       </p>
       <Link
         href="/dashboard"
-        className="rounded-lg bg-brand-600 px-4 py-2 text-[13px] font-semibold text-white hover:bg-brand-700"
+        className="rounded-lg bg-brand-500 px-4 py-2 text-[13px] font-semibold text-ink hover:bg-brand-600"
       >
         Kembali ke Dashboard
       </Link>

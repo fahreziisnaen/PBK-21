@@ -26,7 +26,7 @@ export function StatesShowcase() {
           <button
             type="button"
             onClick={() => toast('Pembayaran OC-X/0088 tersimpan')}
-            className="rounded-lg bg-brand-600 px-4 py-2 text-[13px] font-semibold text-white hover:bg-brand-700"
+            className="rounded-lg bg-brand-500 px-4 py-2 text-[13px] font-semibold text-ink hover:bg-brand-600"
           >
             Tampilkan toast
           </button>

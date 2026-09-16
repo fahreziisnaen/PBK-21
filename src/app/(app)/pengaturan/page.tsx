@@ -77,7 +77,7 @@ export default async function PengaturanPage() {
               <Info k="Bukti keluar berikutnya" v={<span className="font-mono">BKK/{activity.receiptPrefix}/{padSeq((lastExpense?._max.seq ?? 0) + 1, 3)}</span>} />
               <p className="mt-4 text-[12.5px] text-gray-500">
                 Ubah kontribusi, prefix kuitansi, dan data lain di{' '}
-                <Link href="/master/kegiatan" className="font-semibold text-brand-600">Master Data › Kegiatan</Link>. Nomor yang sudah terpakai tidak pernah dipakai ulang.
+                <Link href="/master/kegiatan" className="font-semibold text-brand-700">Master Data › Kegiatan</Link>. Nomor yang sudah terpakai tidak pernah dipakai ulang.
               </p>
             </>
           ) : (

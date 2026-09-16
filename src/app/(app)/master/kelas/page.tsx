@@ -92,7 +92,7 @@ export default async function KelasPage() {
                   <td className={td}>{c.homeroomTeacher ?? '—'}</td>
                   <td className={tdNum}>
                     {students > 0 ? (
-                      <Link href={`/rekap`} className="text-brand-600 hover:underline">{students}</Link>
+                      <Link href={`/rekap`} className="text-brand-700 hover:underline">{students}</Link>
                     ) : (
                       0
                     )}

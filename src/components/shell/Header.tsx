@@ -16,10 +16,10 @@ export async function Header() {
       <ActivitySwitcher activities={activities} active={active} />
 
       <div className="flex items-center gap-3 max-[900px]:flex-wrap">
-        <Link href="/notifikasi" className="text-[13px] font-medium text-gray-600 hover:text-brand-600">
+        <Link href="/notifikasi" className="text-[13px] font-medium text-gray-600 hover:text-brand-800">
           Notifikasi
         </Link>
-        <Link href="/profil" className="text-[13px] font-semibold text-gray-900 hover:text-brand-600">
+        <Link href="/profil" className="text-[13px] font-semibold text-gray-900 hover:text-brand-800">
           {session?.user?.name ?? 'Pengguna'}
         </Link>
         <form action={logout}>

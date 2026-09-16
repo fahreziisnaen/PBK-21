@@ -17,7 +17,7 @@ export function ReportFilters({
 }) {
   return (
     <form className="mb-4 flex flex-wrap items-center gap-2 rounded-xl border border-gray-200 bg-white p-3" data-noprint>
-      <select name="activityId" defaultValue={activityId} className={`${input} max-w-[280px]`} aria-label="Kegiatan">
+      <select name="activityId" defaultValue={activityId} className={`${input} max-w-[325px]`} aria-label="Kegiatan">
         {activities.map((a) => (
           <option key={a.id} value={a.id}>
             {a.name}{a.status === 'ARSIP' ? ' (arsip)' : a.status === 'SELESAI' ? ' (selesai)' : ''}

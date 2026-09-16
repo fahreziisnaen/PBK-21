@@ -1,64 +1,108 @@
 @import "tailwindcss";
 
 @theme {
-  --color-brand-50:  #f5f8ff;
-  --color-brand-100: #eaf0fb;
-  --color-brand-600: #1857b8;
-  --color-brand-700: #12428c;
+  /* ---------------------------------------------------------------------
+     KASERA — Sistem Administrasi Kas, SMAN 21 Surabaya.
 
-  --color-sidebar:       #0f1b33;
-  --color-sidebar-fg:    #b6c6e2;
-  --color-sidebar-dot:   #40567f;
-  --color-sidebar-muted: #8fa4cc;
+     Kuning brand dipakai untuk BIDANG (tombol, state aktif, aksen), tidak
+     pernah untuk teks di atas putih: #FFC107 di atas putih hanya 1,64:1,
+     jauh di bawah ambang WCAG AA 4,5:1. Untuk teks dan ikon berwarna brand
+     dipakai `brand-700` (#8A6100, 5,65:1) yang tetap satu keluarga warna.
+     Lihat tests/unit/contrast.test.ts — rasionya diuji, bukan dikira-kira.
+     --------------------------------------------------------------------- */
+
+  --color-brand-50:  #fff8e1;   /* latar chip dan sorotan lembut            */
+  --color-brand-100: #ffecb3;   /* latar avatar                              */
+  --color-brand-300: #ffd75e;   /* garis aksen tipis                         */
+  --color-brand-500: #ffc107;   /* UTAMA — bidang tombol dan state aktif     */
+  --color-brand-600: #e6ac00;   /* hover bidang                              */
+  --color-brand-700: #8a6100;   /* teks dan ikon brand di atas putih         */
+  --color-brand-800: #6b4b00;   /* hover teks brand                          */
+
+  /* Hitam brand: navbar, judul, teks utama. */
+  --color-ink:      #1a1a1a;
+  --color-ink-soft: #4b5563;
+
+  --color-sidebar:       #1a1a1a;
+  --color-sidebar-fg:    #c9c9c9;
+  --color-sidebar-dot:   #5a5a5a;
+  --color-sidebar-muted: #9a9a9a;
+
+  /* Merah aksen: badge, notifikasi, galat. 4,98:1 di atas putih, dan putih
+     di atasnya juga 4,98:1 — keduanya lolos AA. */
+  --color-accent-50:  #fdecec;
+  --color-accent-500: #d92323;
+  --color-accent-600: #b81c1c;
 
   --color-gray-50:  #f9fafb;
-  --color-gray-100: #f2f4f7;
-  --color-gray-200: #e4e7ec;
-  --color-gray-300: #d0d5dd;
-  --color-gray-400: #98a2b3;
-  --color-gray-500: #667085;
-  --color-gray-600: #475467;
-  --color-gray-700: #344054;
-  --color-gray-900: #101828;
+  --color-gray-100: #f3f4f6;
+  --color-gray-200: #e5e7eb;
+  --color-gray-300: #d1d5db;
+  --color-gray-400: #9ca3af;
+  --color-gray-500: #6b7280;
+  --color-gray-600: #4b5563;
+  --color-gray-700: #374151;
+  --color-gray-900: #1a1a1a;
 
   --color-success-50:  #ecfdf3;
   --color-success-500: #12b76a;
   --color-success-700: #067647;
 
-  --color-error-50:  #fef3f2;
-  --color-error-100: #fda29b;
-  --color-error-200: #fecdca;
-  --color-error-500: #f04438;
-  --color-error-600: #b42318;
-  --color-error-700: #912018;
+  /* Galat memakai merah aksen brand, supaya hanya ada satu merah di aplikasi. */
+  --color-error-50:  #fdecec;
+  --color-error-100: #f5b5b5;
+  --color-error-200: #f0c9c9;
+  --color-error-500: #d92323;
+  --color-error-600: #b81c1c;
+  --color-error-700: #941616;
 
-  --color-warn-50:  #fffaeb;
-  --color-warn-200: #fedf89;
-  --color-warn-500: #f0b429;
-  --color-warn-700: #b54708;
+  /* Peringatan digeser ke oranye: amber lama kembar dengan kuning brand,
+     sehingga "perhatian" tidak lagi terbaca sebagai "tombol utama". */
+  --color-warn-50:  #fff4ed;
+  --color-warn-200: #fdc9a4;
+  --color-warn-500: #ea7317;
+  --color-warn-700: #9a4a06;
 
-  --color-body-bg: #f7f8fa;
+  --color-body-bg: #f3f4f6;
 
-  --font-sans: var(--font-jakarta), system-ui, sans-serif;
+  --font-sans: var(--font-poppins), system-ui, sans-serif;
   --font-mono: var(--font-plex-mono), ui-monospace, monospace;
 
   --radius-control: 8px;
-  --radius-brand: 9px;
+  --radius-card: 12px;
+  --radius-brand: 12px;
 }
 
 @layer base {
   body {
     background: var(--color-body-bg);
-    color: var(--color-gray-900);
+    color: var(--color-ink);
     -webkit-font-smoothing: antialiased;
   }
+  /* Cincin fokus: garisnya amber tua supaya indikatornya sendiri terlihat
+     (5,65:1), dengan halo kuning brand di luarnya. Kuning murni sebagai
+     garis fokus praktis tak terlihat di atas putih. */
   input:focus, select:focus, textarea:focus {
     outline: none;
-    border-color: var(--color-brand-600);
-    box-shadow: 0 0 0 3px rgb(24 87 184 / 0.14);
+    border-color: var(--color-brand-700);
+    box-shadow: 0 0 0 3px rgb(255 193 7 / 0.45);
+  }
+  /* Fokus papan ketik pada tombol dan tautan — sebelumnya mengandalkan
+     bawaan browser yang hilang tertimpa `outline: none` di atas. */
+  a:focus-visible, button:focus-visible, [role='button']:focus-visible {
+    outline: 2px solid var(--color-brand-700);
+    outline-offset: 2px;
+    border-radius: var(--radius-control);
   }
   ::placeholder { color: var(--color-gray-500); }
   table { border-collapse: collapse; width: 100%; }
+}
+
+/* Judul utama mengikuti logo: tebal, huruf besar, spasi huruf sedikit renggang. */
+.kasera-heading {
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  font-weight: 700;
 }
 
 @keyframes pbkin {

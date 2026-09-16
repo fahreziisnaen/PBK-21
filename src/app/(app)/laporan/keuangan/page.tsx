@@ -71,17 +71,17 @@ export default async function LaporanKeuanganPage({ searchParams }: { searchPara
       <PageHead pathname="/laporan/keuangan" activity={activity} actions={<PrintButton label="Cetak Laporan" />} />
 
       <ReportFilters activities={activities} activityId={activity.id} from={sp.from} to={sp.to}>
-        <select name="type" defaultValue={type} className={`${input} max-w-[160px]`} aria-label="Jenis">
+        <select name="type" defaultValue={type} className={`${input} max-w-[205px]`} aria-label="Jenis">
           <option value="">Masuk & keluar</option>
           <option value="masuk">Pemasukan saja</option>
           <option value="keluar">Pengeluaran saja</option>
         </select>
-        <select name="method" defaultValue={method} className={`${input} max-w-[150px]`} aria-label="Metode">
+        <select name="method" defaultValue={method} className={`${input} max-w-[195px]`} aria-label="Metode">
           <option value="">Tunai & transfer</option>
           <option value="TUNAI">Tunai saja</option>
           <option value="TRANSFER">Transfer saja</option>
         </select>
-        <select name="categoryId" defaultValue={sp.categoryId ?? ''} className={`${input} max-w-[200px]`} aria-label="Kategori pengeluaran">
+        <select name="categoryId" defaultValue={sp.categoryId ?? ''} className={`${input} max-w-[245px]`} aria-label="Kategori pengeluaran">
           <option value="">Semua kategori</option>
           {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
         </select>

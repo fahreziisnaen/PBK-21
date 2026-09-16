@@ -1,6 +1,12 @@
 import { Secret, TOTP } from 'otpauth';
 
-const ISSUER = 'PBK';
+/**
+ * Nama yang tampil di aplikasi authenticator. Hanya masuk ke dalam QR code
+ * saat pendaftaran — kode 6 digit dihitung dari secret dan waktu saja, jadi
+ * mengganti nilai ini TIDAK mengganggu akun yang sudah terdaftar. Label di
+ * ponsel mereka baru ikut berubah setelah 2FA-nya direset dan dipindai ulang.
+ */
+const ISSUER = 'KASERA';
 const DIGITS = 6;
 const PERIOD = 30;
 

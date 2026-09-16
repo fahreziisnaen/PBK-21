@@ -50,7 +50,7 @@ function StudentFields({ contribution, classes, row }: { contribution: number; c
           </select>
           {classes.length === 0 && (
             <p className="mt-1 text-[11.5px] text-gray-500">
-              Belum ada kelas. <a href="/master/kelas" className="font-semibold text-brand-600">Tambah di Master Data › Kelas</a>
+              Belum ada kelas. <a href="/master/kelas" className="font-semibold text-brand-700">Tambah di Master Data › Kelas</a>
             </p>
           )}
         </div>
@@ -193,13 +193,13 @@ export default async function SiswaPage({ searchParams }: { searchParams: Promis
 
       <form className="mb-3 flex flex-wrap gap-2" data-noprint>
         <input name="q" defaultValue={q} placeholder="Cari nama atau NIS…" className={`${input} max-w-[260px]`} />
-        <select name="grade" defaultValue={grade} className={`${input} max-w-[140px]`}>
+        <select name="grade" defaultValue={grade} className={`${input} max-w-[185px]`}>
           <option value="">Semua tingkat</option>
           <option value="X">Tingkat X</option>
           <option value="XI">Tingkat XI</option>
           <option value="XII">Tingkat XII</option>
         </select>
-        <select name="status" defaultValue={status} className={`${input} max-w-[160px]`}>
+        <select name="status" defaultValue={status} className={`${input} max-w-[205px]`}>
           <option value="">Semua status</option>
           <option>Lunas</option>
           <option>Belum Lunas</option>
@@ -249,7 +249,7 @@ export default async function SiswaPage({ searchParams }: { searchParams: Promis
                 )}
                 <td className={`${td} ${mono}`}>{r.nis}</td>
                 <td className={td}>
-                  <Link href={`/siswa/${r.studentId}`} className="font-semibold text-gray-900 hover:text-brand-600">{r.name}</Link>
+                  <Link href={`/siswa/${r.studentId}`} className="font-semibold text-gray-900 hover:text-brand-800">{r.name}</Link>
                 </td>
                 <td className={td}>{r.className ?? r.grade}</td>
                 <td className={tdNum}>{rp(r.billing)}</td>

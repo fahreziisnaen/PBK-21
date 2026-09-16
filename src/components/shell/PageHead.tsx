@@ -23,14 +23,16 @@ export function PageHead({
             </span>
           ))}
         </nav>
-        <h1 className="text-[22px] font-bold tracking-[-0.5px] text-gray-900">{meta.title}</h1>
-        <p className="mt-0.5 text-[13px] text-gray-500">{meta.subtitle}</p>
+        <h1 className="kasera-heading text-[21px] text-ink">{meta.title}</h1>
+        {/* Garis kuning tipis, mengikuti pelek logo. */}
+        <div className="mt-1.5 h-[3px] w-10 rounded-full bg-brand-500" />
+        <p className="mt-2 text-[13px] text-ink-soft">{meta.subtitle}</p>
         {activity ? (
           // Halaman ini menampilkan data satu kegiatan saja — namanya ditulis
           // di judul supaya tidak ada keraguan angka ini milik kegiatan mana.
           <div className="mt-2 flex flex-wrap items-center gap-2">
             <span className="inline-flex max-w-full items-center gap-1.5 rounded-full bg-brand-50 px-3 py-1 text-[12.5px] font-semibold text-brand-700">
-              <span className="h-1.5 w-1.5 flex-none rounded-full bg-brand-600" />
+              <span className="h-1.5 w-1.5 flex-none rounded-full bg-brand-500" />
               <span className="truncate">{activity.name}</span>
             </span>
             {activity.year && <span className="text-[12px] text-gray-500">TA {activity.year}</span>}

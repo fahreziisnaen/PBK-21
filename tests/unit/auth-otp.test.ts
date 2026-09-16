@@ -45,10 +45,12 @@ const { encryptSecret } = await import('@/lib/crypto');
 const { generateTotpSecret } = await import('@/lib/totp');
 
 /** Mirrors totp.ts's `totpFor` exactly, so the code it produces is one
- * `verifyTotp` genuinely accepts — not a value assumed to work. */
+ * `verifyTotp` genuinely accepts — not a value assumed to work. The issuer is
+ * display-only metadata and never enters the hash, which is exactly why the
+ * rename to KASERA cannot lock out an already-enrolled account. */
 function currentTotpCode(secretBase32: string): string {
   const totp = new TOTP({
-    issuer: 'PBK',
+    issuer: 'KASERA',
     algorithm: 'SHA1',
     digits: 6,
     period: 30,

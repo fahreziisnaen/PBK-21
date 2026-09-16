@@ -84,7 +84,7 @@ export default async function DashboardPage() {
             <span className="font-mono text-[13px] text-gray-600">{rp(f.income)} / {rp(target)}</span>
           </div>
           <div className="mb-5 h-3 overflow-hidden rounded-full bg-gray-100">
-            <div className="h-full bg-brand-600" style={{ width: `${Math.min(pct, 100)}%` }} />
+            <div className="h-full bg-brand-500" style={{ width: `${Math.min(pct, 100)}%` }} />
           </div>
 
           <h2 className="mb-3 text-[14px] font-bold text-gray-900">Arus Kas per Bulan</h2>
@@ -138,11 +138,11 @@ export default async function DashboardPage() {
       <div className={`${card} p-5`}>
         <div className="mb-3 flex items-center justify-between">
           <h2 className="text-[14px] font-bold text-gray-900">Transaksi Terakhir</h2>
-          <Link href="/buku-kas" className="text-[12.5px] font-semibold text-brand-600">Lihat buku kas →</Link>
+          <Link href="/buku-kas" className="text-[12.5px] font-semibold text-brand-700">Lihat buku kas →</Link>
         </div>
         {recent.length === 0 ? (
           <p className="text-[13px] text-gray-500">
-            Belum ada transaksi. Mulai dari <Link href="/siswa" className="font-semibold text-brand-600">Data Siswa</Link> lalu catat pembayaran.
+            Belum ada transaksi. Mulai dari <Link href="/siswa" className="font-semibold text-brand-700">Data Siswa</Link> lalu catat pembayaran.
           </p>
         ) : (
           <ul className="divide-y divide-gray-100">

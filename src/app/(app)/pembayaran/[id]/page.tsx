@@ -78,7 +78,7 @@ export default async function DetailPembayaranPage({ params }: { params: Promise
         <div className="space-y-4">
         <div className={`${card} h-fit p-6`}>
           <div className="text-[12px] font-semibold text-gray-500">Siswa</div>
-          <Link href={`/siswa/${student.id}`} className="text-[16px] font-bold text-gray-900 hover:text-brand-600">{student.name}</Link>
+          <Link href={`/siswa/${student.id}`} className="text-[16px] font-bold text-gray-900 hover:text-brand-800">{student.name}</Link>
           <div className="mt-3">
             <Row k="NIS" v={<span className="font-mono">{student.nis}</span>} />
             <Row k="Kelas" v={student.className ?? student.grade} />
@@ -91,7 +91,7 @@ export default async function DetailPembayaranPage({ params }: { params: Promise
             {/* Data URI dari database — bukan berkas eksternal, jadi tidak lewat optimizer gambar. */}
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={payment.proof.data} alt={`Bukti transfer ${payment.receiptNo}`} className="w-full rounded-lg border border-gray-200" />
-            <a href={payment.proof.data} download={`bukti-${payment.receiptNo.replace(/\//g, '-')}.jpg`} className="mt-2 inline-block text-[12.5px] font-semibold text-brand-600">
+            <a href={payment.proof.data} download={`bukti-${payment.receiptNo.replace(/\//g, '-')}.jpg`} className="mt-2 inline-block text-[12.5px] font-semibold text-brand-700">
               Unduh bukti
             </a>
           </div>

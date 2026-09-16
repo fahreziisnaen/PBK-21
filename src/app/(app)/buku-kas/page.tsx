@@ -58,7 +58,7 @@ export default async function BukuKasPage({ searchParams }: { searchParams: Prom
         <span className="text-gray-400">–</span>
         <input type="date" name="to" defaultValue={sp.to ?? ''} className={`${input} max-w-[160px]`} aria-label="Sampai tanggal" />
         <button className={btnSecondary}>Terapkan</button>
-        {(sp.from || sp.to) && <Link href="/buku-kas" className="text-[12.5px] font-semibold text-brand-600">Reset</Link>}
+        {(sp.from || sp.to) && <Link href="/buku-kas" className="text-[12.5px] font-semibold text-brand-700">Reset</Link>}
       </form>
 
       <div className={tableWrap}>
@@ -88,7 +88,7 @@ export default async function BukuKasPage({ searchParams }: { searchParams: Prom
               <tr key={r.key}>
                 <td className={`${td} whitespace-nowrap`}>{fdate(isoDate(r.date))}</td>
                 <td className={`${td} ${mono}`}>
-                  {r.href ? <Link href={r.href} className="text-brand-600 hover:underline">{r.ref}</Link> : r.ref}
+                  {r.href ? <Link href={r.href} className="text-brand-700 hover:underline">{r.ref}</Link> : r.ref}
                 </td>
                 <td className={td}>{r.description}</td>
                 <td className={td}>{r.category}</td>

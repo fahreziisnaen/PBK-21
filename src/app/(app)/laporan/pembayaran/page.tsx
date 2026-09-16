@@ -59,13 +59,13 @@ export default async function LaporanPembayaranPage({ searchParams }: { searchPa
       <PageHead pathname="/laporan/pembayaran" activity={activity} actions={<PrintButton label="Cetak Laporan" />} />
 
       <ReportFilters activities={activities} activityId={activity.id} from={sp.from} to={sp.to}>
-        <select name="grade" defaultValue={sp.grade ?? ''} className={`${input} max-w-[140px]`} aria-label="Tingkat">
+        <select name="grade" defaultValue={sp.grade ?? ''} className={`${input} max-w-[185px]`} aria-label="Tingkat">
           <option value="">Semua tingkat</option>
           <option value="X">Tingkat X</option>
           <option value="XI">Tingkat XI</option>
           <option value="XII">Tingkat XII</option>
         </select>
-        <select name="status" defaultValue={sp.status ?? ''} className={`${input} max-w-[160px]`} aria-label="Status">
+        <select name="status" defaultValue={sp.status ?? ''} className={`${input} max-w-[205px]`} aria-label="Status">
           <option value="">Semua status</option>
           <option>Lunas</option>
           <option>Belum Lunas</option>

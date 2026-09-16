@@ -77,12 +77,12 @@ export default async function PembayaranPage({ searchParams }: { searchParams: P
 
       <form className="mb-3 flex flex-wrap gap-2" data-noprint>
         <input name="q" defaultValue={q} placeholder="Cari siswa, NIS, atau no. kuitansi…" className={`${input} max-w-[280px]`} />
-        <select name="method" defaultValue={sp.method ?? ''} className={`${input} max-w-[150px]`}>
+        <select name="method" defaultValue={sp.method ?? ''} className={`${input} max-w-[195px]`}>
           <option value="">Semua metode</option>
           <option value="TUNAI">Tunai</option>
           <option value="TRANSFER">Transfer</option>
         </select>
-        <select name="status" defaultValue={sp.status ?? ''} className={`${input} max-w-[150px]`}>
+        <select name="status" defaultValue={sp.status ?? ''} className={`${input} max-w-[195px]`}>
           <option value="">Semua status</option>
           <option value="SAH">Sah</option>
           <option value="DIBATALKAN">Dibatalkan</option>
@@ -116,7 +116,7 @@ export default async function PembayaranPage({ searchParams }: { searchParams: P
             {payments.map((p) => (
               <tr key={p.id} className={p.status === 'DIBATALKAN' ? 'opacity-60' : ''}>
                 <td className={`${td} ${mono} font-semibold`}>
-                  <Link href={`/pembayaran/${p.id}`} className="text-brand-600 hover:underline">{p.receiptNo}</Link>
+                  <Link href={`/pembayaran/${p.id}`} className="text-brand-700 hover:underline">{p.receiptNo}</Link>
                 </td>
                 <td className={`${td} whitespace-nowrap`}>{fdate(isoDate(p.date))}</td>
                 <td className={td}>
@@ -128,7 +128,7 @@ export default async function PembayaranPage({ searchParams }: { searchParams: P
                 </td>
                 <td className={td}>
                   {p.method === 'TUNAI' ? 'Tunai' : 'Transfer'}
-                  {p.proof && <span className="ml-1.5 rounded bg-brand-50 px-1.5 py-0.5 text-[11px] font-semibold text-brand-600">bukti</span>}
+                  {p.proof && <span className="ml-1.5 rounded bg-brand-50 px-1.5 py-0.5 text-[11px] font-semibold text-brand-700">bukti</span>}
                 </td>
                 <td className={`${tdNum} ${p.status === 'DIBATALKAN' ? 'line-through' : ''}`}>{rp(p.amount)}</td>
                 <td className={td}><Badge status={p.status} /></td>

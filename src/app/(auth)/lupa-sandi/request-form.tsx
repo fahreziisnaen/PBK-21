@@ -35,12 +35,12 @@ export function RequestResetForm() {
       <button
         type="submit"
         disabled={pending}
-        className="h-[42px] w-full rounded-lg bg-brand-600 text-[13.5px] font-semibold text-white hover:bg-brand-700 disabled:opacity-60"
+        className="h-[42px] w-full rounded-lg bg-brand-500 text-[13.5px] font-semibold text-ink hover:bg-brand-600 disabled:opacity-60"
       >
         {pending ? 'Mengirim…' : 'Kirim Kode'}
       </button>
 
-      <a href="/login" className="mt-4 block text-center text-[12.5px] font-semibold text-brand-600 hover:text-brand-700">
+      <a href="/login" className="mt-4 block text-center text-[12.5px] font-semibold text-brand-700 hover:text-brand-800">
         Kembali ke halaman masuk
       </a>
     </form>

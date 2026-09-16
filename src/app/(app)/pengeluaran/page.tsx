@@ -122,11 +122,11 @@ export default async function PengeluaranPage({ searchParams }: { searchParams: 
 
       <form className="mb-3 flex flex-wrap gap-2" data-noprint>
         <input name="q" defaultValue={q} placeholder="Cari uraian atau no. ref…" className={`${input} max-w-[260px]`} />
-        <select name="categoryId" defaultValue={sp.categoryId ?? ''} className={`${input} max-w-[200px]`}>
+        <select name="categoryId" defaultValue={sp.categoryId ?? ''} className={`${input} max-w-[245px]`}>
           <option value="">Semua kategori</option>
           {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
         </select>
-        <select name="status" defaultValue={sp.status ?? ''} className={`${input} max-w-[150px]`}>
+        <select name="status" defaultValue={sp.status ?? ''} className={`${input} max-w-[195px]`}>
           <option value="">Semua status</option>
           <option value="AKTIF">Aktif</option>
           <option value="DIBATALKAN">Dibatalkan</option>

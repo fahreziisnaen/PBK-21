@@ -60,7 +60,7 @@ export function CompleteResetForm({ hint }: { hint: string }) {
       <button
         type="submit"
         disabled={pending}
-        className="h-[42px] w-full rounded-lg bg-brand-600 text-[13.5px] font-semibold text-white hover:bg-brand-700 disabled:opacity-60"
+        className="h-[42px] w-full rounded-lg bg-brand-500 text-[13.5px] font-semibold text-ink hover:bg-brand-600 disabled:opacity-60"
       >
         {pending ? 'Menyimpan…' : 'Simpan Sandi Baru'}
       </button>

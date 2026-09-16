@@ -43,7 +43,7 @@ export function ActivitySwitcher({ activities, active }: { activities: Activity[
       <span
         role="status"
         aria-live="polite"
-        className={'flex-none text-[12px] font-semibold text-brand-600 ' + (pending ? '' : 'invisible')}
+        className={'flex-none text-[12px] font-semibold text-brand-700 ' + (pending ? '' : 'invisible')}
       >
         Memuat…
       </span>

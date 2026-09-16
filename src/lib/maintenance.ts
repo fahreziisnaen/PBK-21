@@ -52,7 +52,7 @@ const RESET_TABLES = new Set([
 const LONG_TX = { timeout: 120_000, maxWait: 10_000 };
 
 export type BackupFile = {
-  app: 'PBK';
+  app: 'KASERA' | 'PBK';
   format: 1;
   migration: string;
   createdAt: string;
@@ -90,7 +90,7 @@ export async function createBackup(): Promise<BackupFile> {
       tables[t.name] = await t.of(tx).findMany();
       counts[t.name] = tables[t.name]!.length;
     }
-    return { app: 'PBK', format: 1, migration: await currentMigration(tx), createdAt: new Date().toISOString(), counts, tables } as BackupFile;
+    return { app: 'KASERA', format: 1, migration: await currentMigration(tx), createdAt: new Date().toISOString(), counts, tables } as BackupFile;
   }, LONG_TX);
 }
 
@@ -99,10 +99,12 @@ export async function restoreBackup(text: string): Promise<{ ok: true; counts: R
   try {
     backup = JSON.parse(text) as BackupFile;
   } catch {
-    return { ok: false, error: 'File bukan backup PBK yang valid (JSON tidak terbaca). Pastikan file tidak rusak atau terpotong.' };
+    return { ok: false, error: 'File bukan backup KASERA yang valid (JSON tidak terbaca). Pastikan file tidak rusak atau terpotong.' };
   }
-  if (backup?.app !== 'PBK' || backup.format !== 1 || typeof backup.tables !== 'object')
-    return { ok: false, error: 'File ini bukan backup PBK.' };
+  // 'PBK' tetap diterima: berkas backup yang dibuat sebelum ganti nama masih
+  // harus bisa dipulihkan.
+  if ((backup?.app !== 'KASERA' && backup?.app !== 'PBK') || backup.format !== 1 || typeof backup.tables !== 'object')
+    return { ok: false, error: 'File ini bukan backup KASERA.' };
 
   const migration = await currentMigration();
   if (backup.migration !== migration)

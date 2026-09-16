@@ -82,7 +82,7 @@ export default async function NotifikasiPage() {
     }),
   ].sort((x, y) => y.at.getTime() - x.at.getTime());
 
-  const dot = { ok: 'bg-success-500', warn: 'bg-warn-500', info: 'bg-brand-600' };
+  const dot = { ok: 'bg-success-500', warn: 'bg-warn-500', info: 'bg-brand-500' };
 
   return (
     <>

@@ -3,21 +3,8 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
+import { BrandLockup } from '@/components/shell/BrandMark';
 import { NAV_GROUPS } from '@/lib/nav';
-
-function Brand() {
-  return (
-    <div className="flex items-center gap-3">
-      <div className="grid h-[38px] w-[38px] flex-none place-items-center rounded-[9px] bg-brand-600 text-sm font-extrabold text-white">
-        PBK
-      </div>
-      <div className="min-w-0">
-        <div className="truncate text-sm font-bold tracking-[-0.2px] text-white">Pencatatan Buku Kas</div>
-        <div className="truncate text-[11px] text-sidebar-muted">SMAN 21 Surabaya</div>
-      </div>
-    </div>
-  );
-}
 
 /**
  * Di layar lebar: kolom nav tetap di kiri. Di layar sempit: bar atas dengan
@@ -51,7 +38,7 @@ export function Sidebar() {
   return (
     <>
       <div data-noprint className="hidden items-center justify-between gap-3 bg-sidebar px-4 py-3 max-[900px]:flex">
-        <Brand />
+        <BrandLockup tone="dark" priority />
         <button
           type="button"
           onClick={() => setOpen(true)}
@@ -91,7 +78,7 @@ export function Sidebar() {
         }
       >
         <div className="flex items-center justify-between gap-2 px-4 py-5 max-[900px]:py-4">
-          <Brand />
+          <BrandLockup tone="dark" priority />
           <button
             type="button"
             onClick={() => setOpen(false)}
@@ -118,13 +105,13 @@ export function Sidebar() {
                     className={
                       'mb-0.5 flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-[13px] transition-colors ' +
                       (active
-                        ? 'bg-brand-600 font-bold text-white'
+                        ? 'bg-brand-500 font-bold text-ink'
                         : 'font-medium text-sidebar-fg hover:bg-white/5')
                     }
                   >
                     <span
                       className={
-                        'h-1.5 w-1.5 flex-none rounded-full ' + (active ? 'bg-white' : 'bg-sidebar-dot')
+                        'h-1.5 w-1.5 flex-none rounded-full ' + (active ? 'bg-ink' : 'bg-sidebar-dot')
                       }
                     />
                     {item.label}

@@ -8,7 +8,7 @@ export function LoginForm() {
 
   return (
     <form action={formAction} className="w-full max-w-[376px]">
-      <h1 className="mb-1.5 text-[26px] font-bold tracking-[-0.7px]">Masuk ke PBK</h1>
+      <h1 className="kasera-heading mb-1.5 text-[26px] text-ink">Masuk ke KASERA</h1>
       <p className="mb-6 text-[13.5px] leading-relaxed text-gray-500">
         Gunakan akun bendahara atau administrator yang terdaftar di sekolah Anda.
       </p>
@@ -37,7 +37,7 @@ export function LoginForm() {
       />
 
       <div className="mb-5 flex items-center justify-end">
-        <a href="/lupa-sandi" className="text-[12.5px] font-semibold text-brand-600 hover:text-brand-700">
+        <a href="/lupa-sandi" className="text-[12.5px] font-semibold text-brand-700 hover:text-brand-800">
           Lupa sandi?
         </a>
       </div>
@@ -51,7 +51,7 @@ export function LoginForm() {
       <button
         type="submit"
         disabled={pending}
-        className="h-11 w-full rounded-lg bg-brand-600 text-sm font-semibold text-white hover:bg-brand-700 disabled:opacity-60"
+        className="h-11 w-full rounded-lg bg-brand-500 text-sm font-semibold text-ink hover:bg-brand-600 disabled:opacity-60"
       >
         {pending ? 'Memproses…' : 'Masuk'}
       </button>

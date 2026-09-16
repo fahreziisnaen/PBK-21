@@ -91,7 +91,7 @@ export default async function DetailSiswaPage({ params }: { params: Promise<{ id
             {payments.map((x) => (
               <tr key={x.id} className={x.status === 'DIBATALKAN' ? 'opacity-60' : ''}>
                 <td className={`${td} ${mono} font-semibold`}>
-                  <Link href={`/pembayaran/${x.id}`} className="text-brand-600 hover:underline">{x.receiptNo}</Link>
+                  <Link href={`/pembayaran/${x.id}`} className="text-brand-700 hover:underline">{x.receiptNo}</Link>
                 </td>
                 <td className={td}>{fdate(isoDate(x.date))}</td>
                 <td className={td}>{x.activityName}</td>

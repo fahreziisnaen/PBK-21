@@ -49,7 +49,7 @@ test('backup, factory reset, lalu restore mengembalikan data utuh', async ({ pag
   expect(download.suggestedFilename()).toMatch(/^pbk-backup-.*\.json$/);
   const backupPath = await download.path();
   const backup = JSON.parse(await readFile(backupPath, 'utf8'));
-  expect(backup.app).toBe('PBK');
+  expect(backup.app).toBe('KASERA');
   expect(backup.tables.SchoolClass.map((c: { name: string }) => c.name)).toContain(MARKER);
   expect(backup.tables.User.map((u: { id: string }) => u.id)).toContain(superadmin.id);
 
@@ -82,7 +82,7 @@ test('backup, factory reset, lalu restore mengembalikan data utuh', async ({ pag
   await expect(page).toHaveURL(/\/dashboard/);
 });
 
-test('file yang bukan backup PBK ditolak tanpa mengubah data', async ({ page }) => {
+test('file yang bukan backup KASERA ditolak tanpa mengubah data', async ({ page }) => {
   const before = await snapshot();
   await loginAsFixture(page, superadmin);
   await page.goto('/pemeliharaan');
@@ -93,6 +93,22 @@ test('file yang bukan backup PBK ditolak tanpa mengubah data', async ({ page }) 
   });
   await page.getByLabel('Ketik PULIHKAN untuk mengonfirmasi').fill('PULIHKAN');
   await page.getByRole('button', { name: 'Pulihkan Data' }).click();
-  await expect(page.getByText('File ini bukan backup PBK.')).toBeVisible();
+  await expect(page.getByText('File ini bukan backup KASERA.')).toBeVisible();
   expect(await snapshot()).toEqual(before);
+});
+
+test('backup lama bertanda PBK masih bisa dipulihkan', async ({ page }) => {
+  // Janji kompatibilitas saat ganti nama: berkas yang dibuat sebelum rebranding
+  // tidak boleh jadi sampah. Cukup dibuktikan sampai validasi penanda lolos —
+  // penolakan berikutnya datang dari isi tabelnya, bukan dari nama aplikasi.
+  await loginAsFixture(page, superadmin);
+  await page.goto('/pemeliharaan');
+  await page.getByLabel('File backup (.json)').setInputFiles({
+    name: 'backup-lama.json',
+    mimeType: 'application/json',
+    buffer: Buffer.from(JSON.stringify({ app: 'PBK', format: 1, migration: 'x', tables: {} })),
+  });
+  await page.getByLabel('Ketik PULIHKAN untuk mengonfirmasi').fill('PULIHKAN');
+  await page.getByRole('button', { name: 'Pulihkan Data' }).click();
+  await expect(page.getByText('File ini bukan backup KASERA.')).toHaveCount(0);
 });
