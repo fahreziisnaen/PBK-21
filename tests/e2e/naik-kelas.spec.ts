@@ -140,3 +140,38 @@ test('siswa yang naik tanpa kelas bisa ditemukan lewat filter tanpa kelas', asyn
   await page.goto('/master/siswa?kelas=-');
   await expect(page.getByRole('row', { name: new RegExp(`Naik XI Satu ${stamp}`) })).toBeVisible();
 });
+
+test('pemilih kegiatan mengelompokkan per tahun pelajaran', async () => {
+  const kategori = await prisma.activityCategory.create({ data: { code: `NY${P}`, name: `Kategori Naik ${stamp}` } });
+  const lama = await prisma.academicYear.create({ data: { name: '2089/2090', startYear: 2089 } });
+  createdYearNames.push('2089/2090');
+
+  const dibuat = await Promise.all([
+    prisma.activity.create({
+      data: {
+        name: `Kegiatan Tahun Ini ${stamp}`, categoryId: kategori.id, year: 2091,
+        startDate: new Date('2091-08-01'), endDate: new Date('2091-08-02'), location: 'Uji',
+        contribution: 100_000, status: 'AKTIF', receiptPrefix: `NA-${P}`,
+        // Tahun berjalan setelah naik kelas pada uji sebelumnya.
+        academicYearId: (await prisma.academicYear.findFirstOrThrow({ where: { name: NAMA_BERIKUT } })).id,
+      },
+    }),
+    prisma.activity.create({
+      data: {
+        name: `Kegiatan Tahun Lama ${stamp}`, categoryId: kategori.id, year: 2089,
+        startDate: new Date('2089-08-01'), endDate: new Date('2089-08-02'), location: 'Uji',
+        contribution: 100_000, status: 'AKTIF', receiptPrefix: `NB-${P}`,
+        academicYearId: lama.id,
+      },
+    }),
+  ]);
+
+  await page.goto('/dashboard');
+  const pemilih = page.getByLabel('KEGIATAN');
+  // Keduanya ada, tetapi berada di grup tahun pelajaran yang berbeda.
+  await expect(pemilih.locator(`optgroup[label="${NAMA_BERIKUT}"]`)).toContainText(`Kegiatan Tahun Ini ${stamp}`);
+  await expect(pemilih.locator('optgroup[label="2089/2090"]')).toContainText(`Kegiatan Tahun Lama ${stamp}`);
+
+  await prisma.activity.deleteMany({ where: { id: { in: dibuat.map((a) => a.id) } } });
+  await prisma.activityCategory.delete({ where: { id: kategori.id } });
+});
