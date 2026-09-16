@@ -26,16 +26,44 @@ next-env.d.ts
 # test output
 test-results/
 playwright-report/
+blob-report/
+playwright/.cache/
 /coverage
+
+# build caches
+.turbo/
+.swc/
+*.log
 
 # design export artifacts
 design/.thumbnail
+
+# Boilerplate create-next-app yang tidak dirujuk satu berkas pun. Didaftarkan
+# di sini, bukan sekadar dihapus, supaya `git add -A` berikutnya tidak
+# memasukkannya kembali — berkasnya masih ada di disk.
+/public/file.svg
+/public/globe.svg
+/public/next.svg
+/public/vercel.svg
+/public/window.svg
+
+# Ekspor desain mandiri 607 KB dari commit b5d8023, memakai merek PBK yang
+# lama dan tidak dirujuk kode mana pun. Sumber desain yang dipakai adalah
+# design/PBK.dc.html, yang tetap dilacak. Riwayat git masih menyimpannya.
+/PBK - Pencatatan Buku Kas.html
 
 # misc
 .DS_Store
 *.pem
 npm-debug.log*
 .vercel
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+desktop.ini
+$RECYCLE.BIN/
 
 # editors
 .idea/
