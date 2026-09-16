@@ -5,11 +5,12 @@ import { clearSessionCookies } from '@/lib/session-cookie';
 
 const { auth } = NextAuth(authConfig);
 
-// '/login/verifikasi' is stage 2 of login (Task 10): a guest arrives there
-// mid-flow, holding only a challenge cookie and no session yet. Without this
-// exemption the guard below sends every guest straight back to /login before
-// the OTP/TOTP/bootstrap step can ever run — the two-stage flow could not
-// complete for anyone.
+// Stage 2 of login now runs in a modal on /login itself, so a guest holding
+// only a challenge cookie never leaves this path. '/login/verifikasi' stays
+// listed because the route still exists purely to redirect old links back to
+// /login: without the exemption a guest would be bounced by the guard below
+// before that redirect could run, which is the same destination by a longer
+// route — and a logged-in visitor would be sent to /dashboard instead.
 const GUEST_PATHS = new Set([
   '/login',
   '/login/verifikasi',

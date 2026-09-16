@@ -27,8 +27,11 @@ export function AuthShell({ children }: { children: React.ReactNode }) {
       />
 
       <div className="relative flex min-h-screen items-center justify-center px-5 py-10 lg:justify-end lg:px-12 xl:pr-[8vw]">
-        {/* Garis kuning di tepi atas mengutip diagonal di sudut gambar latar. */}
-        <div className="w-full max-w-[420px] rounded-card border border-gray-200 border-t-4 border-t-brand-500 bg-white/95 p-7 shadow-2xl backdrop-blur-sm max-[420px]:p-5">
+        {/* Garis kuning di tepi atas mengutip diagonal di sudut gambar latar.
+            Tanpa backdrop-blur: properti itu menjadikan kartu ini containing
+            block bagi keturunan `position: fixed`, sehingga selubung modal
+            token hanya menutupi kartu, bukan seluruh layar. */}
+        <div className="w-full max-w-[420px] rounded-card border border-gray-200 border-t-4 border-t-brand-500 bg-white p-7 shadow-2xl max-[420px]:p-5">
           <div className="mb-6 lg:hidden">
             <BrandLockup tone="light" size={44} priority />
           </div>

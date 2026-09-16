@@ -1,7 +1,6 @@
 'use server';
 
 import { cookies, headers } from 'next/headers';
-import { redirect } from 'next/navigation';
 import bcrypt from 'bcryptjs';
 import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
@@ -13,6 +12,7 @@ import { issueChallenge } from '@/lib/challenge-lock';
 import { CHALLENGE_COOKIE, CHALLENGE_TTL_MINUTES } from '@/lib/auth-challenge';
 import { sendWhatsApp } from '@/lib/wa-gateway';
 import { chooseSecondFactor } from '@/lib/actions/choose-second-factor';
+import { codeHint, type LoginStart } from '@/lib/auth-flow';
 
 /**
  * Compared against when the username does not exist, so a missing user
@@ -28,15 +28,12 @@ const schema = z.object({
 
 const GENERIC = 'Username atau kata sandi salah.';
 
-export async function startLogin(
-  _prev: string | undefined,
-  formData: FormData,
-): Promise<string | undefined> {
+export async function startLogin(_prev: LoginStart | undefined, formData: FormData): Promise<LoginStart> {
   const parsed = schema.safeParse({
     username: formData.get('username'),
     password: formData.get('password'),
   });
-  if (!parsed.success) return GENERIC;
+  if (!parsed.success) return { ok: false, message: GENERIC };
 
   const username = parsed.data.username.trim().toLowerCase();
   const h = await headers();
@@ -45,7 +42,7 @@ export async function startLogin(
 
   const rate = await checkLoginRate(username, ip);
   if (!rate.allowed) {
-    return `Terlalu banyak percobaan. Coba lagi dalam ${rate.retryAfterMinutes} menit.`;
+    return { ok: false, message: `Terlalu banyak percobaan. Coba lagi dalam ${rate.retryAfterMinutes} menit.` };
   }
 
   const user = await prisma.user.findUnique({ where: { username } });
@@ -60,11 +57,11 @@ export async function startLogin(
     // here would let an attacker who can break writes rack up unlogged
     // attempts against a limiter that counts zero.
     await recordAuthEvent({ event: AUTH_EVENTS.LOGIN_PASSWORD_FAIL, username, ip, userAgent });
-    return GENERIC;
+    return { ok: false, message: GENERIC };
   }
   if (!user.isActive) {
     await recordAuthEvent({ event: AUTH_EVENTS.LOGIN_USER_INACTIVE, userId: user.id, username, ip, userAgent });
-    return GENERIC;
+    return { ok: false, message: GENERIC };
   }
 
   const method = chooseSecondFactor(user);
@@ -96,9 +93,13 @@ export async function startLogin(
     method: isBootstrap ? 'TOTP' : method,
   });
   if (issued.kind === 'refused') {
-    return issued.verdict.reason === 'failures'
-      ? 'Terlalu banyak kode verifikasi salah hari ini. Coba lagi besok, atau hubungi administrator.'
-      : `Terlalu banyak percobaan. Coba lagi dalam ${issued.verdict.retryAfterMinutes} menit.`;
+    return {
+      ok: false,
+      message:
+        issued.verdict.reason === 'failures'
+          ? 'Terlalu banyak kode verifikasi salah hari ini. Coba lagi besok, atau hubungi administrator.'
+          : `Terlalu banyak percobaan. Coba lagi dalam ${issued.verdict.retryAfterMinutes} menit.`,
+    };
   }
 
   const store = await cookies();
@@ -131,18 +132,23 @@ export async function startLogin(
         meta: { reason: result.reason, detail: result.detail },
       });
       if (result.reason === 'unregistered') {
-        return 'Nomor WhatsApp Anda tidak terdaftar. Hubungi administrator.';
+        return { ok: false, message: 'Nomor WhatsApp Anda tidak terdaftar. Hubungi administrator.' };
       }
       if (result.reason === 'unavailable') {
-        return 'Layanan pengiriman kode sedang tidak tersedia. Hubungi administrator.';
+        return { ok: false, message: 'Layanan pengiriman kode sedang tidak tersedia. Hubungi administrator.' };
       }
-      return 'Kode gagal dikirim. Hubungi administrator.';
+      return { ok: false, message: 'Kode gagal dikirim. Hubungi administrator.' };
     }
     await recordAuthEvent({ event: AUTH_EVENTS.WA_SEND_OK, userId: user.id, username, ip });
   }
 
-  // redirect() throws NEXT_REDIRECT to unwind the render — never wrap this
-  // in try/catch, or the throw is swallowed and the user sits on the login
-  // page with no feedback.
-  redirect('/login/verifikasi');
+  // Tidak lagi redirect ke halaman terpisah: tahap kode dikerjakan di modal
+  // pada halaman yang sama. Cookie challenge tetap ditulis di atas, jadi
+  // memuat ulang halaman tetap menemukan tahap yang sedang berjalan.
+  return {
+    ok: true,
+    challengeId: issued.challengeId,
+    bootstrap: isBootstrap,
+    hint: isBootstrap ? null : codeHint(method === 'WA_OTP' ? 'WA_OTP' : 'TOTP', user.phone),
+  };
 }

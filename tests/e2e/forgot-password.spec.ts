@@ -41,7 +41,7 @@ test.describe('lupa sandi', () => {
     await page.getByLabel('Username').fill(user.username);
     await page.getByLabel('Kata Sandi').fill(NEW_PASSWORD);
     await page.getByRole('button', { name: 'Masuk' }).click();
-    await page.waitForURL(/\/login\/verifikasi/);
+    await expect(page.getByRole('dialog', { name: 'Verifikasi Masuk' })).toBeVisible();
   });
 
   test('menolak kode salah tanpa mengubah sandi', async ({ page }) => {
@@ -59,7 +59,7 @@ test.describe('lupa sandi', () => {
     await page.getByLabel('Username').fill(user.username);
     await page.getByLabel('Kata Sandi').fill(user.password);
     await page.getByRole('button', { name: 'Masuk' }).click();
-    await page.waitForURL(/\/login\/verifikasi/);
+    await expect(page.getByRole('dialog', { name: 'Verifikasi Masuk' })).toBeVisible();
   });
 });
 

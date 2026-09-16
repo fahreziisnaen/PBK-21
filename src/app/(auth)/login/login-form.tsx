@@ -1,12 +1,23 @@
 'use client';
 
-import { useActionState } from 'react';
+import { useActionState, useState, useTransition } from 'react';
+import { cancelLoginChallenge } from '@/lib/actions/cancel-login';
 import { startLogin } from '@/lib/actions/login-password';
+import type { LoginStart } from '@/lib/auth-flow';
+import { TokenModal } from './TokenModal';
 
-export function LoginForm() {
-  const [error, formAction, pending] = useActionState(startLogin, undefined);
+export function LoginForm({ resume }: { resume?: Extract<LoginStart, { ok: true }> }) {
+  const [state, formAction, pending] = useActionState<LoginStart | undefined, FormData>(startLogin, undefined);
+  const [cancelled, setCancelled] = useState(false);
+  const [, startCancel] = useTransition();
+
+  // Dibatalkan menang atas keduanya: tanpa urutan ini, hasil startLogin yang
+  // masih tersimpan di state akan terus membuka modalnya walau sudah ditutup.
+  const stage = cancelled ? undefined : state?.ok ? state : resume;
+  const error = state && !state.ok ? state.message : undefined;
 
   return (
+    <>
     <form action={formAction} className="w-full">
       <h1 className="kasera-heading mb-1.5 text-[26px] text-ink">Masuk ke KASERA</h1>
       <p className="mb-6 text-[13.5px] leading-relaxed text-gray-500">
@@ -56,5 +67,26 @@ export function LoginForm() {
         {pending ? 'Memproses…' : 'Masuk'}
       </button>
     </form>
+
+    {stage && (
+      <TokenModal
+        key={stage.challengeId}
+        challengeId={stage.challengeId}
+        hint={stage.hint}
+        bootstrap={stage.bootstrap}
+        onCancel={() =>
+          // Ditunggu sampai cookie challenge-nya benar-benar dibuang sebelum
+          // modal ditutup. Uji e2e-nya tidak membuktikan ini perlu — tanpa
+          // menunggu pun ia lulus, karena assertion Playwright sendiri sudah
+          // memberi jeda. Yang dijaga di sini adalah pengguna yang memuat
+          // ulang halaman seketika di koneksi lambat.
+          startCancel(async () => {
+            await cancelLoginChallenge();
+            setCancelled(true);
+          })
+        }
+      />
+    )}
+    </>
   );
 }

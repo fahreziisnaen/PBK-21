@@ -1,26 +1,23 @@
 'use server';
 
 import { AuthError } from 'next-auth';
-import { redirect } from 'next/navigation';
 import { signIn } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { nextGate } from '@/lib/auth-gates';
+import type { OtpVerdict } from '@/lib/auth-flow';
 
-export async function submitOtp(
-  _prevState: string | undefined,
-  formData: FormData,
-): Promise<string | undefined> {
+export async function submitOtp(_prevState: OtpVerdict | undefined, formData: FormData): Promise<OtpVerdict> {
   const challengeId = formData.get('challengeId');
 
   try {
     // `redirect: false` — deliberately NOT `redirectTo: '/dashboard'`. When
     // next-auth itself performs the redirect, it renders the destination
     // page (including the (app) layout) inline as part of THIS action's own
-    // response; a second redirect() thrown from deep inside that render
-    // (the post-login gate, Task 11) is not honoured there, and the guest
-    // is left stuck on /dashboard with the gate silently bypassed. Doing
-    // exactly one redirect, here, at the top of this action — avoids that
-    // nested-redirect trap.
+    // response; a redirect thrown from deep inside that render (the
+    // post-login gate, Task 11) is not honoured there, and the guest is left
+    // stuck on /dashboard with the gate silently bypassed. This action
+    // therefore navigates nowhere at all: it returns the destination and the
+    // client goes there, so the gate is evaluated once, here, on its own.
     await signIn('otp', {
       challengeId,
       code: formData.get('code'),
@@ -28,9 +25,13 @@ export async function submitOtp(
     });
   } catch (error) {
     if (error instanceof AuthError) {
-      return error.type === 'CredentialsSignin'
-        ? 'Kode salah, sudah kedaluwarsa, atau sudah dipakai.'
-        : 'Terjadi kesalahan saat masuk. Coba lagi.';
+      return {
+        ok: false,
+        message:
+          error.type === 'CredentialsSignin'
+            ? 'Kode salah, sudah kedaluwarsa, atau sudah dipakai.'
+            : 'Terjadi kesalahan saat masuk. Coba lagi.',
+      };
     }
     throw error; // redirect Next.js dilempar sebagai error — jangan ditelan
   }
@@ -52,8 +53,9 @@ export async function submitOtp(
       })
     : null;
 
-  // redirect() throws NEXT_REDIRECT to unwind the render — never wrap this
-  // in try/catch, or the throw is swallowed and the guest sits on the
-  // verification page with no feedback.
-  redirect((gateUser && nextGate(gateUser)) || '/dashboard');
+  // Tujuannya dikembalikan, bukan di-redirect dari sini: klien perlu satu
+  // momen untuk menampilkan animasi berhasil sebelum berpindah. Gerbang
+  // pasca-login tetap ditentukan di server — klien hanya menjalankan hasilnya,
+  // tidak boleh memilih tujuannya sendiri.
+  return { ok: true, to: (gateUser && nextGate(gateUser)) || '/dashboard' };
 }

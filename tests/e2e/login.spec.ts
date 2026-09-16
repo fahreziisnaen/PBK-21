@@ -4,6 +4,12 @@
 import 'dotenv/config';
 import { expect, test } from '@playwright/test';
 
+// Satu-satunya spec yang memakai baris `admin` sungguhan, bukan fixture, agar
+// akun hasil seed benar-benar terbukti bisa masuk. Konsekuensinya: penerbitan
+// challenge dibatasi 3 per 15 menit per akun, jadi menjalankan seluruh suite
+// lebih dari tiga kali dalam seperempat jam akan membuat uji di bawah gagal
+// dengan "Terlalu banyak percobaan". Itu pengamannya yang bekerja, bukan
+// regresi — tunggu jendelanya lewat sebelum mencari penyebab lain.
 const USERNAME = 'admin';
 const PASSWORD = process.env.SEED_ADMIN_PASSWORD ?? 'pbk-lokal-2026';
 

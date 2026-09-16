@@ -92,9 +92,11 @@ export async function loginAsFixture(page: Page, user: E2eUser): Promise<void> {
   await page.getByRole('button', { name: 'Masuk' }).click();
 
   if (user.totpSecret) {
-    await page.waitForURL(/\/login\/verifikasi/);
-    await page.getByLabel('Kode Verifikasi').fill(computeTotpCode(user.totpSecret));
-    await page.getByRole('button', { name: 'Verifikasi' }).click();
+    // Tahap kedua muncul sebagai modal di halaman yang sama — tidak ada lagi
+    // perpindahan ke /login/verifikasi yang bisa ditunggu.
+    const dialog = page.getByRole('dialog', { name: 'Verifikasi Masuk' });
+    await dialog.getByLabel('Kode Verifikasi').fill(computeTotpCode(user.totpSecret));
+    await dialog.getByRole('button', { name: 'Verifikasi' }).click();
   }
 
   await page.waitForURL(/\/dashboard/);
