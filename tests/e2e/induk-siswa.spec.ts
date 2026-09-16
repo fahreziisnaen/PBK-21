@@ -98,3 +98,32 @@ test('memindahkan siswa nyasar ke kelas yang benar', async () => {
   const row = page.getByRole('row', { name: new RegExp(NYASAR) });
   await expect(row.getByRole('button', { name: 'Hapus' })).toBeVisible();
 });
+
+test('filter menerapkan diri tanpa tombol, dan kelas mengikuti tingkat', async () => {
+  // Kelas pembanding di tingkat lain, untuk membuktikan daftarnya menyusut.
+  const lain = `I${stamp.slice(-4)}-XII`;
+  await prisma.schoolClass.create({ data: { name: lain, grade: 'XII' } });
+
+  await page.goto('/master/siswa');
+  // Tidak ada lagi tombol Terapkan.
+  await expect(page.getByRole('button', { name: 'Terapkan' })).toHaveCount(0);
+
+  const kelasSelect = page.getByLabel('Kelas', { exact: true });
+  await expect(kelasSelect.getByRole('option', { name: lain })).toHaveCount(1);
+
+  // Memilih tingkat langsung menyaring, tanpa menekan apa pun.
+  await page.getByLabel('Tingkat').selectOption('X');
+  await expect(page).toHaveURL(/grade=X/);
+  // Dan kelas tingkat XII hilang dari pilihan.
+  await expect(kelasSelect.getByRole('option', { name: lain })).toHaveCount(0);
+  await expect(kelasSelect.getByRole('option', { name: KELAS })).toHaveCount(1);
+
+  // Kelas terpilih yang tidak lagi masuk tingkatnya ikut dilepas.
+  await kelasSelect.selectOption(KELAS);
+  await expect(page).toHaveURL(new RegExp(`kelas=${KELAS}`));
+  await page.getByLabel('Tingkat').selectOption('XII');
+  await expect(page).toHaveURL(/grade=XII/);
+  await expect(page).not.toHaveURL(new RegExp(`kelas=${KELAS}`));
+
+  await prisma.schoolClass.deleteMany({ where: { name: lain } });
+});

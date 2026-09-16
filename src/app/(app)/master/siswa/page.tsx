@@ -1,15 +1,15 @@
-import Link from 'next/link';
 import type { SchoolClass, Student } from '@prisma/client';
 import { PageHead } from '@/components/shell/PageHead';
 import { FormModal } from '@/components/ui/FormModal';
 import { ConfirmAction } from '@/components/ui/ConfirmAction';
+import { FilterBar } from '@/components/ui/FilterBar';
 import { Kpi, KpiRow } from '@/components/ui/Kpi';
 import { requireUser } from '@/lib/auth-guard';
 import { canWrite } from '@/lib/roles';
 import { prisma } from '@/lib/prisma';
 import { deleteStudentMaster, saveStudentMaster } from '@/lib/actions/students';
 import { formatPhoneLocal } from '@/lib/phone';
-import { btnGhost, btnSecondary, input, label, mono, table, tableWrap, td, tdNum, th, thNum } from '@/lib/ui';
+import { btnGhost, input, label, mono, table, tableWrap, td, tdNum, th, thNum } from '@/lib/ui';
 
 type Search = { q?: string; grade?: string; kelas?: string; status?: string };
 
@@ -64,7 +64,7 @@ function StudentMasterFields({ classes, row }: { classes: SchoolClass[]; row?: S
 /**
  * Data induk seluruh siswa sekolah, lepas dari kegiatan.
  *
- * "Data Siswa" di grup DATA hanya menampilkan peserta kegiatan yang sedang
+ * "Data Peserta" di grup DATA hanya menampilkan peserta kegiatan yang sedang
  * dipilih, sehingga siswa yang belum diikutkan kegiatan apa pun tidak terlihat
  * di mana pun dan tidak bisa dibetulkan datanya. Halaman inilah tempatnya.
  */
@@ -122,31 +122,16 @@ export default async function IndukSiswaPage({ searchParams }: { searchParams: P
         <Kpi label="Tanpa Kelas" value={String(tanpaKelas)} hint="siswa aktif" tone={tanpaKelas > 0 ? 'error' : undefined} />
       </KpiRow>
 
-      <form className="mb-3 flex flex-wrap gap-2" data-noprint>
-        <input name="q" defaultValue={q} placeholder="Cari nama atau NIS…" className={`${input} max-w-[260px]`} />
-        <select name="grade" defaultValue={grade} className={`${input} max-w-[185px]`} aria-label="Tingkat">
-          <option value="">Semua tingkat</option>
-          <option value="X">Tingkat X</option>
-          <option value="XI">Tingkat XI</option>
-          <option value="XII">Tingkat XII</option>
-        </select>
-        <select name="kelas" defaultValue={kelas} className={`${input} max-w-[205px]`} aria-label="Kelas">
-          <option value="">Semua kelas</option>
-          <option value="-">— Tanpa kelas —</option>
-          {classes.map((c) => (
-            <option key={c.id} value={c.name}>{c.name}</option>
-          ))}
-        </select>
-        <select name="status" defaultValue={status} className={`${input} max-w-[185px]`} aria-label="Status siswa">
-          <option value="AKTIF">Siswa aktif</option>
-          <option value="ALUMNI">Alumni</option>
-          <option value="SEMUA">Aktif &amp; alumni</option>
-        </select>
-        <button className={btnSecondary}>Terapkan</button>
-        {(q || grade || kelas || status !== 'AKTIF') && (
-          <Link href="/master/siswa" className="self-center text-[12.5px] font-semibold text-brand-700">Reset</Link>
-        )}
-      </form>
+      <FilterBar
+        classes={classes}
+        statusLabel="Status siswa"
+        defaultStatus="AKTIF"
+        statusOptions={[
+          { value: 'AKTIF', label: 'Siswa aktif' },
+          { value: 'ALUMNI', label: 'Alumni' },
+          { value: 'SEMUA', label: 'Aktif & alumni' },
+        ]}
+      />
 
       <div className={tableWrap}>
         <table className={`${table} min-w-[820px]`}>
@@ -166,7 +151,7 @@ export default async function IndukSiswaPage({ searchParams }: { searchParams: P
             {students.length === 0 && (
               <tr>
                 <td className={`${td} py-10 text-center text-gray-500`} colSpan={writer ? 8 : 7}>
-                  {total === 0 ? 'Belum ada siswa. Tambahkan di sini, atau impor dari Excel di Data Siswa.' : 'Tidak ada siswa yang cocok dengan filter.'}
+                  {total === 0 ? 'Belum ada siswa. Tambahkan di sini, atau impor dari Excel di Data Peserta.' : 'Tidak ada siswa yang cocok dengan filter.'}
                 </td>
               </tr>
             )}

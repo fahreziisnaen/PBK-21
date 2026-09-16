@@ -19,7 +19,19 @@ export function ReceiptActions({ targetId, filename }: { targetId: string; filen
       const node = document.getElementById(targetId);
       if (!node) throw new Error('Kuitansi tidak ditemukan di halaman.');
       const { toJpeg } = await import('html-to-image');
-      const dataUrl = await toJpeg(node, { quality: 0.95, backgroundColor: '#ffffff', pixelRatio: 2 });
+      // Lebar dan tinggi dikunci ke ukuran elemennya, dan marginnya dinolkan
+      // pada salinan yang digambar. Kuitansi dipusatkan dengan `mx-auto`, yang
+      // jadi margin kiri nyata (mis. 195px); html-to-image ikut menyalin
+      // margin itu lalu menggambarnya di kanvas selebar elemennya saja,
+      // sehingga hasilnya tergeser ke kanan dan sisi kanannya terpotong.
+      const dataUrl = await toJpeg(node, {
+        quality: 0.95,
+        backgroundColor: '#ffffff',
+        pixelRatio: 2,
+        width: node.offsetWidth,
+        height: node.offsetHeight,
+        style: { margin: '0', transform: 'none', transformOrigin: 'top left' },
+      });
       const link = document.createElement('a');
       link.href = dataUrl;
       link.download = filename;

@@ -98,7 +98,7 @@ export default async function NaikKelasPage() {
           <h2 className="mb-1 text-[15px] font-bold text-gray-900">1. Kelas tujuan</h2>
           <p className="mb-3 text-[12.5px] text-ink-soft">
             Tentukan siswa tiap kelas akan pindah ke kelas mana. Dibiarkan kosong berarti siswanya tetap naik tingkat
-            tetapi belum punya kelas — mereka bisa ditemukan lewat filter “Tanpa kelas” di Induk Siswa.
+            tetapi belum punya kelas — mereka bisa ditemukan lewat filter “Tanpa kelas” di Master Data › Data Siswa.
           </p>
           <div className={tableWrap}>
             <table className={`${table} min-w-[640px]`}>

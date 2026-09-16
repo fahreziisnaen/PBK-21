@@ -4,6 +4,7 @@ import { PageHead } from '@/components/shell/PageHead';
 import { Badge } from '@/components/ui/Badge';
 import { FormModal } from '@/components/ui/FormModal';
 import { ConfirmAction } from '@/components/ui/ConfirmAction';
+import { FilterBar } from '@/components/ui/FilterBar';
 import { BulkSelect } from '@/components/ui/BulkSelect';
 import { Kpi, KpiRow, NoActivity } from '@/components/ui/Kpi';
 import { PaymentFormModal } from '@/components/finance/PaymentFormModal';
@@ -193,29 +194,16 @@ export default async function SiswaPage({ searchParams }: { searchParams: Promis
         <Kpi label="Sisa Tagihan" value={rp(totalBilling - totalPaid)} tone="error" />
       </KpiRow>
 
-      <form className="mb-3 flex flex-wrap gap-2" data-noprint>
-        <input name="q" defaultValue={q} placeholder="Cari nama atau NIS…" className={`${input} max-w-[260px]`} />
-        <select name="grade" defaultValue={grade} className={`${input} max-w-[185px]`}>
-          <option value="">Semua tingkat</option>
-          <option value="X">Tingkat X</option>
-          <option value="XI">Tingkat XI</option>
-          <option value="XII">Tingkat XII</option>
-        </select>
-        <select name="kelas" defaultValue={kelas} className={`${input} max-w-[205px]`} aria-label="Kelas">
-          <option value="">Semua kelas</option>
-          <option value="-">— Tanpa kelas —</option>
-          {classes.map((c) => (
-            <option key={c.id} value={c.name}>{c.name}</option>
-          ))}
-        </select>
-        <select name="status" defaultValue={status} className={`${input} max-w-[205px]`}>
-          <option value="">Semua status</option>
-          <option>Lunas</option>
-          <option>Belum Lunas</option>
-          <option>Belum Bayar</option>
-        </select>
-        <button className={btnSecondary}>Terapkan</button>
-      </form>
+      <FilterBar
+        classes={classes}
+        searchPlaceholder="Cari nama atau NIS…"
+        statusOptions={[
+          { value: '', label: 'Semua status' },
+          { value: 'Lunas', label: 'Lunas' },
+          { value: 'Belum Lunas', label: 'Belum Lunas' },
+          { value: 'Belum Bayar', label: 'Belum Bayar' },
+        ]}
+      />
     </>
   );
 

@@ -2,8 +2,8 @@ export type RouteMeta = { title: string; subtitle: string; crumbs: string[] };
 
 export const ROUTES: Record<string, RouteMeta> = {
   '/dashboard': { title: 'Dashboard', subtitle: 'Ringkasan keuangan kegiatan terpilih', crumbs: ['Dashboard'] },
-  '/siswa': { title: 'Data Siswa', subtitle: 'Peserta dan tagihan pada kegiatan aktif — daftar lengkap siswa ada di Master Data › Induk Siswa', crumbs: ['Data', 'Data Siswa'] },
-  '/siswa/[id]': { title: 'Detail Siswa', subtitle: 'Riwayat tagihan dan pembayaran', crumbs: ['Data', 'Data Siswa', 'Detail'] },
+  '/siswa': { title: 'Data Peserta', subtitle: 'Peserta dan tagihan pada kegiatan yang sedang dipilih', crumbs: ['Data', 'Data Peserta'] },
+  '/siswa/[id]': { title: 'Detail Peserta', subtitle: 'Riwayat tagihan dan pembayaran', crumbs: ['Data', 'Data Peserta', 'Detail'] },
   '/pembayaran': { title: 'Pembayaran', subtitle: 'Seluruh transaksi penerimaan kontribusi siswa', crumbs: ['Keuangan', 'Pembayaran'] },
   '/pembayaran/[id]': { title: 'Detail Pembayaran', subtitle: 'Rincian satu transaksi pembayaran', crumbs: ['Keuangan', 'Pembayaran', 'Detail'] },
   '/kuitansi': { title: 'Kuitansi', subtitle: 'Pratinjau kuitansi siap cetak', crumbs: ['Administrasi', 'Kuitansi'] },
@@ -12,7 +12,7 @@ export const ROUTES: Record<string, RouteMeta> = {
   '/rekap': { title: 'Rekap Pembayaran', subtitle: 'Rekapitulasi per tingkat dan status', crumbs: ['Data', 'Rekap Pembayaran'] },
   '/master/kategori-kegiatan': { title: 'Kategori Kegiatan', subtitle: 'Master kategori untuk pengelompokan kegiatan', crumbs: ['Master Data', 'Kategori Kegiatan'] },
   '/master/kategori-pengeluaran': { title: 'Kategori Pengeluaran', subtitle: 'Master kategori belanja kegiatan', crumbs: ['Master Data', 'Kategori Pengeluaran'] },
-  '/master/siswa': { title: 'Induk Siswa', subtitle: 'Seluruh siswa sekolah, lepas dari kegiatan', crumbs: ['Master Data', 'Induk Siswa'] },
+  '/master/siswa': { title: 'Data Siswa', subtitle: 'Seluruh siswa sekolah, lepas dari kegiatan', crumbs: ['Master Data', 'Data Siswa'] },
   '/master/tahun-pelajaran': { title: 'Tahun Pelajaran', subtitle: 'Tahun ajaran yang berjalan dan riwayatnya', crumbs: ['Master Data', 'Tahun Pelajaran'] },
   '/master/naik-kelas': { title: 'Naik Kelas', subtitle: 'Menaikkan tingkat seluruh siswa dan membuka tahun pelajaran berikutnya', crumbs: ['Master Data', 'Naik Kelas'] },
   '/master/kelas': { title: 'Kelas', subtitle: 'Master kelas dan wali kelas per tingkat', crumbs: ['Master Data', 'Kelas'] },

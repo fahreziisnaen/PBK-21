@@ -24,7 +24,7 @@ describe('getRouteMeta', () => {
   });
 
   it('mencocokkan route detail dinamis', () => {
-    expect(getRouteMeta('/siswa/abc123').title).toBe('Detail Siswa');
+    expect(getRouteMeta('/siswa/abc123').title).toBe('Detail Peserta');
     expect(getRouteMeta('/pembayaran/xyz').title).toBe('Detail Pembayaran');
   });
 

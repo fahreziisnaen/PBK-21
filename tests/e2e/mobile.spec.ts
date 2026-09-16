@@ -23,6 +23,7 @@ const ROUTES = [
   '/pengeluaran',
   '/buku-kas',
   '/siswa',
+  '/master/siswa',
   '/rekap',
   '/master/kegiatan',
   '/master/kelas',
@@ -139,7 +140,7 @@ test('laci menu bisa dibuka, membawa ke halaman lain, lalu menutup sendiri', asy
   await page.goto('/dashboard');
 
   // Tertutup: tautan nav tidak bisa diklik sampai menunya dibuka.
-  const dataSiswa = page.getByRole('link', { name: 'Data Siswa' });
+  const dataSiswa = page.getByRole('link', { name: 'Data Peserta' });
   await expect(dataSiswa).toBeHidden();
 
   await page.getByRole('button', { name: 'Buka menu' }).click();
@@ -147,10 +148,10 @@ test('laci menu bisa dibuka, membawa ke halaman lain, lalu menutup sendiri', asy
   if (SHOT_DIR) await page.screenshot({ path: `${SHOT_DIR}/_laci-terbuka.png` });
 
   await dataSiswa.click();
-  await page.waitForURL(/\/siswa/);
+  await page.waitForURL(/\/siswa$/);
   // Menutup sendiri setelah pindah halaman, bukan menutupi isi halaman baru.
   await expect(page.getByRole('link', { name: 'Rekap Pembayaran' })).toBeHidden();
-  await expect(page.getByRole('heading', { name: 'Data Siswa' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Data Peserta' })).toBeVisible();
 });
 
 test('kuitansi dan halaman login muat di layar ponsel', async ({ browser }) => {

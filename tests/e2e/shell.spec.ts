@@ -29,7 +29,7 @@ test('menavigasi ke seluruh route utama dengan judul benar', async ({ page }) =>
     ['Pembayaran', 'Seluruh transaksi penerimaan kontribusi siswa'],
     ['Pengeluaran', 'Belanja kegiatan menurut kategori master'],
     ['Buku Kas', 'Mutasi kas kronologis kegiatan aktif'],
-    ['Data Siswa', 'Peserta dan tagihan pada kegiatan aktif'],
+    ['Data Peserta', 'Peserta dan tagihan pada kegiatan yang sedang dipilih'],
     ['Rekap Pembayaran', 'Rekapitulasi per tingkat dan status'],
     ['Kategori Kegiatan', 'Master kategori untuk pengelompokan kegiatan'],
     ['Laporan Keuangan', 'Laporan pemasukan, pengeluaran, dan saldo'],

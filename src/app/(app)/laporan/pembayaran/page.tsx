@@ -81,9 +81,13 @@ export default async function LaporanPembayaranPage({ searchParams }: { searchPa
         <select name="kelas" defaultValue={sp.kelas ?? ''} className={`${input} max-w-[205px]`} aria-label="Kelas">
           <option value="">Semua kelas</option>
           <option value="-">— Tanpa kelas —</option>
-          {classes.map((c) => (
-            <option key={c.id} value={c.name}>{c.name}</option>
-          ))}
+          {/* Hanya kelas pada tingkat yang sedang disaring: menawarkan kelas
+              tingkat lain di sini pasti menghasilkan laporan kosong. */}
+          {classes
+            .filter((c) => !sp.grade || c.grade === sp.grade)
+            .map((c) => (
+              <option key={c.id} value={c.name}>{c.name}</option>
+            ))}
         </select>
         <select name="status" defaultValue={sp.status ?? ''} className={`${input} max-w-[205px]`} aria-label="Status">
           <option value="">Semua status</option>

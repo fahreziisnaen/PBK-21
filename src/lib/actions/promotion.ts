@@ -70,7 +70,7 @@ export async function promoteStudents(_: ActionResult, fd: FormData): Promise<Ac
     }
     // Tanpa kelas tujuan, siswanya naik tingkat tetapi kelasnya dikosongkan —
     // lebih jujur daripada meninggalkannya di kelas tingkat lama, dan mereka
-    // bisa ditemukan lewat filter "Tanpa kelas" di Induk Siswa.
+    // bisa ditemukan lewat filter "Tanpa kelas" di Master Data > Data Siswa.
     const to = s.className ? (destinationFor.get(s.className) ?? null) : null;
     promoted.push({ id: s.id, grade: next, className: to });
   }

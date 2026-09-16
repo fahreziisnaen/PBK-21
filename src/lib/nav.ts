@@ -14,20 +14,24 @@ export const NAV_GROUPS: NavGroup[] = [
   {
     label: 'DATA',
     items: [
-      { label: 'Data Siswa', href: '/siswa' },
+      { label: 'Data Peserta', href: '/siswa' },
       { label: 'Rekap Pembayaran', href: '/rekap' },
     ],
   },
   {
     label: 'MASTER DATA',
     items: [
-      { label: 'Induk Siswa', href: '/master/siswa' },
+      // Berpasangan dari yang melandasi ke yang bergantung padanya:
+      // tahun pelajaran → kelas → siswa, lalu kategori → kegiatan.
+      // Naik Kelas paling bawah: aksi tahunan yang mengubah seluruh data,
+      // jadi tidak diletakkan berdampingan dengan menu harian.
       { label: 'Tahun Pelajaran', href: '/master/tahun-pelajaran' },
-      { label: 'Naik Kelas', href: '/master/naik-kelas' },
+      { label: 'Kelas', href: '/master/kelas' },
+      { label: 'Data Siswa', href: '/master/siswa' },
       { label: 'Kategori Kegiatan', href: '/master/kategori-kegiatan' },
       { label: 'Kategori Pengeluaran', href: '/master/kategori-pengeluaran' },
-      { label: 'Kelas', href: '/master/kelas' },
       { label: 'Kegiatan', href: '/master/kegiatan' },
+      { label: 'Naik Kelas', href: '/master/naik-kelas' },
     ],
   },
   {
