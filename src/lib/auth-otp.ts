@@ -12,6 +12,8 @@ import { AUTH_EVENTS } from '@/lib/auth-event-names';
 const otpCredentialsSchema = z.object({
   challengeId: z.string().min(1),
   code: z.string().optional(),
+  /** "1" bila "Ingat saya" dicentang. Pilihan pengguna atas sesinya sendiri. */
+  remember: z.string().optional(),
 });
 
 /**
@@ -110,5 +112,8 @@ export async function authorizeOtp(raw: unknown) {
     // Frozen into the JWT by the jwt callback so a later password change can
     // be detected and the session refused — see isSessionStale.
     passwordChangedAt: challenge.user.passwordChangedAt?.getTime() ?? 0,
+    // Dibekukan ke token oleh callback jwt, lalu diperiksa tiap permintaan
+    // oleh requireUser — lihat isSessionExpired.
+    remember: parsed.data.remember === '1',
   };
 }

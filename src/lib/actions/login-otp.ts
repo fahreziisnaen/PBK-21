@@ -21,6 +21,7 @@ export async function submitOtp(_prevState: OtpVerdict | undefined, formData: Fo
     await signIn('otp', {
       challengeId,
       code: formData.get('code'),
+      remember: formData.get('remember'),
       redirect: false,
     });
   } catch (error) {

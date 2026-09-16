@@ -60,3 +60,34 @@ export function isSessionStale(
   if (tokenStamp === undefined) return true;
   return (passwordChangedAt?.getTime() ?? 0) !== tokenStamp;
 }
+
+/**
+ * Berapa lama sesi bertahan bila "Ingat saya" TIDAK dicentang. Kira-kira satu
+ * hari kerja — cukup untuk sekali duduk di komputer bersama, tanpa membuat
+ * pengguna memasukkan kode 2FA berkali-kali dalam sehari.
+ */
+export const UNREMEMBERED_SESSION_MS = 8 * 60 * 60 * 1000;
+
+/**
+ * Sesi JWT tidak bisa dicabut dari server, jadi masa hidup "Ingat saya" tidak
+ * bisa dititipkan pada masa berlaku cookie: cookie-nya dibuat next-auth dengan
+ * satu nilai tetap untuk semua orang. Yang dilakukan di sini sama seperti
+ * `isSessionStale`: stempel waktu masuk dibekukan ke dalam token, lalu
+ * dibandingkan setiap permintaan.
+ *
+ * `loginAt` yang hilang diperlakukan sebagai kedaluwarsa hanya bila
+ * `remember` juga tidak ada — token dari sebelum fitur ini ada tidak punya
+ * keduanya, dan memaksa semua orang keluar saat aplikasi diperbarui bukan
+ * perilaku yang diinginkan.
+ */
+export function isSessionExpired(
+  remember: boolean | undefined,
+  loginAt: number | undefined,
+  now: number = Date.now(),
+): boolean {
+  // Token lama: tidak punya klaimnya sama sekali, biarkan lewat.
+  if (remember === undefined && loginAt === undefined) return false;
+  if (remember) return false;
+  if (loginAt === undefined) return false;
+  return now - loginAt > UNREMEMBERED_SESSION_MS;
+}

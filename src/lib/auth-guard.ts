@@ -3,7 +3,7 @@ import type { Role } from '@prisma/client';
 import type { Session } from 'next-auth';
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
-import { isSessionStale, nextGate } from '@/lib/auth-gates';
+import { isSessionExpired, isSessionStale, nextGate } from '@/lib/auth-gates';
 
 export type SessionUser = Session['user'];
 
@@ -56,6 +56,13 @@ export async function requireUser(
   }
   if (isSessionStale(fresh.passwordChangedAt, session.user.passwordStamp)) {
     redirect('/login?reset=1');
+  }
+  // Ditegakkan di sini, bukan lewat masa berlaku cookie: cookie sesi dibuat
+  // next-auth dengan satu nilai tetap untuk semua orang, jadi "Ingat saya"
+  // tidak bisa dititipkan padanya. Sama seperti isSessionStale, ini juga harus
+  // ada di sini dan bukan di layout — Server Action tidak pernah merender layout.
+  if (isSessionExpired(session.user.remember, session.user.loginAt)) {
+    redirect('/login?ended=1');
   }
 
   // The post-login gate, enforced here for the same reason isSessionStale is:

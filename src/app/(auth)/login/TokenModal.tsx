@@ -40,12 +40,15 @@ export function TokenModal({
   challengeId,
   hint,
   bootstrap,
+  remember,
   onCancel,
 }: {
   challengeId: string;
   hint: string | null;
   /** Akun tanpa faktor kedua: tidak ada kode untuk diisi, diteruskan sendiri. */
   bootstrap: boolean;
+  /** "Ingat saya" dari tahap sandi; sesinya dibuat di sini, bukan di sana. */
+  remember: boolean;
   onCancel: () => void;
 }) {
   const [state, formAction, pending] = useActionState<OtpVerdict | undefined, FormData>(submitOtp, undefined);
@@ -111,6 +114,7 @@ export function TokenModal({
             <p className="mt-1 text-[13px] text-ink-soft">Mohon tunggu sebentar.</p>
             <form ref={formRef} action={formAction} className="hidden">
               <input type="hidden" name="challengeId" value={challengeId} />
+              <input type="hidden" name="remember" value={remember ? '1' : ''} />
             </form>
           </div>
         ) : (
@@ -119,6 +123,7 @@ export function TokenModal({
             <p className="mb-5 mt-1 text-[13px] leading-relaxed text-ink-soft">{hint}</p>
 
             <input type="hidden" name="challengeId" value={challengeId} />
+            <input type="hidden" name="remember" value={remember ? '1' : ''} />
 
             <label htmlFor="code" className="mb-1.5 block text-xs font-semibold text-gray-700">
               Kode Verifikasi

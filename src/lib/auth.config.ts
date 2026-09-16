@@ -11,6 +11,11 @@ export const authConfig = {
         token.role = user.role;
         // Frozen at sign-in — see isSessionStale.
         token.pwc = user.passwordChangedAt ?? 0;
+        // Dibekukan saat masuk: `iat` tidak bisa dipakai karena next-auth
+        // menandatangani ulang token dan memperbaruinya setiap permintaan,
+        // sehingga sesi tanpa "Ingat saya" tidak akan pernah kedaluwarsa.
+        token.rem = user.remember === true;
+        token.lat = Date.now();
       }
       return token;
     },
@@ -24,6 +29,8 @@ export const authConfig = {
         // column is what makes a password reset actually end sessions
         // elsewhere.
         session.user.passwordStamp = token.pwc as number | undefined;
+        session.user.remember = token.rem as boolean | undefined;
+        session.user.loginAt = token.lat as number | undefined;
       }
       return session;
     },

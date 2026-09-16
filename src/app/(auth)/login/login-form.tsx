@@ -1,6 +1,7 @@
 'use client';
 
 import { useActionState, useState, useTransition } from 'react';
+import { PasswordField } from '@/components/ui/PasswordField';
 import { cancelLoginChallenge } from '@/lib/actions/cancel-login';
 import { startLogin } from '@/lib/actions/login-password';
 import type { LoginStart } from '@/lib/auth-flow';
@@ -9,6 +10,9 @@ import { TokenModal } from './TokenModal';
 export function LoginForm({ resume }: { resume?: Extract<LoginStart, { ok: true }> }) {
   const [state, formAction, pending] = useActionState<LoginStart | undefined, FormData>(startLogin, undefined);
   const [cancelled, setCancelled] = useState(false);
+  // Pilihannya dibuat di tahap sandi, tetapi sesinya baru lahir di tahap token,
+  // jadi nilainya dibawa ke modal untuk ikut dikirim bersama kodenya.
+  const [remember, setRemember] = useState(false);
   const [, startCancel] = useTransition();
 
   // Dibatalkan menang atas keduanya: tanpa urutan ini, hasil startLogin yang
@@ -36,18 +40,18 @@ export function LoginForm({ resume }: { resume?: Extract<LoginStart, { ok: true 
         className="mb-4 h-[42px] w-full rounded-lg border border-gray-300 px-3 text-[13.5px]"
       />
 
-      <label htmlFor="password" className="mb-1.5 block text-xs font-semibold text-gray-700">
-        Kata Sandi
-      </label>
-      <input
-        id="password"
-        name="password"
-        type="password"
-        required
-        className="mb-3.5 h-[42px] w-full rounded-lg border border-gray-300 px-3 text-[13.5px]"
-      />
+      <PasswordField className="mb-3.5" />
 
-      <div className="mb-5 flex items-center justify-end">
+      <div className="mb-5 flex flex-wrap items-center justify-between gap-2">
+        <label className="flex cursor-pointer items-center gap-2 text-[12.5px] font-semibold text-gray-700">
+          <input
+            type="checkbox"
+            checked={remember}
+            onChange={(e) => setRemember(e.target.checked)}
+            className="h-4 w-4 rounded border-gray-300"
+          />
+          Ingat saya
+        </label>
         <a href="/lupa-sandi" className="text-[12.5px] font-semibold text-brand-700 hover:text-brand-800">
           Lupa sandi?
         </a>
@@ -74,6 +78,7 @@ export function LoginForm({ resume }: { resume?: Extract<LoginStart, { ok: true 
         challengeId={stage.challengeId}
         hint={stage.hint}
         bootstrap={stage.bootstrap}
+        remember={remember}
         onCancel={() =>
           // Ditunggu sampai cookie challenge-nya benar-benar dibuang sebelum
           // modal ditutup. Uji e2e-nya tidak membuktikan ini perlu — tanpa

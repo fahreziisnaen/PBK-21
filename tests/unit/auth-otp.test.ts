@@ -173,6 +173,8 @@ describe('authorizeOtp — TOTP: replay of a consumed challenge (regression)', (
       // Frozen into the JWT so a later password change invalidates this
       // session; 0 because this fixture has never changed its password.
       passwordChangedAt: 0,
+      // Kredensial uji tidak mengirim `remember`, jadi sesinya tidak diingat.
+      remember: false,
     });
     expect(stored.consumedAt).not.toBeNull();
 
@@ -229,6 +231,8 @@ describe('authorizeOtp — bootstrap (tanpa TOTP maupun telepon)', () => {
       // Frozen into the JWT so a later password change invalidates this
       // session; 0 because this fixture has never changed its password.
       passwordChangedAt: 0,
+      // Kredensial uji tidak mengirim `remember`, jadi sesinya tidak diingat.
+      remember: false,
     });
     expect(stored.consumedAt).not.toBeNull();
 
