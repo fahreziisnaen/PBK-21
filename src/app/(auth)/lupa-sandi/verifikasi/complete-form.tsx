@@ -8,7 +8,7 @@ export function CompleteResetForm({ hint }: { hint: string }) {
   const [error, formAction, pending] = useActionState(completeReset, undefined);
 
   return (
-    <form action={formAction} className="w-full max-w-[376px]">
+    <form action={formAction} className="w-full">
       <h1 className="mb-1.5 text-xl font-bold tracking-[-0.3px]">Masukkan Kode</h1>
       <p className="mb-6 text-[12.5px] text-gray-500">{hint}</p>
 

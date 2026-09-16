@@ -1,9 +1,10 @@
+import { AuthShell } from '@/components/shell/AuthShell';
 import { RequestResetForm } from './request-form';
 
 export default function ForgotPasswordPage() {
   return (
-    <div className="grid min-h-screen place-items-center bg-white px-8 py-10">
+    <AuthShell>
       <RequestResetForm />
-    </div>
+    </AuthShell>
   );
 }

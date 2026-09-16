@@ -7,7 +7,7 @@ export function RequestResetForm() {
   const [error, formAction, pending] = useActionState(requestReset, undefined);
 
   return (
-    <form action={formAction} className="w-full max-w-[376px]">
+    <form action={formAction} className="w-full">
       <h1 className="mb-1.5 text-xl font-bold tracking-[-0.3px]">Lupa Sandi</h1>
       <p className="mb-6 text-[12.5px] text-gray-500">
         Masukkan username Anda. Kode akan dikirim melalui aplikasi autentikator atau WhatsApp,

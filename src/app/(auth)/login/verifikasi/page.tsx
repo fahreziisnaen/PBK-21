@@ -1,4 +1,4 @@
-import { BrandLockup } from '@/components/shell/BrandMark';
+import { AuthShell } from '@/components/shell/AuthShell';
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { prisma } from '@/lib/prisma';
@@ -40,16 +40,10 @@ export default async function VerifikasiPage() {
       : `Kode telah dikirim ke WhatsApp ${maskPhone(challenge.user.phone)}`;
 
   return (
-    <div className="grid min-h-screen bg-white lg:grid-cols-[1.05fr_0.95fr]">
-      <div className="flex flex-col justify-between gap-10 px-8 py-10 lg:px-14 lg:py-13">
-        <BrandLockup tone="light" size={48} priority />
+    <AuthShell>
 
         <VerifyForm challengeId={challenge.id} hint={hint} autoSubmit={isBootstrap} />
 
-        <div className="text-[11.5px] text-gray-500">SMAN 21 Surabaya · Tahun anggaran 2026</div>
-      </div>
-
-      <div className="hidden bg-sidebar lg:block" aria-hidden />
-    </div>
+    </AuthShell>
   );
 }

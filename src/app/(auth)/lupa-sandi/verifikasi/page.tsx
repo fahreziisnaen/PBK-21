@@ -1,3 +1,4 @@
+import { AuthShell } from '@/components/shell/AuthShell';
 import { CompleteResetForm } from './complete-form';
 
 /**
@@ -9,8 +10,8 @@ import { CompleteResetForm } from './complete-form';
  */
 export default function VerifyResetPage() {
   return (
-    <div className="grid min-h-screen place-items-center bg-white px-8 py-10">
+    <AuthShell>
       <CompleteResetForm hint="Masukkan kode dari aplikasi autentikator Anda, atau kode yang dikirim ke WhatsApp Anda, lalu pilih sandi baru." />
-    </div>
+    </AuthShell>
   );
 }

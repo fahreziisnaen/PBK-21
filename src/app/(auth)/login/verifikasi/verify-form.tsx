@@ -37,7 +37,7 @@ export function VerifyForm({
 
   if (autoSubmit) {
     return (
-      <div className="w-full max-w-[376px]">
+      <div className="w-full">
         <h1 className="mb-1.5 text-[26px] font-bold tracking-[-0.7px]">Menyelesaikan masuk…</h1>
         <p className="mb-6 text-[13.5px] leading-relaxed text-gray-500">Mohon tunggu sebentar.</p>
         <form ref={formRef} action={formAction} className="hidden">
@@ -48,7 +48,7 @@ export function VerifyForm({
   }
 
   return (
-    <form ref={formRef} action={formAction} className="w-full max-w-[376px]">
+    <form ref={formRef} action={formAction} className="w-full">
       <h1 className="mb-1.5 text-[26px] font-bold tracking-[-0.7px]">Verifikasi Masuk</h1>
       <p className="mb-6 text-[13.5px] leading-relaxed text-gray-500">{hint}</p>
 

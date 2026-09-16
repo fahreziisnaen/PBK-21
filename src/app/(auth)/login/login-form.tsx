@@ -7,7 +7,7 @@ export function LoginForm() {
   const [error, formAction, pending] = useActionState(startLogin, undefined);
 
   return (
-    <form action={formAction} className="w-full max-w-[376px]">
+    <form action={formAction} className="w-full">
       <h1 className="kasera-heading mb-1.5 text-[26px] text-ink">Masuk ke KASERA</h1>
       <p className="mb-6 text-[13.5px] leading-relaxed text-gray-500">
         Gunakan akun bendahara atau administrator yang terdaftar di sekolah Anda.
