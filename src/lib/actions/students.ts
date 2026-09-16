@@ -1,12 +1,13 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import type { Grade } from '@prisma/client';
+import type { Grade, Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { requireWriter } from '@/lib/roles';
 import { getWritableActivity } from '@/lib/writable-activity';
 import { parseAmount } from '@/lib/finance';
 import { normalizePhone } from '@/lib/phone';
+import { rp } from '@/lib/format';
 import { fail, ok, type ActionResult } from '@/lib/action-result';
 
 const GRADES: Grade[] = ['X', 'XI', 'XII'];
@@ -213,4 +214,41 @@ export async function importStudents(_: ActionResult, fd: FormData): Promise<Act
     `${parsed.length} siswa diproses, ${added} baru didaftarkan ke ${activity.name}` +
       (createdClasses ? `, ${createdClasses} kelas baru dibuat.` : '.'),
   );
+}
+
+/**
+ * Ubah tagihan banyak peserta sekaligus: seluruh kegiatan, satu tingkat, atau
+ * satu kelas — supaya nominal yang berubah tidak perlu diedit satu per satu
+ * untuk ratusan siswa.
+ */
+export async function updateBillingBulk(_: ActionResult, fd: FormData): Promise<ActionResult> {
+  await requireWriter();
+  const target = await getWritableActivity();
+  if ('error' in target) return fail(target.error);
+  const { activity } = target;
+
+  const scope = str(fd, 'scope');
+  const amount = parseAmount(fd.get('amount'));
+  if (!amount) return fail('Nominal tagihan harus lebih dari nol.');
+
+  let where: Prisma.ParticipantWhereInput = { activityId: activity.id };
+  let label = 'seluruh peserta';
+  if (scope.startsWith('grade:')) {
+    const grade = scope.slice(6) as Grade;
+    if (!GRADES.includes(grade)) return fail('Tingkat tidak dikenal.');
+    where = { ...where, student: { grade } };
+    label = 'tingkat ' + grade;
+  } else if (scope.startsWith('class:')) {
+    const className = scope.slice(6);
+    if (!className) return fail('Kelas tidak dikenal.');
+    where = { ...where, student: { className } };
+    label = 'kelas ' + className;
+  } else if (scope !== 'all') {
+    return fail('Pilih cakupan perubahan.');
+  }
+
+  const { count } = await prisma.participant.updateMany({ where, data: { billing: amount } });
+  if (count === 0) return fail('Tidak ada peserta pada ' + label + '.');
+  refresh();
+  return ok('Tagihan ' + count + ' siswa (' + label + ') diubah menjadi ' + rp(amount) + '.');
 }

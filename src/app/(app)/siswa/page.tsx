@@ -11,7 +11,7 @@ import { canWrite } from '@/lib/roles';
 import { getActiveActivity } from '@/lib/activity-context';
 import { prisma } from '@/lib/prisma';
 import { participantRows, todayIso } from '@/lib/finance';
-import { addStudent, enrollGrade, importStudents, removeParticipant, updateParticipant } from '@/lib/actions/students';
+import { addStudent, enrollGrade, importStudents, removeParticipant, updateBillingBulk, updateParticipant } from '@/lib/actions/students';
 import { formatPhoneLocal } from '@/lib/phone';
 import { rp } from '@/lib/format';
 import { btnGhost, btnSecondary, input, label, mono, table, tableWrap, td, tdNum, textarea, th, thNum } from '@/lib/ui';
@@ -124,6 +124,28 @@ export default async function SiswaPage({ searchParams }: { searchParams: Promis
                     <option value="XI">XI</option>
                     <option value="XII">XII</option>
                   </select>
+                </div>
+              </FormModal>
+              <FormModal trigger="Ubah Tagihan Massal" triggerClassName={btnSecondary} title="Ubah Tagihan Banyak Siswa" submitLabel="Ubah Tagihan" action={updateBillingBulk}>
+                <p className="text-[12.5px] text-gray-600">
+                  Mengubah nominal tagihan sekaligus untuk banyak peserta di <b>{activity.name}</b>. Pembayaran yang
+                  sudah tercatat tidak berubah — hanya tagihannya, sehingga status pelunasan ikut dihitung ulang.
+                </p>
+                <div>
+                  <label className={label} htmlFor="scope">Berlaku untuk</label>
+                  <select id="scope" name="scope" className={input} defaultValue="all">
+                    <option value="all">Seluruh peserta kegiatan ini</option>
+                    <option value="grade:X">Tingkat X</option>
+                    <option value="grade:XI">Tingkat XI</option>
+                    <option value="grade:XII">Tingkat XII</option>
+                    {classes.map((c) => (
+                      <option key={c.id} value={`class:${c.name}`}>Kelas {c.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className={label} htmlFor="amount">Tagihan Baru (Rp)</label>
+                  <input id="amount" name="amount" inputMode="numeric" required defaultValue={activity.contribution} className={`${input} font-mono`} />
                 </div>
               </FormModal>
               <FormModal trigger="+ Tambah Siswa" title="Tambah Siswa" action={addStudent} wide>

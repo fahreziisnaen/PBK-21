@@ -8,6 +8,7 @@ import { getWritableActivity } from '@/lib/writable-activity';
 import { nextSeq, parseAmount, parseDateInput } from '@/lib/finance';
 import { writeAudit } from '@/lib/audit';
 import { padSeq, rp } from '@/lib/format';
+import { readImageUpload } from '@/lib/upload';
 import { fail, ok, type ActionResult } from '@/lib/action-result';
 
 const METHODS: PaymentMethod[] = ['TUNAI', 'TRANSFER'];
@@ -42,6 +43,10 @@ export async function recordPayment(_: ActionResult, fd: FormData): Promise<Acti
   if (remaining <= 0) return fail(`${participant.student.name} sudah lunas.`);
   if (amount > remaining) return fail(`Nominal melebihi sisa tagihan ${participant.student.name} (${rp(remaining)}).`);
 
+  // Bukti transfer opsional: pembayaran tunai memang tidak punya bukti.
+  const proof = await readImageUpload(fd.get('proof'), 3 * 1024 * 1024);
+  if (proof && 'error' in proof) return fail(proof.error);
+
   const payment = await prisma.$transaction(async (tx) => {
     const seq = await nextSeq(tx, activity.id, 'payment');
     return tx.payment.create({
@@ -55,6 +60,7 @@ export async function recordPayment(_: ActionResult, fd: FormData): Promise<Acti
         date,
         note,
         createdById: user.id,
+        ...(proof ? { proof: { create: { mime: proof.mime, size: proof.size, data: proof.dataUri } } } : {}),
       },
     });
   });

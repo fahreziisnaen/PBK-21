@@ -52,7 +52,7 @@ export default async function PembayaranPage({ searchParams }: { searchParams: P
   const [payments, participants] = await Promise.all([
     prisma.payment.findMany({
       where,
-      include: { participant: { include: { student: true } } },
+      include: { participant: { include: { student: true } }, proof: { select: { id: true } } },
       orderBy: [{ date: 'desc' }, { seq: 'desc' }],
     }),
     writer && !archived ? participantRows(activity.id) : Promise.resolve([]),
@@ -120,9 +120,15 @@ export default async function PembayaranPage({ searchParams }: { searchParams: P
                 <td className={`${td} whitespace-nowrap`}>{fdate(isoDate(p.date))}</td>
                 <td className={td}>
                   <div className="font-semibold text-gray-900">{p.participant.student.name}</div>
-                  <div className={`text-[12px] text-gray-500 ${mono}`}>{p.participant.student.nis}</div>
+                  <div className="text-[12px] text-gray-500">
+                    <span className={mono}>{p.participant.student.nis}</span>
+                    {p.participant.student.className ? ` · ${p.participant.student.className}` : ''}
+                  </div>
                 </td>
-                <td className={td}>{p.method === 'TUNAI' ? 'Tunai' : 'Transfer'}</td>
+                <td className={td}>
+                  {p.method === 'TUNAI' ? 'Tunai' : 'Transfer'}
+                  {p.proof && <span className="ml-1.5 rounded bg-brand-50 px-1.5 py-0.5 text-[11px] font-semibold text-brand-600">bukti</span>}
+                </td>
                 <td className={`${tdNum} ${p.status === 'DIBATALKAN' ? 'line-through' : ''}`}>{rp(p.amount)}</td>
                 <td className={td}><Badge status={p.status} /></td>
                 <td className={`${td} whitespace-nowrap`}>

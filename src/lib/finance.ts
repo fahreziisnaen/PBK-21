@@ -86,6 +86,7 @@ export type LedgerRow = {
   ref: string;
   description: string;
   category: string;
+  method: 'TUNAI' | 'TRANSFER';
   income: number;
   expense: number;
   balance: number;
@@ -114,8 +115,9 @@ export async function ledgerRows(
       key: `p-${p.id}`,
       date: p.date,
       ref: p.receiptNo,
-      description: `Pembayaran ${p.participant.student.name}`,
+      description: `Pembayaran ${p.participant.student.name}${p.participant.student.className ? ' (' + p.participant.student.className + ')' : ''}`,
       category: 'Kontribusi siswa',
+      method: p.method,
       income: p.amount,
       expense: 0,
       href: `/pembayaran/${p.id}`,
@@ -127,6 +129,7 @@ export async function ledgerRows(
       ref: e.refNo,
       description: e.description,
       category: e.category.name,
+      method: e.method,
       income: 0,
       expense: e.amount,
       href: null,
@@ -136,7 +139,7 @@ export async function ledgerRows(
   let balance = 0;
   return rows.map((r) => {
     balance += r.income - r.expense;
-    return { key: r.key, date: r.date, ref: r.ref, description: r.description, category: r.category, income: r.income, expense: r.expense, href: r.href, balance };
+    return { key: r.key, date: r.date, ref: r.ref, description: r.description, category: r.category, method: r.method, income: r.income, expense: r.expense, href: r.href, balance };
   });
 }
 

@@ -56,6 +56,17 @@ export function PaymentFormModal({
         </div>
       </div>
       <div>
+        <label className={label} htmlFor="proof">Bukti Transfer</label>
+        <input
+          id="proof"
+          name="proof"
+          type="file"
+          accept="image/jpeg,image/png,image/webp"
+          className="block w-full text-[13px] text-gray-700 file:mr-3 file:rounded-lg file:border-0 file:bg-gray-100 file:px-3 file:py-2 file:font-semibold"
+        />
+        <p className="mt-1 text-[11.5px] text-gray-500">Untuk pembayaran transfer: foto atau tangkapan layar bukti, maksimal 3 MB. Kosongkan untuk pembayaran tunai.</p>
+      </div>
+      <div>
         <label className={label} htmlFor="note">Catatan</label>
         <textarea id="note" name="note" rows={2} className={textarea} placeholder="Opsional" />
       </div>

@@ -9,6 +9,7 @@ import { requireUser } from '@/lib/auth-guard';
 import { normalizePhone } from '@/lib/phone';
 import { MIN_PASSWORD_LENGTH } from '@/lib/password-policy';
 import { writeAudit } from '@/lib/audit';
+import { readImageUpload } from '@/lib/upload';
 import { fail, ok, type ActionResult } from '@/lib/action-result';
 
 const ROLES: Role[] = ['SUPERADMIN', 'ADMIN', 'BENDAHARA', 'KEPALA_SEKOLAH'];
@@ -150,4 +151,20 @@ export async function updateSchool(_: ActionResult, fd: FormData): Promise<Actio
   });
   revalidatePath('/', 'layout');
   return ok('Identitas sekolah disimpan.');
+}
+
+/** Tanda tangan yang tercetak di kuitansi dan laporan, milik masing-masing pengguna. */
+export async function updateSignature(_: ActionResult, fd: FormData): Promise<ActionResult> {
+  const me = await requireUser();
+  if (String(fd.get('remove') ?? '') === '1') {
+    await prisma.user.update({ where: { id: me.id }, data: { signatureImage: null } });
+    revalidatePath('/profil');
+    return ok('Tanda tangan dihapus.');
+  }
+  const image = await readImageUpload(fd.get('signature'), 512 * 1024);
+  if (!image) return fail('Pilih berkas gambar tanda tangan lebih dulu.');
+  if ('error' in image) return fail(image.error);
+  await prisma.user.update({ where: { id: me.id }, data: { signatureImage: image.dataUri } });
+  revalidatePath('/profil');
+  return ok('Tanda tangan disimpan, dan akan tercetak di kuitansi serta laporan Anda.');
 }

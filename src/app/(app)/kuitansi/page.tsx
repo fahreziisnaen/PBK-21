@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { PageHead } from '@/components/shell/PageHead';
 import { NoActivity } from '@/components/ui/Kpi';
 import { PrintButton } from '@/components/ui/PrintButton';
+import { ReceiptActions } from '@/components/finance/ReceiptActions';
 import { requireUser } from '@/lib/auth-guard';
 import { getActiveActivity } from '@/lib/activity-context';
 import { prisma } from '@/lib/prisma';
@@ -21,7 +22,7 @@ export default async function KuitansiPage({ searchParams }: { searchParams: Pro
     if (payment) {
       const [school, creator] = await Promise.all([
         prisma.school.findFirst(),
-        prisma.user.findUnique({ where: { id: payment.createdById }, select: { name: true } }),
+        prisma.user.findUnique({ where: { id: payment.createdById }, select: { name: true, signatureImage: true } }),
       ]);
       const s = payment.participant.student;
       const cancelled = payment.status === 'DIBATALKAN';
@@ -32,11 +33,12 @@ export default async function KuitansiPage({ searchParams }: { searchParams: Pro
             actions={
               <>
                 <Link href={`/pembayaran/${payment.id}`} className={btnSecondary}>Kembali</Link>
+                <ReceiptActions targetId="kuitansi" filename={`kuitansi-${payment.receiptNo.replace(/\//g, '-')}.jpg`} />
                 <PrintButton label="Cetak Kuitansi" />
               </>
             }
           />
-          <div className="relative mx-auto max-w-[760px] overflow-hidden rounded-xl border border-gray-300 bg-white p-8 print:rounded-none print:border-gray-400">
+          <div id="kuitansi" className="relative mx-auto max-w-[760px] overflow-hidden rounded-xl border border-gray-300 bg-white p-8 print:rounded-none print:border-gray-400">
             {cancelled && (
               <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
                 <span className="-rotate-12 rounded-lg border-4 border-error-600 px-6 py-2 text-[44px] font-extrabold tracking-widest text-error-600 opacity-40">
@@ -87,7 +89,13 @@ export default async function KuitansiPage({ searchParams }: { searchParams: Pro
               <div className="min-w-[220px] text-center text-[13px] text-gray-700">
                 <div>Surabaya, {fdateLong(isoDate(payment.date))}</div>
                 <div>Bendahara</div>
-                <div className="mt-16 border-t border-gray-500 pt-1 font-semibold text-gray-900">{creator?.name ?? '....................'}</div>
+                {creator?.signatureImage ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={creator.signatureImage} alt="Tanda tangan bendahara" className="mx-auto h-16 object-contain" />
+                ) : (
+                  <div className="h-16" />
+                )}
+                <div className="border-t border-gray-500 pt-1 font-semibold text-gray-900">{creator?.name ?? '....................'}</div>
               </div>
             </div>
           </div>

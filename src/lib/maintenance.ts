@@ -31,6 +31,7 @@ const TABLES: Table[] = [
   { name: 'Activity', label: 'Kegiatan', of: (db) => db.activity as unknown as Delegate },
   { name: 'Participant', label: 'Peserta kegiatan', of: (db) => db.participant as unknown as Delegate },
   { name: 'Payment', label: 'Pembayaran', of: (db) => db.payment as unknown as Delegate },
+  { name: 'PaymentProof', label: 'Bukti transfer', of: (db) => db.paymentProof as unknown as Delegate },
   { name: 'Expense', label: 'Pengeluaran', of: (db) => db.expense as unknown as Delegate },
   { name: 'Notification', label: 'Notifikasi', of: (db) => db.notification as unknown as Delegate },
   {
@@ -45,7 +46,7 @@ const TABLES: Table[] = [
 /** Tabel yang dikosongkan factory reset. Pengguna, sekolah, dan pengaturan dipertahankan. */
 const RESET_TABLES = new Set([
   'ActivityCategory', 'ExpenseCategory', 'SchoolClass', 'Student', 'Activity',
-  'Participant', 'Payment', 'Expense', 'Notification', 'AuditLog',
+  'Participant', 'Payment', 'PaymentProof', 'Expense', 'Notification', 'AuditLog',
 ]);
 
 const LONG_TX = { timeout: 120_000, maxWait: 10_000 };

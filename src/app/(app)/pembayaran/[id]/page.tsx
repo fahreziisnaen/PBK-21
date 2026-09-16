@@ -24,7 +24,7 @@ export default async function DetailPembayaranPage({ params }: { params: Promise
   const { id } = await params;
   const payment = await prisma.payment.findUnique({
     where: { id },
-    include: { activity: true, participant: { include: { student: true } } },
+    include: { activity: true, participant: { include: { student: true } }, proof: true },
   });
   if (!payment) notFound();
 
@@ -65,6 +65,7 @@ export default async function DetailPembayaranPage({ params }: { params: Promise
             <Row k="Metode" v={payment.method === 'TUNAI' ? 'Tunai' : 'Transfer'} />
             <Row k="Kegiatan" v={payment.activity.name} />
             <Row k="Catatan" v={payment.note ?? '—'} />
+            <Row k="Kelas siswa" v={student.className ?? student.grade} />
             <Row k="Dicatat oleh" v={creator?.name ?? '—'} />
             {payment.status === 'DIBATALKAN' && (
               <>
@@ -74,6 +75,7 @@ export default async function DetailPembayaranPage({ params }: { params: Promise
             )}
           </div>
         </div>
+        <div className="space-y-4">
         <div className={`${card} h-fit p-6`}>
           <div className="text-[12px] font-semibold text-gray-500">Siswa</div>
           <Link href={`/siswa/${student.id}`} className="text-[16px] font-bold text-gray-900 hover:text-brand-600">{student.name}</Link>
@@ -82,6 +84,18 @@ export default async function DetailPembayaranPage({ params }: { params: Promise
             <Row k="Kelas" v={student.className ?? student.grade} />
             <Row k="Tagihan kegiatan" v={<span className="font-mono">{rp(payment.participant.billing)}</span>} />
           </div>
+        </div>
+        {payment.proof && (
+          <div className={`${card} p-6`}>
+            <div className="mb-2 text-[12px] font-semibold text-gray-500">Bukti Transfer</div>
+            {/* Data URI dari database — bukan berkas eksternal, jadi tidak lewat optimizer gambar. */}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={payment.proof.data} alt={`Bukti transfer ${payment.receiptNo}`} className="w-full rounded-lg border border-gray-200" />
+            <a href={payment.proof.data} download={`bukti-${payment.receiptNo.replace(/\//g, '-')}.jpg`} className="mt-2 inline-block text-[12.5px] font-semibold text-brand-600">
+              Unduh bukti
+            </a>
+          </div>
+        )}
         </div>
       </div>
     </>

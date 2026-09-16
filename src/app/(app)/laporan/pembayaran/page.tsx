@@ -16,6 +16,7 @@ export default async function LaporanPembayaranPage({ searchParams }: { searchPa
   const user = await requireUser();
   const sp = await searchParams;
   const { activities, activity, from, to, school } = await resolveReport(sp);
+  const signer = await prisma.user.findUnique({ where: { id: user.id }, select: { signatureImage: true } });
   if (!activity) {
     return (
       <>
@@ -140,7 +141,13 @@ export default async function LaporanPembayaranPage({ searchParams }: { searchPa
           <div className="min-w-[220px] text-center text-[13px] text-gray-700">
             <div>Surabaya, {fdateLong(new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jakarta' }).format(new Date()))}</div>
             <div>Bendahara</div>
-            <div className="mt-16 border-t border-gray-500 pt-1 font-semibold text-gray-900">{user.name}</div>
+            {signer?.signatureImage ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={signer.signatureImage} alt="Tanda tangan bendahara" className="mx-auto h-16 object-contain" />
+            ) : (
+              <div className="h-16" />
+            )}
+            <div className="border-t border-gray-500 pt-1 font-semibold text-gray-900">{user.name}</div>
           </div>
         </div>
       </div>

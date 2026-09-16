@@ -76,6 +76,7 @@ model User {
   totpEnabledAt      DateTime?                  // BARU — null = belum mendaftar
   isActive           Boolean   @default(true)   // BARU
   lastLoginAt        DateTime?                  // BARU
+  signatureImage     String?                    // tanda tangan PNG/JPG sebagai data URI, untuk kuitansi & laporan
   passwordChangedAt  DateTime?                  // membatalkan sesi JWT lama setelah reset sandi
   createdAt          DateTime  @default(now())
   updatedAt          DateTime  @updatedAt
@@ -226,9 +227,20 @@ model Payment {
   cancelledById String?
   cancelledAt   DateTime?
   cancelReason  String?
+  proof         PaymentProof?
 
   @@unique([activityId, receiptNo])
   @@index([activityId, date])
+}
+
+model PaymentProof {                 // bukti transfer, disimpan sebagai data URI base64
+  id        String   @id @default(cuid())
+  paymentId String   @unique
+  payment   Payment  @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+  mime      String
+  size      Int
+  data      String                     // "data:image/jpeg;base64,..."
+  createdAt DateTime @default(now())
 }
 
 model Expense {
