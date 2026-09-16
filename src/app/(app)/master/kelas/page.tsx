@@ -6,8 +6,8 @@ import { ConfirmAction } from '@/components/ui/ConfirmAction';
 import { requireUser } from '@/lib/auth-guard';
 import { canWrite } from '@/lib/roles';
 import { prisma } from '@/lib/prisma';
-import { deleteClass, saveClass } from '@/lib/actions/master';
-import { btnGhost, input, label, mono, table, tableWrap, td, tdNum, th, thNum } from '@/lib/ui';
+import { deleteClass, importClassesFromStudents, saveClass } from '@/lib/actions/master';
+import { btnGhost, btnSecondary, input, label, mono, table, tableWrap, td, tdNum, th, thNum } from '@/lib/ui';
 
 function ClassFields({ row }: { row?: SchoolClass }) {
   return (
@@ -47,6 +47,13 @@ export default async function KelasPage() {
     prisma.student.groupBy({ by: ['className'], _count: true }),
   ]);
   const studentsIn = new Map(counts.map((c) => [c.className, c._count]));
+  // Kelas yang sudah terpakai di data siswa tetapi belum terdaftar di master.
+  // Terjadi pada data dari versi sebelum master kelas ada, ketika kolom kelas
+  // masih isian teks bebas.
+  const known = new Set(classes.map((c) => c.name));
+  const orphan = counts
+    .map((c) => c.className)
+    .filter((n): n is string => !!n && !known.has(n));
   const sorted = [...classes].sort(
     (a, b) => ['X', 'XI', 'XII'].indexOf(a.grade) - ['X', 'XI', 'XII'].indexOf(b.grade) || a.name.localeCompare(b.name, 'id', { numeric: true }),
   );
@@ -57,9 +64,27 @@ export default async function KelasPage() {
         pathname="/master/kelas"
         actions={
           writer && (
-            <FormModal trigger="+ Tambah Kelas" title="Tambah Kelas" action={saveClass}>
-              <ClassFields />
-            </FormModal>
+            <>
+              {orphan.length > 0 && (
+                <ConfirmAction
+                  label={`Tarik ${orphan.length} Kelas dari Data Siswa`}
+                  title="Tarik Kelas dari Data Siswa"
+                  body={`${orphan.length} kelas sudah dipakai siswa tetapi belum terdaftar di master: ${orphan.slice(0, 8).join(', ')}${orphan.length > 8 ? ', …' : ''}.`}
+                  bullets={[
+                    'Tingkat tiap kelas diambil dari tingkat siswa terbanyak di kelas itu.',
+                    'Data siswa tidak diubah — hanya master kelasnya yang dilengkapi.',
+                    'Wali kelas dikosongkan, silakan diisi lewat Edit setelah ini.',
+                  ]}
+                  confirmLabel="Tarik Sekarang"
+                  run={importClassesFromStudents}
+                  className={btnSecondary}
+                  tone="warn"
+                />
+              )}
+              <FormModal trigger="+ Tambah Kelas" title="Tambah Kelas" action={saveClass}>
+                <ClassFields />
+              </FormModal>
+            </>
           )
         }
       />

@@ -241,3 +241,54 @@ export async function deleteClass(id: string): Promise<ActionResult> {
   revalidatePath('/master/kelas');
   return ok(`Kelas ${schoolClass.name} dihapus.`);
 }
+
+/**
+ * Menarik kelas yang sudah terpakai di data siswa ke master kelas.
+ *
+ * `Student.className` hanyalah kolom teks — tidak ada relasi yang memaksanya
+ * cocok dengan tabel kelas. Versi aplikasi sebelum master kelas ada mengisinya
+ * lewat isian bebas, sehingga setelah pemutakhiran siswa punya kelas sementara
+ * masternya kosong: kelas lama tetap tampil, tetapi tidak bisa dipilih untuk
+ * siswa baru karena formnya memakai daftar dari master.
+ *
+ * Tingkat tiap kelas diambil dari tingkat yang paling banyak dipakai siswa di
+ * kelas itu — bukan dari tebakan pola nama, yang akan salah untuk penamaan
+ * seperti "XI IPA 2" atau "AKL 1".
+ */
+export async function importClassesFromStudents(): Promise<ActionResult> {
+  await requireWriter();
+
+  const used = await prisma.student.groupBy({
+    by: ['className', 'grade'],
+    where: { className: { not: null } },
+    _count: { _all: true },
+  });
+  if (used.length === 0) return fail('Belum ada siswa yang punya kelas untuk ditarik.');
+
+  // Satu nama kelas bisa muncul dengan beberapa tingkat bila data lamanya tidak
+  // konsisten; yang dipakai adalah tingkat dengan siswa terbanyak.
+  const best = new Map<string, { grade: (typeof GRADES)[number]; count: number }>();
+  for (const row of used) {
+    const name = (row.className ?? '').trim().toUpperCase().replace(/\s+/g, ' ');
+    if (!name || name.length > 20) continue;
+    const current = best.get(name);
+    if (!current || row._count._all > current.count) {
+      best.set(name, { grade: row.grade, count: row._count._all });
+    }
+  }
+  if (best.size === 0) return fail('Belum ada siswa yang punya kelas untuk ditarik.');
+
+  const existing = new Set((await prisma.schoolClass.findMany({ select: { name: true } })).map((c) => c.name));
+  const toCreate = [...best.entries()].filter(([name]) => !existing.has(name));
+  if (toCreate.length === 0) return fail('Semua kelas yang dipakai siswa sudah ada di master.');
+
+  const { count } = await prisma.schoolClass.createMany({
+    data: toCreate.map(([name, { grade }]) => ({ name, grade })),
+    skipDuplicates: true,
+  });
+
+  revalidatePath('/master/kelas');
+  revalidatePath('/siswa');
+  revalidatePath('/rekap');
+  return ok(`${count} kelas ditarik dari data siswa: ${toCreate.map(([n]) => n).slice(0, 8).join(', ')}${toCreate.length > 8 ? ', …' : ''}.`);
+}
