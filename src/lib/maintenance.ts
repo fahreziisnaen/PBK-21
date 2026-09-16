@@ -27,6 +27,8 @@ const TABLES: Table[] = [
   { name: 'ActivityCategory', label: 'Kategori kegiatan', of: (db) => db.activityCategory as unknown as Delegate },
   { name: 'ExpenseCategory', label: 'Kategori pengeluaran', of: (db) => db.expenseCategory as unknown as Delegate },
   { name: 'SchoolClass', label: 'Kelas', of: (db) => db.schoolClass as unknown as Delegate },
+  // Sebelum Activity: kegiatan mengacu ke tahun pelajaran lewat kunci asing.
+  { name: 'AcademicYear', label: 'Tahun pelajaran', of: (db) => db.academicYear as unknown as Delegate },
   { name: 'Student', label: 'Siswa', of: (db) => db.student as unknown as Delegate },
   { name: 'Activity', label: 'Kegiatan', of: (db) => db.activity as unknown as Delegate },
   { name: 'Participant', label: 'Peserta kegiatan', of: (db) => db.participant as unknown as Delegate },
@@ -45,7 +47,7 @@ const TABLES: Table[] = [
 
 /** Tabel yang dikosongkan factory reset. Pengguna, sekolah, dan pengaturan dipertahankan. */
 const RESET_TABLES = new Set([
-  'ActivityCategory', 'ExpenseCategory', 'SchoolClass', 'Student', 'Activity',
+  'ActivityCategory', 'ExpenseCategory', 'SchoolClass', 'AcademicYear', 'Student', 'Activity',
   'Participant', 'Payment', 'PaymentProof', 'Expense', 'Notification', 'AuditLog',
 ]);
 

@@ -56,6 +56,11 @@ enum Grade {
   XII
 }
 
+enum StudentStatus {
+  AKTIF
+  ALUMNI                            // kelas XII yang sudah diluluskan saat naik kelas
+}
+
 enum NotifKind {
   OK
   WARN
@@ -158,7 +163,11 @@ model Activity {
   name              String
   categoryId        String
   category          ActivityCategory @relation(fields: [categoryId], references: [id])
+  // Tahun kalender, diturunkan dari startDate. Dipertahankan untuk mengurutkan
+  // kegiatan lama yang belum dikaitkan ke tahun pelajaran.
   year              Int
+  academicYearId    String?
+  academicYear      AcademicYear?    @relation(fields: [academicYearId], references: [id])
   startDate         DateTime         @db.Date
   endDate           DateTime         @db.Date
   location          String
@@ -182,9 +191,22 @@ model Student {
   grade          Grade
   className      String?                       // opsional, mis. 'X-3'
   phone          String?
+  status         StudentStatus @default(AKTIF)
+  graduatedAt    DateTime?
+  graduatedYear  String?                       // nama tahun pelajaran saat diluluskan
   participations Participant[]
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt
+}
+
+model AcademicYear {                  // TAHUN PELAJARAN — mis. 2026/2027
+  id         String     @id @default(cuid())
+  name       String     @unique       // '2026/2027'
+  startYear  Int        @unique       // 2026 — dipakai mengurutkan dan membuat tahun berikutnya
+  isActive   Boolean    @default(false)   // tepat satu baris bernilai true
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+  activities Activity[]
 }
 
 model SchoolClass {                  // KELAS — mis. X-1, XI IPA 2

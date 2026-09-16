@@ -86,7 +86,7 @@ export default async function SiswaPage({ searchParams }: { searchParams: Promis
     participantRows(activity.id),
     prisma.schoolClass.findMany({ orderBy: [{ grade: 'asc' }, { name: 'asc' }] }),
     prisma.student.findMany({
-      where: { participations: { none: { activityId: activity.id } } },
+      where: { status: 'AKTIF', participations: { none: { activityId: activity.id } } },
       orderBy: [{ grade: 'asc' }, { className: 'asc' }, { name: 'asc' }],
     }),
   ]);

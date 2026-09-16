@@ -8,7 +8,7 @@ export function PageHead({
   pathname: string;
   actions?: React.ReactNode;
   /** Kegiatan yang sedang dipilih, untuk halaman yang datanya terikat kegiatan. */
-  activity?: { name: string; year?: number; status?: string } | null;
+  activity?: { name: string; year?: number; status?: string; academicYear?: { name: string } | null } | null;
 }) {
   const meta = getRouteMeta(pathname);
 
@@ -35,7 +35,11 @@ export function PageHead({
               <span className="h-1.5 w-1.5 flex-none rounded-full bg-brand-500" />
               <span className="truncate">{activity.name}</span>
             </span>
-            {activity.year && <span className="text-[12px] text-gray-500">TA {activity.year}</span>}
+            {/* Tahun pelajaran bila kegiatannya sudah dikaitkan; kalau belum,
+                tahun kalender yang diturunkan dari tanggal mulai. */}
+            {(activity.academicYear?.name || activity.year) && (
+              <span className="text-[12px] text-gray-500">TP {activity.academicYear?.name ?? activity.year}</span>
+            )}
             {activity.status === 'ARSIP' && (
               <span className="rounded-full bg-gray-100 px-2.5 py-1 text-[11.5px] font-semibold text-gray-600">Arsip — hanya baca</span>
             )}

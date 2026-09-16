@@ -5,7 +5,7 @@ import { parseDateInput } from '@/lib/finance';
 /** Kegiatan dan periode untuk halaman laporan, dari query string; default kegiatan aktif. */
 export async function resolveReport(sp: { activityId?: string; from?: string; to?: string }) {
   const activities = await prisma.activity.findMany({
-    include: { category: true },
+    include: { category: true, academicYear: true },
     orderBy: [{ year: 'desc' }, { startDate: 'desc' }],
   });
   const active = await getActiveActivity();

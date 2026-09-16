@@ -107,6 +107,9 @@ export async function saveActivity(_: ActionResult, fd: FormData): Promise<Actio
     name,
     categoryId,
     year: startDate.getUTCFullYear(),
+    // Kegiatan baru mengikuti tahun pelajaran yang sedang berjalan; bila belum
+    // ada yang ditetapkan, dibiarkan kosong dan bisa dikaitkan belakangan.
+    academicYearId: (await prisma.academicYear.findFirst({ where: { isActive: true }, select: { id: true } }))?.id ?? null,
     startDate,
     endDate,
     location,

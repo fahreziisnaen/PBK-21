@@ -13,6 +13,8 @@ export const ROUTES: Record<string, RouteMeta> = {
   '/master/kategori-kegiatan': { title: 'Kategori Kegiatan', subtitle: 'Master kategori untuk pengelompokan kegiatan', crumbs: ['Master Data', 'Kategori Kegiatan'] },
   '/master/kategori-pengeluaran': { title: 'Kategori Pengeluaran', subtitle: 'Master kategori belanja kegiatan', crumbs: ['Master Data', 'Kategori Pengeluaran'] },
   '/master/siswa': { title: 'Induk Siswa', subtitle: 'Seluruh siswa sekolah, lepas dari kegiatan', crumbs: ['Master Data', 'Induk Siswa'] },
+  '/master/tahun-pelajaran': { title: 'Tahun Pelajaran', subtitle: 'Tahun ajaran yang berjalan dan riwayatnya', crumbs: ['Master Data', 'Tahun Pelajaran'] },
+  '/master/naik-kelas': { title: 'Naik Kelas', subtitle: 'Menaikkan tingkat seluruh siswa dan membuka tahun pelajaran berikutnya', crumbs: ['Master Data', 'Naik Kelas'] },
   '/master/kelas': { title: 'Kelas', subtitle: 'Master kelas dan wali kelas per tingkat', crumbs: ['Master Data', 'Kelas'] },
   '/master/kegiatan': { title: 'Kegiatan', subtitle: 'Seluruh kegiatan sekolah yang dikelola PBK', crumbs: ['Master Data', 'Kegiatan'] },
   '/laporan/keuangan': { title: 'Laporan Keuangan', subtitle: 'Laporan pemasukan, pengeluaran, dan saldo', crumbs: ['Laporan', 'Laporan Keuangan'] },

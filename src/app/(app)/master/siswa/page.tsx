@@ -11,7 +11,7 @@ import { deleteStudentMaster, saveStudentMaster } from '@/lib/actions/students';
 import { formatPhoneLocal } from '@/lib/phone';
 import { btnGhost, btnSecondary, input, label, mono, table, tableWrap, td, tdNum, th, thNum } from '@/lib/ui';
 
-type Search = { q?: string; grade?: string; kelas?: string };
+type Search = { q?: string; grade?: string; kelas?: string; status?: string };
 
 function StudentMasterFields({ classes, row }: { classes: SchoolClass[]; row?: Student }) {
   return (
@@ -75,6 +75,9 @@ export default async function IndukSiswaPage({ searchParams }: { searchParams: P
   const q = (sp.q ?? '').trim();
   const grade = sp.grade ?? '';
   const kelas = sp.kelas ?? '';
+  // Bawaannya hanya siswa aktif: alumni menumpuk tiap tahun dan akan menutupi
+  // siswa yang sedang bersekolah kalau ikut ditampilkan tanpa diminta.
+  const status = sp.status === 'ALUMNI' || sp.status === 'SEMUA' ? sp.status : 'AKTIF';
 
   const [classes, students, total] = await Promise.all([
     prisma.schoolClass.findMany({ orderBy: [{ grade: 'asc' }, { name: 'asc' }] }),
@@ -85,6 +88,7 @@ export default async function IndukSiswaPage({ searchParams }: { searchParams: P
         // "-" berarti siswa yang belum punya kelas sama sekali — justru yang
         // paling perlu ditemukan, dan tidak mungkin dicari lewat nama kelas.
         ...(kelas === '-' ? { className: null } : kelas ? { className: kelas } : {}),
+        ...(status === 'SEMUA' ? {} : { status }),
       },
       include: { _count: { select: { participations: true } } },
       orderBy: [{ grade: 'asc' }, { className: 'asc' }, { name: 'asc' }],
@@ -93,7 +97,10 @@ export default async function IndukSiswaPage({ searchParams }: { searchParams: P
     prisma.student.count(),
   ]);
 
-  const tanpaKelas = await prisma.student.count({ where: { className: null } });
+  const [tanpaKelas, alumni] = await Promise.all([
+    prisma.student.count({ where: { className: null, status: 'AKTIF' } }),
+    prisma.student.count({ where: { status: 'ALUMNI' } }),
+  ]);
 
   return (
     <>
@@ -109,10 +116,10 @@ export default async function IndukSiswaPage({ searchParams }: { searchParams: P
       />
 
       <KpiRow>
-        <Kpi label="Total Siswa" value={String(total)} />
+        <Kpi label="Siswa Aktif" value={String(total - alumni)} hint={`${alumni} alumni`} />
         <Kpi label="Tingkat X" value={String(students.filter((s) => s.grade === 'X').length)} hint="pada filter ini" />
         <Kpi label="Tingkat XI" value={String(students.filter((s) => s.grade === 'XI').length)} hint="pada filter ini" />
-        <Kpi label="Tanpa Kelas" value={String(tanpaKelas)} tone={tanpaKelas > 0 ? 'error' : undefined} />
+        <Kpi label="Tanpa Kelas" value={String(tanpaKelas)} hint="siswa aktif" tone={tanpaKelas > 0 ? 'error' : undefined} />
       </KpiRow>
 
       <form className="mb-3 flex flex-wrap gap-2" data-noprint>
@@ -130,8 +137,13 @@ export default async function IndukSiswaPage({ searchParams }: { searchParams: P
             <option key={c.id} value={c.name}>{c.name}</option>
           ))}
         </select>
+        <select name="status" defaultValue={status} className={`${input} max-w-[185px]`} aria-label="Status siswa">
+          <option value="AKTIF">Siswa aktif</option>
+          <option value="ALUMNI">Alumni</option>
+          <option value="SEMUA">Aktif &amp; alumni</option>
+        </select>
         <button className={btnSecondary}>Terapkan</button>
-        {(q || grade || kelas) && (
+        {(q || grade || kelas || status !== 'AKTIF') && (
           <Link href="/master/siswa" className="self-center text-[12.5px] font-semibold text-brand-700">Reset</Link>
         )}
       </form>
@@ -144,6 +156,7 @@ export default async function IndukSiswaPage({ searchParams }: { searchParams: P
               <th className={th}>Nama Siswa</th>
               <th className={th}>Tingkat</th>
               <th className={th}>Kelas</th>
+              <th className={th}>Status</th>
               <th className={th}>Telepon Ortu</th>
               <th className={thNum}>Kegiatan</th>
               {writer && <th className={th}>Aksi</th>}
@@ -152,7 +165,7 @@ export default async function IndukSiswaPage({ searchParams }: { searchParams: P
           <tbody>
             {students.length === 0 && (
               <tr>
-                <td className={`${td} py-10 text-center text-gray-500`} colSpan={writer ? 7 : 6}>
+                <td className={`${td} py-10 text-center text-gray-500`} colSpan={writer ? 8 : 7}>
                   {total === 0 ? 'Belum ada siswa. Tambahkan di sini, atau impor dari Excel di Data Siswa.' : 'Tidak ada siswa yang cocok dengan filter.'}
                 </td>
               </tr>
@@ -164,6 +177,15 @@ export default async function IndukSiswaPage({ searchParams }: { searchParams: P
                 <td className={td}>{s.grade}</td>
                 <td className={td}>
                   {s.className ?? <span className="text-error-600">— belum ada —</span>}
+                </td>
+                <td className={td}>
+                  {s.status === 'ALUMNI' ? (
+                    <span className="rounded-full bg-gray-100 px-2.5 py-1 text-[11.5px] font-semibold text-gray-600">
+                      Alumni {s.graduatedYear ?? ''}
+                    </span>
+                  ) : (
+                    <span className="text-gray-500">Aktif</span>
+                  )}
                 </td>
                 <td className={td}>{s.phone ? formatPhoneLocal(s.phone) : '—'}</td>
                 <td className={tdNum}>{s._count.participations}</td>

@@ -123,7 +123,8 @@ export async function enrollGrade(_: ActionResult, fd: FormData): Promise<Action
   if (!GRADES.includes(grade)) return fail('Pilih tingkat.');
 
   const students = await prisma.student.findMany({
-    where: { grade, participations: { none: { activityId: activity.id } } },
+    // Alumni dikecualikan: mereka sudah lulus dan tidak ikut kegiatan baru.
+    where: { grade, status: 'AKTIF', participations: { none: { activityId: activity.id } } },
     select: { id: true },
   });
   if (students.length === 0) return fail(`Semua siswa tingkat ${grade} sudah terdaftar, atau belum ada data siswanya.`);
@@ -307,7 +308,7 @@ export async function enrollStudents(_: ActionResult, fd: FormData): Promise<Act
   if (ids.length === 0) return fail('Pilih dulu siswa yang akan didaftarkan.');
 
   const students = await prisma.student.findMany({
-    where: { id: { in: ids }, participations: { none: { activityId: activity.id } } },
+    where: { id: { in: ids }, status: 'AKTIF', participations: { none: { activityId: activity.id } } },
     select: { id: true },
   });
   if (students.length === 0) return fail('Semua siswa yang dipilih sudah terdaftar di kegiatan ini.');

@@ -1,5 +1,5 @@
 import { cookies } from 'next/headers';
-import type { Activity } from '@prisma/client';
+import type { Activity, AcademicYear } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 
 export const ACTIVITY_COOKIE = 'pbk_activity';
@@ -14,9 +14,13 @@ export function resolveActiveActivity<T extends { id: string }>(
   return activities[0].id;
 }
 
-export async function listSelectableActivities(): Promise<Activity[]> {
+/** Kegiatan beserta tahun pelajarannya, untuk ditampilkan di judul halaman. */
+export type SelectableActivity = Activity & { academicYear: AcademicYear | null };
+
+export async function listSelectableActivities(): Promise<SelectableActivity[]> {
   return prisma.activity.findMany({
     where: { status: { in: ['AKTIF', 'DRAFT'] } },
+    include: { academicYear: true },
     orderBy: [{ year: 'desc' }, { startDate: 'desc' }],
   });
 }
@@ -27,7 +31,7 @@ export async function listSelectableActivities(): Promise<Activity[]> {
  * daftar) — supaya `listSelectableActivities()` tidak dijalankan dua kali
  * per render. Tanpa argumen, ia mengambil daftarnya sendiri.
  */
-export async function getActiveActivity(preloadedActivities?: Activity[]): Promise<Activity | null> {
+export async function getActiveActivity(preloadedActivities?: SelectableActivity[]): Promise<SelectableActivity | null> {
   const activities = preloadedActivities ?? (await listSelectableActivities());
   const store = await cookies();
   const id = resolveActiveActivity(store.get(ACTIVITY_COOKIE)?.value, activities);
