@@ -4,6 +4,7 @@ import { PageHead } from '@/components/shell/PageHead';
 import { Badge } from '@/components/ui/Badge';
 import { Kpi, KpiRow, NoActivity } from '@/components/ui/Kpi';
 import { PaymentFormModal } from '@/components/finance/PaymentFormModal';
+import { PAGE_SIZE, Pagination, pageFrom } from '@/components/ui/Pagination';
 import { CancelPaymentButton } from '@/components/finance/CancelPaymentButton';
 import { requireUser } from '@/lib/auth-guard';
 import { canWrite } from '@/lib/roles';
@@ -13,7 +14,7 @@ import { prisma } from '@/lib/prisma';
 import { fdate, rp } from '@/lib/format';
 import { btnGhost, btnSecondary, input, mono, table, tableWrap, td, tdNum, th, thNum } from '@/lib/ui';
 
-type Search = { q?: string; method?: string; status?: string; from?: string; to?: string };
+type Search = { q?: string; method?: string; status?: string; from?: string; to?: string; page?: string };
 
 export default async function PembayaranPage({ searchParams }: { searchParams: Promise<Search> }) {
   const user = await requireUser();
@@ -49,16 +50,27 @@ export default async function PembayaranPage({ searchParams }: { searchParams: P
       : {}),
   };
 
-  const [payments, participants] = await Promise.all([
+  const page = pageFrom(sp.page);
+
+  const [payments, matched, valid, participants] = await Promise.all([
     prisma.payment.findMany({
       where,
       include: { participant: { include: { student: true } }, proof: { select: { id: true } } },
       orderBy: [{ date: 'desc' }, { seq: 'desc' }],
+      skip: (page - 1) * PAGE_SIZE,
+      take: PAGE_SIZE,
+    }),
+    prisma.payment.count({ where }),
+    // Ringkasan dihitung di database atas SELURUH pembayaran yang cocok, bukan
+    // atas baris satu halaman — totalnya tidak boleh berubah saat berpindah halaman.
+    prisma.payment.findMany({
+      where: { ...where, status: 'SAH' },
+      select: { amount: true, method: true },
     }),
     writer && !archived ? participantRows(activity.id) : Promise.resolve([]),
   ]);
-  const valid = payments.filter((p) => p.status === 'SAH');
-  const sum = (list: typeof payments) => list.reduce((s, p) => s + p.amount, 0);
+  const sum = (list: { amount: number }[]) => list.reduce((s, p) => s + p.amount, 0);
+  const cancelled = matched - valid.length;
 
   return (
     <>
@@ -72,7 +84,7 @@ export default async function PembayaranPage({ searchParams }: { searchParams: P
         <Kpi label="Total Pemasukan" value={rp(sum(valid))} tone="success" hint={`${valid.length} transaksi sah`} />
         <Kpi label="Tunai" value={rp(sum(valid.filter((p) => p.method === 'TUNAI')))} />
         <Kpi label="Transfer" value={rp(sum(valid.filter((p) => p.method === 'TRANSFER')))} />
-        <Kpi label="Dibatalkan" value={String(payments.length - valid.length)} hint="tidak dihitung" />
+        <Kpi label="Dibatalkan" value={String(cancelled)} hint="tidak dihitung" />
       </KpiRow>
 
       <form className="mb-3 flex flex-wrap gap-2" data-noprint>
@@ -141,6 +153,12 @@ export default async function PembayaranPage({ searchParams }: { searchParams: P
           </tbody>
         </table>
       </div>
+      <Pagination
+        page={page}
+        total={matched}
+        label="pembayaran"
+        params={{ q, method: sp.method, status: sp.status, from: sp.from, to: sp.to }}
+      />
     </>
   );
 }

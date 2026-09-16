@@ -38,7 +38,7 @@ export function Sidebar() {
   return (
     <>
       <div data-noprint className="hidden items-center justify-between gap-3 bg-sidebar px-4 py-3 max-[900px]:flex">
-        <BrandLockup tone="dark" priority />
+        <BrandLockup tone="dark" priority href="/dashboard" />
         <button
           type="button"
           onClick={() => setOpen(true)}
@@ -78,7 +78,7 @@ export function Sidebar() {
         }
       >
         <div className="flex items-center justify-between gap-2 px-4 py-5 max-[900px]:py-4">
-          <BrandLockup tone="dark" priority />
+          <BrandLockup tone="dark" priority href="/dashboard" />
           <button
             type="button"
             onClick={() => setOpen(false)}

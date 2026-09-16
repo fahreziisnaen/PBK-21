@@ -1,8 +1,9 @@
-import type { SchoolClass, Student } from '@prisma/client';
+import type { Grade, Prisma, SchoolClass, Student, StudentStatus } from '@prisma/client';
 import { PageHead } from '@/components/shell/PageHead';
 import { FormModal } from '@/components/ui/FormModal';
 import { ConfirmAction } from '@/components/ui/ConfirmAction';
 import { FilterBar } from '@/components/ui/FilterBar';
+import { PAGE_SIZE, Pagination, pageFrom } from '@/components/ui/Pagination';
 import { Kpi, KpiRow } from '@/components/ui/Kpi';
 import { requireUser } from '@/lib/auth-guard';
 import { canWrite } from '@/lib/roles';
@@ -11,7 +12,7 @@ import { deleteStudentMaster, saveStudentMaster } from '@/lib/actions/students';
 import { formatPhoneLocal } from '@/lib/phone';
 import { btnGhost, input, label, mono, table, tableWrap, td, tdNum, th, thNum } from '@/lib/ui';
 
-type Search = { q?: string; grade?: string; kelas?: string; status?: string };
+type Search = { q?: string; grade?: string; kelas?: string; status?: string; page?: string };
 
 function StudentMasterFields({ classes, row }: { classes: SchoolClass[]; row?: Student }) {
   return (
@@ -79,21 +80,30 @@ export default async function IndukSiswaPage({ searchParams }: { searchParams: P
   // siswa yang sedang bersekolah kalau ikut ditampilkan tanpa diminta.
   const status = sp.status === 'ALUMNI' || sp.status === 'SEMUA' ? sp.status : 'AKTIF';
 
-  const [classes, students, total] = await Promise.all([
+  const page = pageFrom(sp.page);
+
+  // Penyaringnya seluruhnya bisa dinyatakan di SQL, jadi halamannya diambil
+  // dengan skip/take — bukan mengambil seribu baris lalu membuang sebagian
+  // besarnya di server, yang justru jadi lambatnya.
+  const where: Prisma.StudentWhereInput = {
+    ...(q ? { OR: [{ name: { contains: q, mode: 'insensitive' as const } }, { nis: { contains: q } }] } : {}),
+    ...(grade === 'X' || grade === 'XI' || grade === 'XII' ? { grade: grade as Grade } : {}),
+    // "-" berarti siswa yang belum punya kelas sama sekali — justru yang
+    // paling perlu ditemukan, dan tidak mungkin dicari lewat nama kelas.
+    ...(kelas === '-' ? { className: null } : kelas ? { className: kelas } : {}),
+    ...(status === 'SEMUA' ? {} : { status: status as StudentStatus }),
+  };
+
+  const [classes, students, matched, total] = await Promise.all([
     prisma.schoolClass.findMany({ orderBy: [{ grade: 'asc' }, { name: 'asc' }] }),
     prisma.student.findMany({
-      where: {
-        ...(q ? { OR: [{ name: { contains: q, mode: 'insensitive' } }, { nis: { contains: q } }] } : {}),
-        ...(grade === 'X' || grade === 'XI' || grade === 'XII' ? { grade } : {}),
-        // "-" berarti siswa yang belum punya kelas sama sekali — justru yang
-        // paling perlu ditemukan, dan tidak mungkin dicari lewat nama kelas.
-        ...(kelas === '-' ? { className: null } : kelas ? { className: kelas } : {}),
-        ...(status === 'SEMUA' ? {} : { status }),
-      },
+      where,
       include: { _count: { select: { participations: true } } },
       orderBy: [{ grade: 'asc' }, { className: 'asc' }, { name: 'asc' }],
-      take: 1000,
+      skip: (page - 1) * PAGE_SIZE,
+      take: PAGE_SIZE,
     }),
+    prisma.student.count({ where }),
     prisma.student.count(),
   ]);
 
@@ -117,8 +127,8 @@ export default async function IndukSiswaPage({ searchParams }: { searchParams: P
 
       <KpiRow>
         <Kpi label="Siswa Aktif" value={String(total - alumni)} hint={`${alumni} alumni`} />
-        <Kpi label="Tingkat X" value={String(students.filter((s) => s.grade === 'X').length)} hint="pada filter ini" />
-        <Kpi label="Tingkat XI" value={String(students.filter((s) => s.grade === 'XI').length)} hint="pada filter ini" />
+        <Kpi label="Hasil Filter" value={String(matched)} hint="siswa cocok" />
+        <Kpi label="Halaman" value={`${page} / ${Math.max(1, Math.ceil(matched / PAGE_SIZE))}`} hint={`${PAGE_SIZE} per halaman`} />
         <Kpi label="Tanpa Kelas" value={String(tanpaKelas)} hint="siswa aktif" tone={tanpaKelas > 0 ? 'error' : undefined} />
       </KpiRow>
 
@@ -200,11 +210,12 @@ export default async function IndukSiswaPage({ searchParams }: { searchParams: P
         </table>
       </div>
 
-      {students.length >= 1000 && (
-        <p className="mt-3 text-[12.5px] text-gray-500">
-          Menampilkan 1.000 siswa pertama. Persempit dengan pencarian atau filter kelas.
-        </p>
-      )}
+      <Pagination
+        page={page}
+        total={matched}
+        label="siswa"
+        params={{ q, grade, kelas, status: status === 'AKTIF' ? '' : status }}
+      />
     </>
   );
 }

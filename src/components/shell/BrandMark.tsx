@@ -1,4 +1,5 @@
 import Image from 'next/image';
+import Link from 'next/link';
 
 export const APP_NAME = 'KASERA';
 export const APP_TAGLINE = 'Sistem Administrasi Kas';
@@ -35,16 +36,20 @@ export function BrandLockup({
   tone = 'dark',
   size = 38,
   priority = false,
+  href,
 }: {
   /** `dark` untuk latar hitam (sidebar), `light` untuk latar putih (login). */
   tone?: 'dark' | 'light';
   size?: number;
   priority?: boolean;
+  /** Tujuan saat lambangnya diklik. Dikosongkan di halaman masuk, karena
+   *  tamu belum punya dashboard untuk dituju. */
+  href?: string;
 }) {
   const title = tone === 'dark' ? 'text-white' : 'text-ink';
   const sub = tone === 'dark' ? 'text-sidebar-muted' : 'text-gray-500';
-  return (
-    <div className="flex items-center gap-3">
+  const inner = (
+    <>
       <BrandMark size={size} priority={priority} />
       <div className="min-w-0">
         <div className={`kasera-heading truncate text-[15px] leading-tight ${title}`}>{APP_NAME}</div>
@@ -53,6 +58,16 @@ export function BrandLockup({
         <div className={`truncate text-[10.5px] leading-tight ${sub}`}>{APP_TAGLINE}</div>
         <div className={`truncate text-[10.5px] leading-tight ${sub}`}>{APP_SCHOOL}</div>
       </div>
-    </div>
+    </>
+  );
+
+  // Dua cabang utuh, bukan komponen pembungkus yang dibuat saat render:
+  // komponen yang didefinisikan di dalam render adalah tipe baru setiap kali,
+  // sehingga React melepas dan memasang ulang seluruh isinya.
+  if (!href) return <div className="flex items-center gap-3">{inner}</div>;
+  return (
+    <Link href={href} className="flex items-center gap-3 rounded-lg hover:opacity-90" aria-label="Ke Dashboard">
+      {inner}
+    </Link>
   );
 }

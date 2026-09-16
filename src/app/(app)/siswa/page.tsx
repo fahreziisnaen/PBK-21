@@ -5,9 +5,11 @@ import { Badge } from '@/components/ui/Badge';
 import { FormModal } from '@/components/ui/FormModal';
 import { ConfirmAction } from '@/components/ui/ConfirmAction';
 import { FilterBar } from '@/components/ui/FilterBar';
+import { Pagination, pageFrom, sliceFor } from '@/components/ui/Pagination';
 import { BulkSelect } from '@/components/ui/BulkSelect';
 import { Kpi, KpiRow, NoActivity } from '@/components/ui/Kpi';
 import { PaymentFormModal } from '@/components/finance/PaymentFormModal';
+import { StudentPicker } from '@/components/finance/StudentPicker';
 import { requireUser } from '@/lib/auth-guard';
 import { canWrite } from '@/lib/roles';
 import { getActiveActivity } from '@/lib/activity-context';
@@ -18,7 +20,7 @@ import { formatPhoneLocal } from '@/lib/phone';
 import { rp } from '@/lib/format';
 import { btnGhost, btnSecondary, input, label, mono, table, tableWrap, td, tdNum, textarea, th, thNum } from '@/lib/ui';
 
-type Search = { q?: string; grade?: string; status?: string; kelas?: string };
+type Search = { q?: string; grade?: string; status?: string; kelas?: string; page?: string };
 
 function StudentFields({ contribution, classes, row }: { contribution: number; classes: SchoolClass[]; row?: Awaited<ReturnType<typeof participantRows>>[number] }) {
   return (
@@ -81,7 +83,8 @@ export default async function SiswaPage({ searchParams }: { searchParams: Promis
     );
   }
   const archived = activity.status === 'ARSIP';
-  const { q = '', grade = '', status = '', kelas = '' } = await searchParams;
+  const { q = '', grade = '', status = '', kelas = '', page: pageParam } = await searchParams;
+  const page = pageFrom(pageParam);
 
   const [all, classes, unenrolled] = await Promise.all([
     participantRows(activity.id),
@@ -101,6 +104,9 @@ export default async function SiswaPage({ searchParams }: { searchParams: Promis
       (!status || r.status === status),
   );
 
+  // Ringkasan sengaja dihitung dari `all`, bukan dari baris satu halaman:
+  // "Total Tagihan" yang berubah saat berpindah halaman akan menyesatkan.
+  const paged = sliceFor(rows, page);
   const totalBilling = all.reduce((s, r) => s + r.billing, 0);
   const totalPaid = all.reduce((s, r) => s + r.paid, 0);
   const lunas = all.filter((r) => r.status === 'Lunas').length;
@@ -131,16 +137,7 @@ export default async function SiswaPage({ searchParams }: { searchParams: Promis
                       Centang siswa yang ikut <b>{activity.name}</b>. Tagihan awalnya {rp(activity.contribution)}, bisa diubah
                       per siswa atau lewat Ubah Tagihan Massal.
                     </p>
-                    <div className="max-h-[320px] overflow-y-auto rounded-lg border border-gray-200">
-                      {unenrolled.map((s) => (
-                        <label key={s.id} className="flex cursor-pointer items-center gap-3 border-b border-gray-100 px-3 py-2 text-[13px] last:border-0 hover:bg-gray-50">
-                          <input type="checkbox" name="studentIds" value={s.id} className="h-4 w-4 flex-none rounded border-gray-300" />
-                          <span className="min-w-0 flex-1 truncate font-semibold text-gray-900">{s.name}</span>
-                          <span className="flex-none font-mono text-[12px] text-gray-500">{s.nis}</span>
-                          <span className="w-16 flex-none text-right text-[12px] text-gray-500">{s.className ?? s.grade}</span>
-                        </label>
-                      ))}
-                    </div>
+                    <StudentPicker students={unenrolled} />
                   </>
                 )}
               </FormModal>
@@ -208,6 +205,7 @@ export default async function SiswaPage({ searchParams }: { searchParams: Promis
   );
 
   const tabel = (
+    <>
       <div className={tableWrap}>
         <table className={`${table} min-w-[900px]`}>
           <thead>
@@ -224,14 +222,14 @@ export default async function SiswaPage({ searchParams }: { searchParams: Promis
             </tr>
           </thead>
           <tbody>
-            {rows.length === 0 && (
+            {paged.length === 0 && (
               <tr>
                 <td className={`${td} py-10 text-center text-gray-500`} colSpan={writer && !archived ? 9 : 8}>
                   {all.length === 0 ? 'Belum ada peserta. Tambah siswa, import dari Excel, atau daftarkan per tingkat.' : 'Tidak ada siswa yang cocok dengan filter.'}
                 </td>
               </tr>
             )}
-            {rows.map((r) => (
+            {paged.map((r) => (
               <tr key={r.id}>
                 {writer && !archived && (
                   <td className={td}>
@@ -284,6 +282,8 @@ export default async function SiswaPage({ searchParams }: { searchParams: Promis
           </tbody>
         </table>
       </div>
+      <Pagination page={page} total={rows.length} label="peserta" params={{ q, grade, kelas, status }} />
+    </>
   );
 
   return (
@@ -300,7 +300,7 @@ export default async function SiswaPage({ searchParams }: { searchParams: Promis
             'Siswa yang sudah punya kuitansi akan dilewati, termasuk kuitansi yang dibatalkan.',
           ]}
           noun="siswa"
-          total={rows.length}
+          total={paged.length}
         >
           {tabel}
         </BulkSelect>
