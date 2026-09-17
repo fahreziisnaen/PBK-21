@@ -2,11 +2,13 @@ import { PageHead } from '@/components/shell/PageHead';
 import { Kpi, KpiRow, NoActivity } from '@/components/ui/Kpi';
 import { PrintButton } from '@/components/ui/PrintButton';
 import { GradeClassSelects, ReportFilters } from '@/components/finance/ReportFilters';
+import { ReportKop, ReportSignature, SignatureFooterRow } from '@/components/finance/ReportDocument';
 import { requireUser } from '@/lib/auth-guard';
 import { resolveReport } from '@/lib/report-context';
-import { isoDate, ledgerRows } from '@/lib/finance';
+import { isoDate, ledgerRows, todayIso } from '@/lib/finance';
+import { reportPeriod } from '@/lib/report-period';
 import { prisma } from '@/lib/prisma';
-import { fdate, fdateLong, rp } from '@/lib/format';
+import { fdate, rp } from '@/lib/format';
 import { input, mono, table, tableWrap, td, tdNum, th, thNum } from '@/lib/ui';
 
 type Search = {
@@ -87,7 +89,14 @@ export default async function LaporanKeuanganPage({ searchParams }: { searchPara
   const perCategory = new Map<string, number>();
   for (const r of rows) if (r.expense) perCategory.set(r.category, (perCategory.get(r.category) ?? 0) + r.expense);
 
-  const periodLabel = `${from ? fdateLong(isoDate(from)) : fdateLong(isoDate(activity.startDate))} s.d. ${to ? fdateLong(isoDate(to)) : 'saat ini'}`;
+  const today = todayIso();
+  const periodLabel = reportPeriod({
+    from,
+    to,
+    firstDate: rows[0]?.date ?? null,
+    lastDate: rows.at(-1)?.date ?? null,
+    today,
+  });
   const balances: number[] = [];
   rows.reduce((prev, r) => {
     const next = prev + r.income - r.expense;
@@ -124,19 +133,28 @@ export default async function LaporanKeuanganPage({ searchParams }: { searchPara
         )}
       </ReportFilters>
 
-      <div className="rounded-xl border border-gray-200 bg-white p-6 print:border-0 print:p-0">
-        <div className="mb-5 border-b-2 border-gray-900 pb-3 text-center">
-          <div className="text-[16px] font-extrabold uppercase tracking-wide text-gray-900">{school?.name}</div>
-          <div className="text-[15px] font-bold text-gray-900">
-            {byClass ? 'LAPORAN PEMASUKAN KEGIATAN' : 'LAPORAN KEUANGAN KEGIATAN'}
-          </div>
-          <div className="text-[13px] text-gray-700">
-            {activity.name} · {activity.category.name}
-            {grade ? ` · Tingkat ${grade}` : ''}
-            {kelas ? ` · Kelas ${kelas === '-' ? 'belum diisi' : kelas}` : ''}
-          </div>
-          <div className="text-[12px] text-gray-500">Periode {periodLabel}</div>
-        </div>
+      <div data-report data-landscape className="rounded-xl border border-gray-200 bg-white p-6 print:border-0 print:p-0">
+        <ReportKop
+          school={school}
+          title={byClass ? 'Laporan Pemasukan Kegiatan' : 'Laporan Keuangan Kegiatan'}
+          lines={[
+            [
+              activity.name,
+              activity.category.name,
+              grade ? `Tingkat ${grade}` : '',
+              kelas ? `Kelas ${kelas === '-' ? 'belum diisi' : kelas}` : '',
+              method ? (method === 'TUNAI' ? 'Tunai saja' : 'Transfer saja') : '',
+              type === 'masuk' ? 'Pemasukan saja' : type === 'keluar' ? 'Pengeluaran saja' : '',
+              categoryName ? `Kategori ${categoryName}` : '',
+            ]
+              .filter(Boolean)
+              .join(' · '),
+            // Di kertas tidak ada catatan layar yang menjelaskannya, jadi
+            // alasan tidak adanya pengeluaran ditulis di kop.
+            byClass ? 'Hanya pemasukan dari siswa yang cocok; pengeluaran kegiatan tidak termasuk.' : '',
+          ]}
+          period={periodLabel}
+        />
 
         {byClass ? (
           <>
@@ -174,7 +192,7 @@ export default async function LaporanKeuanganPage({ searchParams }: { searchPara
           <>
             <h2 className="mb-2 text-[14px] font-bold text-gray-900">Ringkasan Pengeluaran per Kategori</h2>
             <div className={`${tableWrap} mb-5`}>
-              <table className={table}>
+              <table data-compact className={table}>
                 <thead>
                   <tr><th className={th}>Kategori</th><th className={thNum}>Jumlah</th><th className={thNum}>Porsi</th></tr>
                 </thead>
@@ -203,7 +221,7 @@ export default async function LaporanKeuanganPage({ searchParams }: { searchPara
                 <th className={th}>Kategori</th>
                 <th className={th}>Metode</th>
                 <th className={thNum}>Masuk</th>
-                <th className={thNum}>Keluar</th>
+                {!byClass && <th className={thNum}>Keluar</th>}
                 {showBalance && <th className={thNum}>Saldo</th>}
               </tr>
             </thead>
@@ -217,10 +235,10 @@ export default async function LaporanKeuanganPage({ searchParams }: { searchPara
                     <td className={`${td} whitespace-nowrap`}>{fdate(isoDate(r.date))}</td>
                     <td className={`${td} ${mono}`}>{r.ref}</td>
                     <td className={td}>{r.description}</td>
-                    <td className={td}>{r.category}</td>
+                    <td className={`${td} print:whitespace-nowrap`}>{r.category}</td>
                     <td className={td}>{r.method === 'TUNAI' ? 'Tunai' : 'Transfer'}</td>
                     <td className={tdNum}>{r.income ? rp(r.income) : ''}</td>
-                    <td className={tdNum}>{r.expense ? rp(r.expense) : ''}</td>
+                    {!byClass && <td className={tdNum}>{r.expense ? rp(r.expense) : ''}</td>}
                     {showBalance && <td className={`${tdNum} font-semibold`}>{rp(balances[i]!)}</td>}
                   </tr>
                 );
@@ -231,27 +249,21 @@ export default async function LaporanKeuanganPage({ searchParams }: { searchPara
                 <tr className="bg-gray-50 font-semibold">
                   <td className={td} colSpan={5}>Total</td>
                   <td className={tdNum}>{rp(income)}</td>
-                  <td className={tdNum}>{rp(expense)}</td>
+                  {!byClass && <td className={tdNum}>{rp(expense)}</td>}
                   {showBalance && <td className={tdNum}>{rp(opening + income - expense)}</td>}
                 </tr>
+                <SignatureFooterRow
+                  colSpan={6 + (byClass ? 0 : 1) + (showBalance ? 1 : 0)}
+                  name={user.name ?? ''}
+                  signatureImage={signer?.signatureImage}
+                  date={today}
+                />
               </tfoot>
             )}
           </table>
         </div>
 
-        <div className="mt-10 flex justify-end">
-          <div className="min-w-[220px] text-center text-[13px] text-gray-700">
-            <div>Surabaya, {fdateLong(new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jakarta' }).format(new Date()))}</div>
-            <div>Bendahara</div>
-            {signer?.signatureImage ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={signer.signatureImage} alt="Tanda tangan bendahara" className="mx-auto h-16 object-contain" />
-            ) : (
-              <div className="h-16" />
-            )}
-            <div className="border-t border-gray-500 pt-1 font-semibold text-gray-900">{user.name}</div>
-          </div>
-        </div>
+        <ReportSignature screenOnly={rows.length > 0} name={user.name ?? ''} signatureImage={signer?.signatureImage} date={today} />
       </div>
     </>
   );

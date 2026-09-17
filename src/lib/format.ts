@@ -6,7 +6,10 @@ export const MONFULL = [
 ] as const;
 
 export function rp(n: number): string {
-  return 'Rp' + Math.round(n || 0).toLocaleString('id-ID');
+  const v = Math.round(n || 0);
+  // Tanda minus di depan "Rp", bukan di antara "Rp" dan angkanya: saldo negatif
+  // tercetak "-Rp7.500.000", bukan "Rp-7.500.000" yang lazim dibaca salah ketik.
+  return (v < 0 ? '-Rp' : 'Rp') + Math.abs(v).toLocaleString('id-ID');
 }
 
 export function rpShort(n: number): string {

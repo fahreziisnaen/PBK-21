@@ -3,9 +3,10 @@ import { Badge } from '@/components/ui/Badge';
 import { Kpi, KpiRow, NoActivity } from '@/components/ui/Kpi';
 import { PrintButton } from '@/components/ui/PrintButton';
 import { GradeClassSelects, ReportFilters } from '@/components/finance/ReportFilters';
+import { ReportKop, ReportSignature, SignatureFooterRow } from '@/components/finance/ReportDocument';
 import { requireUser } from '@/lib/auth-guard';
 import { resolveReport } from '@/lib/report-context';
-import { isoDate, payStatus } from '@/lib/finance';
+import { isoDate, payStatus, todayIso } from '@/lib/finance';
 import { prisma } from '@/lib/prisma';
 import { fdateLong, rp } from '@/lib/format';
 import { input, mono, table, tableWrap, td, tdNum, th, thNum } from '@/lib/ui';
@@ -65,7 +66,15 @@ export default async function LaporanPembayaranPage({ searchParams }: { searchPa
 
   const billing = rows.reduce((s, r) => s + r.billing, 0);
   const paid = rows.reduce((s, r) => s + r.paid, 0);
-  const periodLabel = from || to ? `${from ? fdateLong(isoDate(from)) : 'awal'} s.d. ${to ? fdateLong(isoDate(to)) : 'saat ini'}` : 'seluruh periode';
+  const today = todayIso();
+  // Tanpa penyaring tanggal, laporan ini adalah potret status pelunasan pada
+  // hari dicetak — ditulis begitu, bukan "seluruh periode" yang tidak menyebut
+  // kapan keadaan itu berlaku. Dengan penyaring, akhir periode ditulis sebagai
+  // tanggal, bukan "saat ini" yang berubah arti setelah kertasnya disimpan.
+  const periodLabel =
+    from || to
+      ? `Pembayaran ${from ? fdateLong(isoDate(from)) : 'awal'} s.d. ${fdateLong(to ? isoDate(to) : today)}`
+      : `Keadaan per ${fdateLong(today)}`;
 
   return (
     <>
@@ -81,24 +90,28 @@ export default async function LaporanPembayaranPage({ searchParams }: { searchPa
         </select>
       </ReportFilters>
 
-      <div className="rounded-xl border border-gray-200 bg-white p-6 print:border-0 print:p-0">
-        <div className="mb-5 border-b-2 border-gray-900 pb-3 text-center">
-          <div className="text-[16px] font-extrabold uppercase tracking-wide text-gray-900">{school?.name}</div>
-          <div className="text-[15px] font-bold text-gray-900">LAPORAN PEMBAYARAN SISWA</div>
-          <div className="text-[13px] text-gray-700">
-            {activity.name}
-            {sp.grade ? ` · Tingkat ${sp.grade}` : ''}
-            {sp.kelas ? ` · Kelas ${sp.kelas === '-' ? 'belum diisi' : sp.kelas}` : ''}
-            {sp.status ? ` · ${sp.status}` : ''}
-          </div>
-          <div className="text-[12px] text-gray-500">Periode pembayaran: {periodLabel}</div>
-        </div>
+      <div data-report className="rounded-xl border border-gray-200 bg-white p-6 print:border-0 print:p-0">
+        <ReportKop
+          school={school}
+          title="Laporan Pembayaran Siswa"
+          lines={[
+            [
+              activity.name,
+              sp.grade ? `Tingkat ${sp.grade}` : '',
+              sp.kelas ? `Kelas ${sp.kelas === '-' ? 'belum diisi' : sp.kelas}` : '',
+              sp.status ?? '',
+            ]
+              .filter(Boolean)
+              .join(' · '),
+            periodLabel,
+          ]}
+        />
 
         <KpiRow>
           <Kpi label="Siswa" value={String(rows.length)} hint={`${rows.filter((r) => r.status === 'Lunas').length} lunas`} />
           <Kpi label="Total Tagihan" value={rp(billing)} />
           <Kpi label="Total Dibayar" value={rp(paid)} tone="success" />
-          <Kpi label="Total Outstanding" value={rp(Math.max(billing - paid, 0))} tone="error" />
+          <Kpi label="Sisa Tagihan" value={rp(Math.max(billing - paid, 0))} tone="error" />
         </KpiRow>
 
         <div className={tableWrap}>
@@ -141,24 +154,13 @@ export default async function LaporanPembayaranPage({ searchParams }: { searchPa
                   <td className={tdNum}>{rp(Math.max(billing - paid, 0))}</td>
                   <td className={td}></td>
                 </tr>
+                <SignatureFooterRow colSpan={8} name={user.name ?? ''} signatureImage={signer?.signatureImage} date={today} />
               </tfoot>
             )}
           </table>
         </div>
 
-        <div className="mt-10 flex justify-end">
-          <div className="min-w-[220px] text-center text-[13px] text-gray-700">
-            <div>Surabaya, {fdateLong(new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jakarta' }).format(new Date()))}</div>
-            <div>Bendahara</div>
-            {signer?.signatureImage ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={signer.signatureImage} alt="Tanda tangan bendahara" className="mx-auto h-16 object-contain" />
-            ) : (
-              <div className="h-16" />
-            )}
-            <div className="border-t border-gray-500 pt-1 font-semibold text-gray-900">{user.name}</div>
-          </div>
-        </div>
+        <ReportSignature screenOnly={rows.length > 0} name={user.name ?? ''} signatureImage={signer?.signatureImage} date={today} />
       </div>
     </>
   );

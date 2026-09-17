@@ -154,7 +154,81 @@
   .pbk-draw { stroke-dashoffset: 0; animation: none; }
 }
 
+/* ---------------------------------------------------------------------------
+   CETAK
+
+   Lebar cetak A4 dengan margin ini sekitar 700px — di bawah batas tampilan
+   ponsel (900px). Tanpa aturan di bawah, kertas diperlakukan seperti layar
+   sempit: tabel yang dirancang minimal 860px terpotong di kanan (kolom uang,
+   saldo, dan status hilang), dan kartu ringkasan membesar jadi dua kolom.
+
+   Aturan ini tidak berlapis (@layer), jadi menang atas utilitas Tailwind.
+   --------------------------------------------------------------------------- */
+@page {
+  size: A4;
+  margin: 12mm 12mm 14mm;
+}
+
 @media print {
   body { background: #fff; }
   [data-noprint] { display: none !important; }
+  main { padding: 0 !important; }
+
+  /* Tabel mengikuti lebar kertas, bukan lebar minimum untuk layar. Pembungkus
+     gulir-sampingnya dilepas: kertas tidak bisa digulir, jadi yang tidak muat
+     hanya akan terpangkas. */
+  .overflow-x-auto { overflow: visible !important; border: 0 !important; border-radius: 0 !important; }
+  table { min-width: 0 !important; width: 100% !important; }
+
+  /* Judul kolom diulang di tiap halaman, tetapi baris Total tidak: sebagai
+     footer tabel ia ikut berulang dan terbaca seperti subtotal per halaman. */
+  thead { display: table-header-group; }
+  tfoot { display: table-row-group; break-inside: avoid; }
+  tr { break-inside: avoid; }
+
+  /* Garis tabel lengkap dan huruf yang lebih rapat, seperti laporan resmi. */
+  th, td {
+    padding: 3pt 4pt !important;
+    font-size: 9.5pt !important;
+    line-height: 1.3 !important;
+    border: 0.5pt solid #555 !important;
+  }
+  th { background: none !important; }
+
+  /* Tabel ringkasan tiga kolom tidak perlu dibentang selebar kertas: kolom
+     Jumlah jadi selebar separuh halaman dengan angka di ujung kanan. */
+  table[data-compact] { width: auto !important; min-width: 55% !important; }
+
+  /* Lencana status di kertas hitam putih cukup teks biasa seukuran isi sel;
+     padding pil-nya hanya memakan lebar kolom nama. */
+  [data-badge] { padding: 0 !important; font-size: inherit !important; background: none !important; }
+
+  /* Ringkasan: empat kolom sempit, bukan kartu besar dua kolom. */
+  [data-kpi-row] { grid-template-columns: repeat(4, minmax(0, 1fr)) !important; gap: 4pt !important; margin-bottom: 8pt !important; }
+  [data-kpi] { padding: 4pt 6pt !important; border: 0.5pt solid #555 !important; border-radius: 0 !important; }
+  [data-kpi] > div:first-child { font-size: 8pt !important; }
+  [data-kpi-value] { font-size: 11pt !important; margin-top: 1pt !important; }
+  [data-kpi] > div:last-child:not([data-kpi-value]) { font-size: 7.5pt !important; }
+
+  /* Laporan dicetak hitam putih: warna hijau, merah, dan amber di layar jadi
+     abu-abu pudar di printer hitam putih, dan tautan tercetak berwarna. */
+  [data-report], [data-report] * { color: #000 !important; }
+  [data-report] h2 { font-size: 10.5pt !important; margin: 8pt 0 4pt !important; }
+
+  /* Laporan berkolom banyak (Laporan Keuangan, Buku Kas) dicetak melintang:
+     di kertas tegak kolom Keterangan hanya tersisa beberapa sentimeter dan
+     tiap transaksi memakan empat sampai lima baris. */
+  [data-landscape] { page: melintang; }
+
+  /* Tanda tangan: isinya dijadikan inline-block, satu kotak utuh yang tidak
+     bisa dibelah Chrome (break-inside pada wadah flex tidak selalu dipatuhi).
+     Laporan bertabel mencetaknya dari baris footer tabel, lihat
+     SignatureFooterRow; blok biasa hanya untuk laporan tanpa baris. */
+  [data-signature]:not([data-noprint]) { display: block !important; text-align: right; break-inside: avoid; break-before: avoid; }
+  [data-signature] > div { display: inline-block !important; text-align: center; }
+  [data-signature-row] > td { border: 0 !important; padding: 18pt 0 0 !important; }
+}
+
+@page melintang {
+  size: A4 landscape;
 }

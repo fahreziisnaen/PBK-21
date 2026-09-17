@@ -15,6 +15,7 @@ const CLASSES: Record<Tone, string> = {
 export function Badge({ status }: { status: string }) {
   return (
     <span
+      data-badge
       className={
         'inline-flex whitespace-nowrap rounded-full px-2.5 py-1 text-[11.5px] font-semibold ' +
         CLASSES[statusTone(status)]

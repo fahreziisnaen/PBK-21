@@ -6,6 +6,7 @@ describe('rp', () => {
     expect(rp(250000)).toBe('Rp250.000');
     expect(rp(7000000)).toBe('Rp7.000.000');
     expect(rp(0)).toBe('Rp0');
+    expect(rp(-7500000)).toBe('-Rp7.500.000');
   });
 });
 

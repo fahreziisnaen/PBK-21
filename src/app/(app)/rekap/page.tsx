@@ -3,9 +3,11 @@ import { Kpi, KpiRow, NoActivity } from '@/components/ui/Kpi';
 import { PrintButton } from '@/components/ui/PrintButton';
 import { requireUser } from '@/lib/auth-guard';
 import { getActiveActivity } from '@/lib/activity-context';
-import { participantRows, type ParticipantRow } from '@/lib/finance';
-import { rp } from '@/lib/format';
+import { participantRows, todayIso, type ParticipantRow } from '@/lib/finance';
+import { fdateLong, rp } from '@/lib/format';
 import { table, tableWrap, td, tdNum, th, thNum } from '@/lib/ui';
+import { ReportKop, ReportSignature, SignatureFooterRow } from '@/components/finance/ReportDocument';
+import { prisma } from '@/lib/prisma';
 
 type Group = { key: string; rows: ParticipantRow[] };
 
@@ -24,7 +26,18 @@ function summarize(rows: ParticipantRow[]) {
   };
 }
 
-function RecapTable({ title, firstCol, groups }: { title: string; firstCol: string; groups: Group[] }) {
+function RecapTable({
+  title,
+  firstCol,
+  groups,
+  footer,
+}: {
+  title: string;
+  firstCol: string;
+  groups: Group[];
+  /** Baris tambahan di akhir footer tabel, mis. tanda tangan cetak. */
+  footer?: React.ReactNode;
+}) {
   const total = summarize(groups.flatMap((g) => g.rows));
   return (
     <>
@@ -41,7 +54,7 @@ function RecapTable({ title, firstCol, groups }: { title: string; firstCol: stri
               <th className={thNum}>Tagihan</th>
               <th className={thNum}>Dibayar</th>
               <th className={thNum}>Sisa</th>
-              <th className={th}>Terkumpul</th>
+              <th className={thNum}>Terkumpul</th>
             </tr>
           </thead>
           <tbody>
@@ -60,9 +73,11 @@ function RecapTable({ title, firstCol, groups }: { title: string; firstCol: stri
                   <td className={tdNum}>{rp(s.billing)}</td>
                   <td className={tdNum}>{rp(s.paid)}</td>
                   <td className={tdNum}>{rp(s.remaining)}</td>
-                  <td className={td}>
-                    <div className="flex items-center gap-2">
-                      <div className="h-2 w-24 overflow-hidden rounded-full bg-gray-100">
+                  <td className={tdNum}>
+                    <div className="flex items-center justify-end gap-2">
+                      {/* Bilah tidak tercetak: latar belakang tidak ikut dicetak, jadi
+                          yang tersisa hanya ruang kosong di depan persentase. */}
+                      <div className="h-2 w-24 overflow-hidden rounded-full bg-gray-100 print:hidden">
                         <div className="h-full bg-success-500" style={{ width: `${Math.min(s.pct, 100)}%` }} />
                       </div>
                       <span className="font-mono text-[12px]">{s.pct}%</span>
@@ -83,8 +98,9 @@ function RecapTable({ title, firstCol, groups }: { title: string; firstCol: stri
                 <td className={tdNum}>{rp(total.billing)}</td>
                 <td className={tdNum}>{rp(total.paid)}</td>
                 <td className={tdNum}>{rp(total.remaining)}</td>
-                <td className={`${td} font-mono`}>{total.pct}%</td>
+                <td className={tdNum}>{total.pct}%</td>
               </tr>
+              {footer}
             </tfoot>
           )}
         </table>
@@ -100,7 +116,7 @@ function groupBy(rows: ParticipantRow[], key: (r: ParticipantRow) => string): Gr
 }
 
 export default async function RekapPage() {
-  await requireUser();
+  const user = await requireUser();
   const activity = await getActiveActivity();
   if (!activity) {
     return (
@@ -110,13 +126,27 @@ export default async function RekapPage() {
       </>
     );
   }
-  const rows = await participantRows(activity.id);
+  const [rows, school, signer] = await Promise.all([
+    participantRows(activity.id),
+    prisma.school.findFirst(),
+    prisma.user.findUnique({ where: { id: user.id }, select: { signatureImage: true } }),
+  ]);
+  const today = todayIso();
   const t = summarize(rows);
   const gradeOrder = { X: '1', XI: '2', XII: '3' } as Record<string, string>;
 
   return (
     <>
       <PageHead pathname="/rekap" activity={activity} actions={<PrintButton label="Cetak Rekap" />} />
+      {/* Sebelumnya rekap tidak punya kop maupun tanda tangan: yang tercetak
+          hanya judul layar, tanpa nama sekolah atau tanggal. */}
+      <div data-report>
+      <ReportKop
+        printOnly
+        school={school}
+        title="Rekap Pembayaran"
+        lines={[activity.name, `Keadaan per ${fdateLong(today)}`]}
+      />
       <KpiRow>
         <Kpi label="Total Siswa" value={String(t.count)} />
         <Kpi label="Lunas" value={String(t.lunas)} tone="success" hint={`${t.count ? Math.round((t.lunas / t.count) * 100) : 0}% peserta`} />
@@ -128,7 +158,16 @@ export default async function RekapPage() {
         firstCol="Tingkat"
         groups={groupBy(rows, (r) => `${gradeOrder[r.grade] ?? ''}|Tingkat ${r.grade}`).map((g) => ({ ...g, key: g.key.split('|')[1]! }))}
       />
-      <RecapTable title="Rekap per Kelas" firstCol="Kelas" groups={groupBy(rows, (r) => r.className ?? `${r.grade} (tanpa kelas)`)} />
+      <RecapTable
+        title="Rekap per Kelas"
+        firstCol="Kelas"
+        groups={groupBy(rows, (r) => r.className ?? `${r.grade} (tanpa kelas)`)}
+        footer={<SignatureFooterRow colSpan={9} name={user.name ?? ''} signatureImage={signer?.signatureImage} date={today} />}
+      />
+      {rows.length === 0 && (
+        <ReportSignature printOnly name={user.name ?? ''} signatureImage={signer?.signatureImage} date={today} />
+      )}
+      </div>
     </>
   );
 }

@@ -2,15 +2,17 @@ import Link from 'next/link';
 import { PageHead } from '@/components/shell/PageHead';
 import { Kpi, KpiRow, NoActivity } from '@/components/ui/Kpi';
 import { PrintButton } from '@/components/ui/PrintButton';
+import { ReportKop, ReportSignature, SignatureFooterRow } from '@/components/finance/ReportDocument';
 import { requireUser } from '@/lib/auth-guard';
 import { getActiveActivity } from '@/lib/activity-context';
-import { isoDate, ledgerRows, parseDateInput } from '@/lib/finance';
+import { isoDate, ledgerRows, parseDateInput, todayIso } from '@/lib/finance';
+import { reportPeriod } from '@/lib/report-period';
 import { prisma } from '@/lib/prisma';
-import { fdate, fdateLong, rp } from '@/lib/format';
+import { fdate, rp } from '@/lib/format';
 import { btnSecondary, input, mono, table, tableWrap, td, tdNum, th, thNum } from '@/lib/ui';
 
 export default async function BukuKasPage({ searchParams }: { searchParams: Promise<{ from?: string; to?: string }> }) {
-  await requireUser();
+  const user = await requireUser();
   const activity = await getActiveActivity();
   if (!activity) {
     return (
@@ -26,7 +28,11 @@ export default async function BukuKasPage({ searchParams }: { searchParams: Prom
 
   // Saldo berjalan selalu dihitung dari awal kegiatan, lalu baris di luar
   // rentang disembunyikan — supaya saldo pada baris pertama hasil filter tetap benar.
-  const [all, school] = await Promise.all([ledgerRows(activity.id), prisma.school.findFirst()]);
+  const [all, school, signer] = await Promise.all([
+    ledgerRows(activity.id),
+    prisma.school.findFirst(),
+    prisma.user.findUnique({ where: { id: user.id }, select: { signatureImage: true } }),
+  ]);
   const inRange = all.filter((r) => (!from || r.date >= from) && (!to || r.date <= to));
   const firstIndex = inRange.length ? all.indexOf(inRange[0]!) : -1;
   const opening = firstIndex > 0 ? all[firstIndex - 1]!.balance : 0;
@@ -37,13 +43,20 @@ export default async function BukuKasPage({ searchParams }: { searchParams: Prom
     <>
       <PageHead pathname="/buku-kas" activity={activity} actions={<PrintButton label="Cetak Buku Kas" />} />
 
-      <div className="mb-4 hidden print:block">
-        <div className="text-[16px] font-extrabold uppercase">{school?.name}</div>
-        <div className="text-[14px] font-bold">Buku Kas — {activity.name}</div>
-        <div className="text-[12px] text-gray-600">
-          Periode {from ? fdateLong(isoDate(from)) : 'awal'} s.d. {to ? fdateLong(isoDate(to)) : 'saat ini'}
-        </div>
-      </div>
+      <div data-report data-landscape>
+      <ReportKop
+        printOnly
+        school={school}
+        title="Buku Kas"
+        lines={[activity.name]}
+        period={reportPeriod({
+          from,
+          to,
+          firstDate: inRange[0]?.date ?? null,
+          lastDate: inRange.at(-1)?.date ?? null,
+          today: todayIso(),
+        })}
+      />
 
       <KpiRow>
         <Kpi label="Saldo Awal" value={rp(opening)} />
@@ -91,7 +104,7 @@ export default async function BukuKasPage({ searchParams }: { searchParams: Prom
                   {r.href ? <Link href={r.href} className="text-brand-700 hover:underline">{r.ref}</Link> : r.ref}
                 </td>
                 <td className={td}>{r.description}</td>
-                <td className={td}>{r.category}</td>
+                <td className={`${td} print:whitespace-nowrap`}>{r.category}</td>
                 <td className={`${tdNum} text-success-700`}>{r.income ? rp(r.income) : ''}</td>
                 <td className={`${tdNum} text-error-600`}>{r.expense ? rp(r.expense) : ''}</td>
                 <td className={`${tdNum} font-semibold text-gray-900`}>{rp(r.balance)}</td>
@@ -106,9 +119,15 @@ export default async function BukuKasPage({ searchParams }: { searchParams: Prom
                 <td className={`${tdNum} text-error-600`}>{rp(expense)}</td>
                 <td className={`${tdNum} text-gray-900`}>{rp(opening + income - expense)}</td>
               </tr>
+              <SignatureFooterRow colSpan={7} name={user.name ?? ''} signatureImage={signer?.signatureImage} date={todayIso()} />
             </tfoot>
           )}
         </table>
+      </div>
+
+      {inRange.length === 0 && (
+        <ReportSignature printOnly name={user.name ?? ''} signatureImage={signer?.signatureImage} date={todayIso()} />
+      )}
       </div>
     </>
   );
