@@ -52,19 +52,30 @@ test.afterAll(async () => {
   await deleteE2eUser(bendahara.id);
 });
 
-test('menambah peserta satu per satu lalu mengeluarkannya lagi', async () => {
+test('data peserta tidak punya jalan membuat atau mengubah data siswa', async () => {
   await page.goto('/siswa');
-  await page.getByRole('button', { name: '+ Tambah Siswa' }).click();
-  const dialog = page.getByRole('dialog', { name: 'Tambah Siswa' });
-  await dialog.getByLabel('NIS').fill(`PS${stamp}1`);
-  await dialog.getByLabel('Nama Siswa').fill(`Siswa Peserta 1 ${stamp}`);
-  await dialog.getByLabel('Kelas', { exact: true }).selectOption(CLASS);
-  await dialog.getByRole('button', { name: 'Simpan' }).click();
+  // Siswa ditambah dan diimpor di Data Siswa. Di sini hanya mengambil dari sana.
+  await expect(page.getByRole('button', { name: '+ Tambah Siswa' })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Import Excel' })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Daftarkan per Tingkat' })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Daftarkan Siswa' })).toBeVisible();
+});
+
+test('mendaftarkan siswa dari data siswa lalu mengeluarkannya lagi', async () => {
+  const student = await prisma.student.create({
+    data: { nis: `PS${stamp}1`, name: `Siswa Peserta 1 ${stamp}`, grade: 'XI', className: CLASS },
+  });
+  studentIds.push(student.id);
+
+  await page.goto('/siswa');
+  await page.getByRole('button', { name: 'Daftarkan Siswa' }).click();
+  const dialog = page.getByRole('dialog', { name: 'Daftarkan Siswa ke Kegiatan' });
+  await dialog.getByLabel('Cari siswa').fill(`PS${stamp}1`);
+  await dialog.getByRole('checkbox', { name: new RegExp(`Siswa Peserta 1 ${stamp}`) }).check();
+  await dialog.getByRole('button', { name: 'Daftarkan Terpilih' }).click();
 
   const row = page.getByRole('row', { name: new RegExp(`Siswa Peserta 1 ${stamp}`) });
   await expect(row).toBeVisible();
-  const student = await prisma.student.findFirstOrThrow({ where: { nis: `PS${stamp}1` } });
-  studentIds.push(student.id);
 
   // Belum ada pembayaran, jadi boleh dikeluarkan.
   await row.getByRole('button', { name: 'Keluarkan' }).click();
@@ -76,7 +87,7 @@ test('menambah peserta satu per satu lalu mengeluarkannya lagi', async () => {
   expect(await prisma.participant.count({ where: { activityId, studentId: student.id } })).toBe(0);
 });
 
-test('mendaftarkan satu tingkat sekaligus', async () => {
+test('mendaftarkan satu tingkat sekaligus lewat saringan', async () => {
   for (const n of [2, 3]) {
     const s = await prisma.student.create({
       data: { nis: `PS${stamp}${n}`, name: `Siswa Peserta ${n} ${stamp}`, grade: 'XI', className: CLASS },
@@ -85,18 +96,46 @@ test('mendaftarkan satu tingkat sekaligus', async () => {
   }
 
   await page.goto('/siswa');
-  await page.getByRole('button', { name: 'Daftarkan per Tingkat' }).click();
-  const dialog = page.getByRole('dialog', { name: 'Daftarkan Seluruh Siswa Satu Tingkat' });
-  await dialog.getByLabel('Tingkat').selectOption('XI');
-  await dialog.getByRole('button', { name: 'Daftarkan' }).click();
+  await page.getByRole('button', { name: 'Daftarkan Siswa' }).click();
+  const dialog = page.getByRole('dialog', { name: 'Daftarkan Siswa ke Kegiatan' });
+  // Dipersempit ke kelas uji ini: database dev bisa berisi siswa tingkat XI lain.
+  await dialog.getByLabel('Tingkat siswa').selectOption('XI');
+  await dialog.getByLabel('Kelas siswa').selectOption(CLASS);
+  await dialog.getByRole('button', { name: /Pilih 3 yang tampil/ }).click();
+  await dialog.getByRole('button', { name: 'Daftarkan Terpilih' }).click();
 
-  await expect(page.getByText(/siswa tingkat XI didaftarkan/)).toBeVisible();
+  await expect(page.getByText(/3 siswa didaftarkan/)).toBeVisible();
   const enrolled = await prisma.participant.findMany({ where: { activityId }, include: { student: true } });
   // Siswa 1 ikut terdaftar lagi: dikeluarkan dari kegiatan tidak menghapus
-  // datanya, jadi pendaftaran per tingkat menjangkaunya kembali.
+  // datanya, jadi ia muncul kembali di pilihan pendaftaran.
   expect(enrolled.map((p) => p.student.nis).sort()).toEqual([`PS${stamp}1`, `PS${stamp}2`, `PS${stamp}3`]);
   // Tagihan mengikuti kontribusi kegiatan.
   expect(enrolled.every((p) => p.billing === 300_000)).toBe(true);
+});
+
+test('ubah tagihan peserta tidak menyentuh data siswanya', async () => {
+  const participant = await prisma.participant.findFirstOrThrow({
+    where: { activityId, student: { nis: `PS${stamp}2` } },
+    include: { student: true },
+  });
+  const before = participant.student;
+
+  await page.goto('/siswa');
+  const row = page.getByRole('row', { name: new RegExp(before.name) });
+  await row.getByRole('button', { name: 'Ubah Tagihan' }).click();
+  const dialog = page.getByRole('dialog', { name: 'Ubah Tagihan Peserta' });
+  // Modalnya hanya punya kolom tagihan — nama dan kelas tidak bisa diubah dari sini.
+  await expect(dialog.getByLabel('Nama Siswa')).toHaveCount(0);
+  await expect(dialog.getByLabel('Kelas', { exact: true })).toHaveCount(0);
+  await dialog.getByLabel('Tagihan (Rp)').fill('325000');
+  await dialog.getByRole('button', { name: 'Simpan' }).click();
+  await expect(page.getByText(/Tagihan .* diubah menjadi Rp325\.000/)).toBeVisible();
+
+  const after = await prisma.participant.findUniqueOrThrow({ where: { id: participant.id }, include: { student: true } });
+  expect(after.billing).toBe(325_000);
+  expect(after.student).toMatchObject({ name: before.name, grade: before.grade, className: before.className, phone: before.phone });
+  // Dikembalikan supaya uji berikutnya membaca tagihan asal.
+  await prisma.participant.update({ where: { id: participant.id }, data: { billing: 300_000 } });
 });
 
 test('peserta yang kuitansinya sudah dibatalkan tetap tidak bisa dikeluarkan', async () => {

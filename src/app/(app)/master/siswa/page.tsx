@@ -8,9 +8,9 @@ import { Kpi, KpiRow } from '@/components/ui/Kpi';
 import { requireUser } from '@/lib/auth-guard';
 import { canWrite } from '@/lib/roles';
 import { prisma } from '@/lib/prisma';
-import { deleteStudentMaster, saveStudentMaster } from '@/lib/actions/students';
+import { deleteStudentMaster, importStudents, saveStudentMaster } from '@/lib/actions/students';
 import { formatPhoneLocal } from '@/lib/phone';
-import { btnGhost, input, label, mono, table, tableWrap, td, tdNum, th, thNum } from '@/lib/ui';
+import { btnGhost, btnSecondary, input, label, mono, table, tableWrap, td, tdNum, textarea, th, thNum } from '@/lib/ui';
 
 type Search = { q?: string; grade?: string; kelas?: string; status?: string; page?: string };
 
@@ -118,9 +118,29 @@ export default async function IndukSiswaPage({ searchParams }: { searchParams: P
         pathname="/master/siswa"
         actions={
           writer && (
-            <FormModal trigger="+ Tambah Siswa" title="Tambah Siswa ke Data Induk" action={saveStudentMaster} wide>
-              <StudentMasterFields classes={classes} />
-            </FormModal>
+            <>
+              <FormModal trigger="Import Excel" triggerClassName={btnSecondary} title="Import Siswa dari Excel" submitLabel="Import" action={importStudents} wide>
+                <p className="text-[12.5px] text-gray-600">
+                  Salin kolom dari Excel lalu tempel di bawah, satu siswa per baris, urutan kolom:{' '}
+                  <b>NIS, Nama, Tingkat (X/XI/XII), Kelas, Telepon</b>. Kelas dan telepon boleh kosong.
+                </p>
+                <ul className="list-disc space-y-0.5 pl-5 text-[12px] text-gray-500">
+                  <li>NIS yang sudah ada diperbarui datanya, tidak digandakan.</li>
+                  <li>Kelas yang belum ada di Master Data › Kelas dibuat otomatis.</li>
+                  <li>Siswa hanya masuk Data Siswa. Untuk mengikutkan ke kegiatan, pakai Daftarkan Siswa di Data Peserta.</li>
+                </ul>
+                <textarea
+                  name="rows"
+                  rows={10}
+                  aria-label="Data siswa dari Excel"
+                  className={`${textarea} font-mono text-[12.5px]`}
+                  placeholder={'2026001\tAhmad Fauzi\tX\tX-1\t081234567890\n2026002\tBunga Lestari\tX\tX-1'}
+                />
+              </FormModal>
+              <FormModal trigger="+ Tambah Siswa" title="Tambah Siswa" action={saveStudentMaster} wide>
+                <StudentMasterFields classes={classes} />
+              </FormModal>
+            </>
           )
         }
       />
@@ -192,7 +212,7 @@ export default async function IndukSiswaPage({ searchParams }: { searchParams: P
                     {s._count.participations === 0 && (
                       <ConfirmAction
                         label="Hapus"
-                        title="Hapus dari Data Induk"
+                        title="Hapus Siswa"
                         body={`${s.name} (NIS ${s.nis}) akan dihapus permanen dari data siswa.`}
                         bullets={[
                           'Hanya siswa yang belum pernah ikut kegiatan yang bisa dihapus.',

@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import { PageHead } from '@/components/shell/PageHead';
 import { Badge } from '@/components/ui/Badge';
 import { requireUser } from '@/lib/auth-guard';
+import { canWrite } from '@/lib/roles';
 import { prisma } from '@/lib/prisma';
 import { isoDate, payStatus } from '@/lib/finance';
 import { formatPhoneLocal } from '@/lib/phone';
@@ -10,7 +11,7 @@ import { fdate, rp } from '@/lib/format';
 import { btnSecondary, card, mono, table, tableWrap, td, tdNum, th, thNum } from '@/lib/ui';
 
 export default async function DetailSiswaPage({ params }: { params: Promise<{ id: string }> }) {
-  await requireUser();
+  const user = await requireUser();
   const { id } = await params;
   const student = await prisma.student.findUnique({
     where: { id },
@@ -31,7 +32,20 @@ export default async function DetailSiswaPage({ params }: { params: Promise<{ id
 
   return (
     <>
-      <PageHead pathname="/siswa/[id]" actions={<Link href="/siswa" className={btnSecondary}>Kembali</Link>} />
+      <PageHead
+        pathname="/siswa/[id]"
+        actions={
+          <>
+            <Link href="/siswa" className={btnSecondary}>Kembali</Link>
+            {/* Halaman ini hanya membaca. Data siswanya diubah di satu tempat saja. */}
+            {canWrite(user.role) && (
+              <Link href={`/master/siswa?q=${encodeURIComponent(student.nis)}`} className={btnSecondary}>
+                Ubah Data Siswa
+              </Link>
+            )}
+          </>
+        }
+      />
 
       <div className={`${card} mb-4 flex flex-wrap items-center gap-x-10 gap-y-2 p-5`}>
         <div>

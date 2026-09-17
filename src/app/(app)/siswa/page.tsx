@@ -1,5 +1,4 @@
 import Link from 'next/link';
-import type { SchoolClass } from '@prisma/client';
 import { PageHead } from '@/components/shell/PageHead';
 import { Badge } from '@/components/ui/Badge';
 import { FormModal } from '@/components/ui/FormModal';
@@ -15,62 +14,28 @@ import { canWrite } from '@/lib/roles';
 import { getActiveActivity } from '@/lib/activity-context';
 import { prisma } from '@/lib/prisma';
 import { participantRows, todayIso } from '@/lib/finance';
-import { addStudent, enrollGrade, enrollStudents, importStudents, removeParticipant, removeParticipants, updateBillingBulk, updateParticipant } from '@/lib/actions/students';
-import { formatPhoneLocal } from '@/lib/phone';
+import {
+  enrollStudents,
+  removeParticipant,
+  removeParticipants,
+  updateBillingBulk,
+  updateParticipantBilling,
+} from '@/lib/actions/students';
 import { rp } from '@/lib/format';
-import { btnGhost, btnSecondary, input, label, mono, table, tableWrap, td, tdNum, textarea, th, thNum } from '@/lib/ui';
+import { btnGhost, btnSecondary, input, label, mono, table, tableWrap, td, tdNum, th, thNum } from '@/lib/ui';
 
 type Search = { q?: string; grade?: string; status?: string; kelas?: string; page?: string };
 
-function StudentFields({ contribution, classes, row }: { contribution: number; classes: SchoolClass[]; row?: Awaited<ReturnType<typeof participantRows>>[number] }) {
-  return (
-    <>
-      {row && <input type="hidden" name="participantId" value={row.id} />}
-      <div className="grid grid-cols-2 gap-3 max-[520px]:grid-cols-1">
-        <div>
-          <label className={label} htmlFor="nis">NIS</label>
-          <input id="nis" name="nis" required={!row} disabled={!!row} defaultValue={row?.nis} className={`${input} font-mono`} />
-        </div>
-        <div>
-          <label className={label} htmlFor="name">Nama Siswa</label>
-          <input id="name" name="name" required defaultValue={row?.name} className={input} />
-        </div>
-        <div>
-          <label className={label} htmlFor="grade">Tingkat <span className="font-normal text-gray-400">(mengikuti kelas bila dipilih)</span></label>
-          <select id="grade" name="grade" required defaultValue={row?.grade ?? 'X'} className={input}>
-            <option value="X">X</option>
-            <option value="XI">XI</option>
-            <option value="XII">XII</option>
-          </select>
-        </div>
-        <div>
-          <label className={label} htmlFor="className">Kelas</label>
-          <select id="className" name="className" defaultValue={row?.className ?? ''} className={input}>
-            <option value="">— Tanpa kelas —</option>
-            {classes.map((c) => (
-              <option key={c.id} value={c.name}>{c.name} (tingkat {c.grade})</option>
-            ))}
-          </select>
-          {classes.length === 0 && (
-            <p className="mt-1 text-[11.5px] text-gray-500">
-              Belum ada kelas. <a href="/master/kelas" className="font-semibold text-brand-700">Tambah di Master Data › Kelas</a>
-            </p>
-          )}
-        </div>
-        <div>
-          <label className={label} htmlFor="phone">Telepon Orang Tua</label>
-          <input id="phone" name="phone" inputMode="tel" defaultValue={row?.phone ? formatPhoneLocal(row.phone) : ''} placeholder="081234567890" className={input} />
-        </div>
-        <div>
-          <label className={label} htmlFor="billing">Tagihan (Rp)</label>
-          <input id="billing" name="billing" inputMode="numeric" defaultValue={row?.billing ?? contribution} className={`${input} font-mono`} />
-        </div>
-      </div>
-    </>
-  );
-}
-
-export default async function SiswaPage({ searchParams }: { searchParams: Promise<Search> }) {
+/**
+ * Data Peserta: siapa yang ikut kegiatan yang sedang dipilih, berapa
+ * tagihannya, dan sudah membayar berapa.
+ *
+ * Halaman ini tidak membuat atau mengubah data siswa sama sekali. Siswa
+ * ditambah, diimpor, dan disunting di Master Data › Data Siswa; di sini
+ * mereka hanya diambil dari sana lewat Daftarkan Siswa. Satu-satunya data yang
+ * diubah di sini adalah milik peserta itu sendiri: tagihan dan keikutsertaan.
+ */
+export default async function DataPesertaPage({ searchParams }: { searchParams: Promise<Search> }) {
   const user = await requireUser();
   const writer = canWrite(user.role);
   const activity = await getActiveActivity();
@@ -83,21 +48,23 @@ export default async function SiswaPage({ searchParams }: { searchParams: Promis
     );
   }
   const archived = activity.status === 'ARSIP';
+  const editable = writer && !archived;
   const { q = '', grade = '', status = '', kelas = '', page: pageParam } = await searchParams;
   const page = pageFrom(pageParam);
 
-  const [all, classes, unenrolled] = await Promise.all([
+  const [all, classes, unenrolled, activeStudents] = await Promise.all([
     participantRows(activity.id),
     prisma.schoolClass.findMany({ orderBy: [{ grade: 'asc' }, { name: 'asc' }] }),
     prisma.student.findMany({
       where: { status: 'AKTIF', participations: { none: { activityId: activity.id } } },
       orderBy: [{ grade: 'asc' }, { className: 'asc' }, { name: 'asc' }],
     }),
+    prisma.student.count({ where: { status: 'AKTIF' } }),
   ]);
   const needle = q.trim().toLowerCase();
   const rows = all.filter(
     (r) =>
-      (!needle || r.name.toLowerCase().includes(needle) || r.nis.includes(needle)) &&
+      (!needle || r.name.toLowerCase().includes(needle) || r.nis.toLowerCase().includes(needle)) &&
       (!grade || r.grade === grade) &&
       // '-' menyaring peserta yang belum punya kelas.
       (!kelas || (kelas === '-' ? !r.className : r.className === kelas)) &&
@@ -117,43 +84,8 @@ export default async function SiswaPage({ searchParams }: { searchParams: Promis
         pathname="/siswa"
         activity={activity}
         actions={
-          writer &&
-          !archived && (
+          editable && (
             <>
-              <FormModal trigger="Import Excel" triggerClassName={btnSecondary} title="Import Siswa dari Excel" submitLabel="Import" action={importStudents} wide>
-                <p className="text-[12.5px] text-gray-600">
-                  Salin kolom dari Excel lalu tempel di bawah, satu siswa per baris, urutan kolom:{' '}
-                  <b>NIS, Nama, Tingkat (X/XI/XII), Kelas, Telepon</b>. Kelas dan telepon boleh kosong. Semua langsung didaftarkan ke{' '}
-                  <b>{activity.name}</b> dengan tagihan {rp(activity.contribution)}.
-                </p>
-                <textarea name="rows" rows={10} className={`${textarea} font-mono text-[12.5px]`} placeholder={'2026001\tAhmad Fauzi\tX\tX-1\t081234567890\n2026002\tBunga Lestari\tX\tX-1'} />
-              </FormModal>
-              <FormModal trigger="Daftarkan Siswa" triggerClassName={btnSecondary} title="Daftarkan Siswa ke Kegiatan" submitLabel="Daftarkan Terpilih" action={enrollStudents} wide>
-                {unenrolled.length === 0 ? (
-                  <p className="text-[12.5px] text-gray-600">Semua siswa di data sekolah sudah terdaftar di <b>{activity.name}</b>.</p>
-                ) : (
-                  <>
-                    <p className="text-[12.5px] text-gray-600">
-                      Centang siswa yang ikut <b>{activity.name}</b>. Tagihan awalnya {rp(activity.contribution)}, bisa diubah
-                      per siswa atau lewat Ubah Tagihan Massal.
-                    </p>
-                    <StudentPicker students={unenrolled} />
-                  </>
-                )}
-              </FormModal>
-              <FormModal trigger="Daftarkan per Tingkat" triggerClassName={btnSecondary} title="Daftarkan Seluruh Siswa Satu Tingkat" submitLabel="Daftarkan" action={enrollGrade}>
-                <p className="text-[12.5px] text-gray-600">
-                  Semua siswa di data siswa pada tingkat yang dipilih, yang belum terdaftar, akan ditambahkan ke <b>{activity.name}</b> dengan tagihan {rp(activity.contribution)}.
-                </p>
-                <div>
-                  <label className={label} htmlFor="grade-enroll">Tingkat</label>
-                  <select id="grade-enroll" name="grade" className={input}>
-                    <option value="X">X</option>
-                    <option value="XI">XI</option>
-                    <option value="XII">XII</option>
-                  </select>
-                </div>
-              </FormModal>
               <FormModal trigger="Ubah Tagihan Massal" triggerClassName={btnSecondary} title="Ubah Tagihan Banyak Siswa" submitLabel="Ubah Tagihan" action={updateBillingBulk}>
                 <p className="text-[12.5px] text-gray-600">
                   Mengubah nominal tagihan sekaligus untuk banyak peserta di <b>{activity.name}</b>. Pembayaran yang
@@ -176,8 +108,33 @@ export default async function SiswaPage({ searchParams }: { searchParams: Promis
                   <input id="amount" name="amount" inputMode="numeric" required defaultValue={activity.contribution} className={`${input} font-mono`} />
                 </div>
               </FormModal>
-              <FormModal trigger="+ Tambah Siswa" title="Tambah Siswa" action={addStudent} wide>
-                <StudentFields contribution={activity.contribution} classes={classes} />
+              <FormModal trigger="+ Daftarkan Siswa" title="Daftarkan Siswa ke Kegiatan" submitLabel="Daftarkan Terpilih" action={enrollStudents} wide>
+                {activeStudents === 0 ? (
+                  // Dibedakan dari "semua sudah terdaftar": di sini tidak ada
+                  // yang bisa dipilih karena data siswanya memang belum ada, dan
+                  // pengguna perlu tahu ke mana harus mengisinya.
+                  <p className="text-[12.5px] text-gray-600">
+                    Data Siswa masih kosong. Tambahkan atau impor siswa lebih dulu di{' '}
+                    <Link href="/master/siswa" className="font-semibold text-brand-700">Master Data › Data Siswa</Link>.
+                  </p>
+                ) : unenrolled.length === 0 ? (
+                  <p className="text-[12.5px] text-gray-600">
+                    Semua {activeStudents} siswa aktif sudah terdaftar di <b>{activity.name}</b>.
+                  </p>
+                ) : (
+                  <>
+                    <p className="text-[12.5px] text-gray-600">
+                      Pilih siswa dari Data Siswa yang ikut <b>{activity.name}</b>. Tagihan awalnya{' '}
+                      {rp(activity.contribution)}, bisa diubah per peserta atau lewat Ubah Tagihan Massal. Untuk
+                      mendaftarkan satu tingkat sekaligus, saring tingkatnya lalu pilih semua yang tampil.
+                    </p>
+                    <StudentPicker students={unenrolled} />
+                    <p className="text-[11.5px] text-gray-500">
+                      Siswa yang dicari belum ada? Tambahkan di{' '}
+                      <Link href="/master/siswa" className="font-semibold text-brand-700">Master Data › Data Siswa</Link>.
+                    </p>
+                  </>
+                )}
               </FormModal>
             </>
           )
@@ -185,7 +142,7 @@ export default async function SiswaPage({ searchParams }: { searchParams: Promis
       />
 
       <KpiRow>
-        <Kpi label="Total Siswa" value={String(all.length)} hint={`${lunas} lunas`} />
+        <Kpi label="Total Peserta" value={String(all.length)} hint={`${lunas} lunas`} />
         <Kpi label="Total Tagihan" value={rp(totalBilling)} />
         <Kpi label="Total Dibayar" value={rp(totalPaid)} tone="success" />
         <Kpi label="Sisa Tagihan" value={rp(totalBilling - totalPaid)} tone="error" />
@@ -210,7 +167,7 @@ export default async function SiswaPage({ searchParams }: { searchParams: Promis
         <table className={`${table} min-w-[900px]`}>
           <thead>
             <tr>
-              {writer && !archived && <th className={`${th} w-10`}><span className="sr-only">Pilih</span></th>}
+              {editable && <th className={`${th} w-10`}><span className="sr-only">Pilih</span></th>}
               <th className={th}>NIS</th>
               <th className={th}>Nama Siswa</th>
               <th className={th}>Kelas</th>
@@ -218,20 +175,22 @@ export default async function SiswaPage({ searchParams }: { searchParams: Promis
               <th className={thNum}>Dibayar</th>
               <th className={thNum}>Sisa</th>
               <th className={th}>Status</th>
-              {writer && !archived && <th className={th}>Aksi</th>}
+              {editable && <th className={th}>Aksi</th>}
             </tr>
           </thead>
           <tbody>
             {paged.length === 0 && (
               <tr>
-                <td className={`${td} py-10 text-center text-gray-500`} colSpan={writer && !archived ? 9 : 8}>
-                  {all.length === 0 ? 'Belum ada peserta. Tambah siswa, import dari Excel, atau daftarkan per tingkat.' : 'Tidak ada siswa yang cocok dengan filter.'}
+                <td className={`${td} py-10 text-center text-gray-500`} colSpan={editable ? 9 : 8}>
+                  {all.length === 0
+                    ? 'Belum ada peserta. Klik Daftarkan Siswa untuk memilih siswa dari Data Siswa.'
+                    : 'Tidak ada peserta yang cocok dengan filter.'}
                 </td>
               </tr>
             )}
             {paged.map((r) => (
               <tr key={r.id}>
-                {writer && !archived && (
+                {editable && (
                   <td className={td}>
                     <input
                       type="checkbox"
@@ -251,7 +210,7 @@ export default async function SiswaPage({ searchParams }: { searchParams: Promis
                 <td className={tdNum}>{rp(r.paid)}</td>
                 <td className={tdNum}>{rp(Math.max(r.remaining, 0))}</td>
                 <td className={td}><Badge status={r.status} /></td>
-                {writer && !archived && (
+                {editable && (
                   <td className={`${td} whitespace-nowrap`}>
                     {r.remaining > 0 && (
                       <PaymentFormModal
@@ -262,8 +221,32 @@ export default async function SiswaPage({ searchParams }: { searchParams: Promis
                         today={todayIso()}
                       />
                     )}
-                    <FormModal trigger="Edit" triggerClassName={btnGhost} title="Edit Siswa" action={updateParticipant} wide>
-                      <StudentFields contribution={activity.contribution} classes={classes} row={r} />
+                    <FormModal trigger="Ubah Tagihan" triggerClassName={btnGhost} title="Ubah Tagihan Peserta" action={updateParticipantBilling}>
+                      <input type="hidden" name="participantId" value={r.id} />
+                      <div className="rounded-lg bg-gray-50 px-3 py-2.5 text-[13px]">
+                        <div className="font-semibold text-gray-900">{r.name}</div>
+                        <div className="text-gray-500">
+                          <span className={mono}>{r.nis}</span> · {r.className ?? `Tingkat ${r.grade}`}
+                        </div>
+                      </div>
+                      <div>
+                        <label className={label} htmlFor={`billing-${r.id}`}>Tagihan (Rp)</label>
+                        <input
+                          id={`billing-${r.id}`}
+                          name="billing"
+                          inputMode="numeric"
+                          required
+                          defaultValue={r.billing}
+                          className={`${input} font-mono`}
+                        />
+                      </div>
+                      <p className="text-[11.5px] text-gray-500">
+                        Nama, kelas, atau telepon salah? Ubah di{' '}
+                        <Link href={`/master/siswa?q=${encodeURIComponent(r.nis)}`} className="font-semibold text-brand-700">
+                          Master Data › Data Siswa
+                        </Link>
+                        .
+                      </p>
                     </FormModal>
                     {r.paymentCount === 0 && (
                       <ConfirmAction
@@ -289,7 +272,7 @@ export default async function SiswaPage({ searchParams }: { searchParams: Promis
   return (
     <>
       {head}
-      {writer && !archived ? (
+      {editable ? (
         <BulkSelect
           action={removeParticipants}
           actionLabel="Keluarkan Terpilih"

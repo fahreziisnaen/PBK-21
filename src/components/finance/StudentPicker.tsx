@@ -30,7 +30,7 @@ export function StudentPicker({ students }: { students: PickableStudent[] }) {
     const needle = q.trim().toLowerCase();
     return students.filter(
       (s) =>
-        (!needle || s.name.toLowerCase().includes(needle) || s.nis.includes(needle)) &&
+        (!needle || s.name.toLowerCase().includes(needle) || s.nis.toLowerCase().includes(needle)) &&
         (!grade || s.grade === grade) &&
         (!kelas || (kelas === '-' ? !s.className : s.className === kelas)),
     );
@@ -44,7 +44,7 @@ export function StudentPicker({ students }: { students: PickableStudent[] }) {
       students
         .filter(
           (s) =>
-            (!needle || s.name.toLowerCase().includes(needle) || s.nis.includes(needle)) &&
+            (!needle || s.name.toLowerCase().includes(needle) || s.nis.toLowerCase().includes(needle)) &&
             (!g || s.grade === g) &&
             (!k || (k === '-' ? !s.className : s.className === k)),
         )

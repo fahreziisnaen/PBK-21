@@ -40,101 +40,28 @@ function refresh() {
 }
 
 /**
- * Tambah siswa ke kegiatan aktif. Siswa disimpan sekali (NIS unik) lalu
- * didaftarkan sebagai peserta; kalau NIS sudah ada, data siswanya dipakai
- * ulang dan diperbarui — tidak diinput dua kali untuk kegiatan berbeda.
+ * Ubah tagihan satu peserta. Hanya tagihan: nama, tingkat, kelas, dan telepon
+ * adalah data induk siswa dan diubah di Master Data › Data Siswa. Dulu tombol
+ * "Edit" di Data Peserta ikut mengubah data induk itu, sehingga membetulkan
+ * tagihan satu kegiatan bisa diam-diam mengganti data siswa di semua kegiatan.
  */
-export async function addStudent(_: ActionResult, fd: FormData): Promise<ActionResult> {
-  await requireWriter();
-  const target = await getWritableActivity();
-  if ('error' in target) return fail(target.error);
-  const { activity } = target;
-
-  const nis = str(fd, 'nis');
-  const name = str(fd, 'name');
-  const phoneRaw = str(fd, 'phone');
-  const phone = phoneRaw ? normalizePhone(phoneRaw) : null;
-  const billing = str(fd, 'billing') ? parseAmount(fd.get('billing')) : activity.contribution;
-
-  if (!nis) return fail('NIS wajib diisi.');
-  if (!name) return fail('Nama siswa wajib diisi.');
-  if (!GRADES.includes(str(fd, 'grade') as Grade)) return fail('Pilih tingkat X, XI, atau XII.');
-  const cls = await resolveClass(str(fd, 'className'), str(fd, 'grade') as Grade);
-  if ('error' in cls) return fail(cls.error);
-  const { className, grade } = cls;
-  if (phoneRaw && !phone) return fail('Nomor telepon tidak valid. Contoh: 081234567890.');
-  if (!billing) return fail('Tagihan harus lebih dari nol.');
-
-  const student = await prisma.student.upsert({
-    where: { nis },
-    create: { nis, name, grade, className, phone },
-    update: { name, grade, className, phone },
-  });
-  const already = await prisma.participant.findUnique({
-    where: { activityId_studentId: { activityId: activity.id, studentId: student.id } },
-  });
-  if (already) return fail(`${student.name} (NIS ${nis}) sudah terdaftar di kegiatan ini.`);
-
-  await prisma.participant.create({ data: { activityId: activity.id, studentId: student.id, billing } });
-  refresh();
-  return ok(`${student.name} ditambahkan ke ${activity.name}.`);
-}
-
-/** Ubah data siswa dan tagihannya di kegiatan aktif. */
-export async function updateParticipant(_: ActionResult, fd: FormData): Promise<ActionResult> {
+export async function updateParticipantBilling(_: ActionResult, fd: FormData): Promise<ActionResult> {
   await requireWriter();
   const participantId = str(fd, 'participantId');
   const participant = await prisma.participant.findUnique({
     where: { id: participantId },
-    include: { activity: true },
+    include: { activity: true, student: { select: { name: true } } },
   });
   if (!participant) return fail('Peserta tidak ditemukan.');
   if (participant.activity.status === 'ARSIP') return fail('Kegiatan ini sudah diarsipkan dan hanya bisa dibaca.');
 
-  const name = str(fd, 'name');
-  const phoneRaw = str(fd, 'phone');
-  const phone = phoneRaw ? normalizePhone(phoneRaw) : null;
   const billing = parseAmount(fd.get('billing'));
-
-  if (!name) return fail('Nama siswa wajib diisi.');
-  if (!GRADES.includes(str(fd, 'grade') as Grade)) return fail('Pilih tingkat X, XI, atau XII.');
-  const cls = await resolveClass(str(fd, 'className'), str(fd, 'grade') as Grade);
-  if ('error' in cls) return fail(cls.error);
-  const { className, grade } = cls;
-  if (phoneRaw && !phone) return fail('Nomor telepon tidak valid. Contoh: 081234567890.');
   if (!billing) return fail('Tagihan harus lebih dari nol.');
 
-  await prisma.$transaction([
-    prisma.student.update({ where: { id: participant.studentId }, data: { name, grade, className, phone } }),
-    prisma.participant.update({ where: { id: participantId }, data: { billing } }),
-  ]);
+  await prisma.participant.update({ where: { id: participantId }, data: { billing } });
   refresh();
   revalidatePath(`/siswa/${participant.studentId}`);
-  return ok('Data siswa diperbarui.');
-}
-
-/** Daftarkan semua siswa satu tingkat yang belum menjadi peserta kegiatan aktif. */
-export async function enrollGrade(_: ActionResult, fd: FormData): Promise<ActionResult> {
-  await requireWriter();
-  const target = await getWritableActivity();
-  if ('error' in target) return fail(target.error);
-  const { activity } = target;
-  const grade = str(fd, 'grade') as Grade;
-  if (!GRADES.includes(grade)) return fail('Pilih tingkat.');
-
-  const students = await prisma.student.findMany({
-    // Alumni dikecualikan: mereka sudah lulus dan tidak ikut kegiatan baru.
-    where: { grade, status: 'AKTIF', participations: { none: { activityId: activity.id } } },
-    select: { id: true },
-  });
-  if (students.length === 0) return fail(`Semua siswa tingkat ${grade} sudah terdaftar, atau belum ada data siswanya.`);
-
-  await prisma.participant.createMany({
-    data: students.map((s) => ({ activityId: activity.id, studentId: s.id, billing: activity.contribution })),
-    skipDuplicates: true,
-  });
-  refresh();
-  return ok(`${students.length} siswa tingkat ${grade} didaftarkan.`);
+  return ok(`Tagihan ${participant.student.name} diubah menjadi ${rp(billing)}.`);
 }
 
 /** Keluarkan peserta dari kegiatan — hanya bila belum pernah ada pembayaran. */
@@ -157,15 +84,19 @@ export async function removeParticipant(participantId: string): Promise<ActionRe
 }
 
 /**
- * Impor banyak siswa sekaligus dari teks yang ditempel dari Excel: satu baris
- * per siswa, kolom NIS, Nama, Tingkat, Kelas (opsional), Telepon (opsional),
- * dipisah tab, titik koma, atau koma. Semua langsung didaftarkan ke kegiatan aktif.
+ * Impor banyak siswa sekaligus ke Data Siswa dari teks yang ditempel dari
+ * Excel: satu baris per siswa, kolom NIS, Nama, Tingkat, Kelas (opsional),
+ * Telepon (opsional), dipisah tab, titik koma, atau koma.
+ *
+ * Hanya mengisi data induk — tidak mendaftarkan siapa pun ke kegiatan. Karena
+ * itu impor juga tidak lagi butuh kegiatan aktif: data siswa sekolah tidak
+ * bergantung pada ada atau tidaknya kegiatan. Pendaftaran ke kegiatan dilakukan
+ * terpisah lewat Daftarkan Siswa di Data Peserta.
+ *
+ * NIS yang sudah ada diperbarui, bukan digandakan; status alumni dibiarkan.
  */
 export async function importStudents(_: ActionResult, fd: FormData): Promise<ActionResult> {
   await requireWriter();
-  const target = await getWritableActivity();
-  if ('error' in target) return fail(target.error);
-  const { activity } = target;
 
   const lines = str(fd, 'rows')
     .split(/\r?\n/)
@@ -201,22 +132,26 @@ export async function importStudents(_: ActionResult, fd: FormData): Promise<Act
   }
   for (const row of parsed) if (row.className) row.grade = existing.get(row.className)!;
 
-  let added = 0;
+  // Dihitung sebelum ditulis, supaya pesannya bisa membedakan siswa baru dari
+  // siswa lama yang datanya diperbarui — dua hal yang sangat berbeda bagi
+  // orang yang baru saja menempel ratusan baris.
+  const known = new Set(
+    (await prisma.student.findMany({ where: { nis: { in: parsed.map((r) => r.nis) } }, select: { nis: true } })).map(
+      (st) => st.nis,
+    ),
+  );
   for (const row of parsed) {
-    const student = await prisma.student.upsert({
+    await prisma.student.upsert({
       where: { nis: row.nis },
       create: row,
       update: { name: row.name, grade: row.grade, className: row.className, phone: row.phone },
     });
-    const result = await prisma.participant.createMany({
-      data: [{ activityId: activity.id, studentId: student.id, billing: activity.contribution }],
-      skipDuplicates: true,
-    });
-    added += result.count;
   }
+  const created = parsed.filter((r) => !known.has(r.nis)).length;
   refresh();
+  revalidatePath('/master/siswa');
   return ok(
-    `${parsed.length} siswa diproses, ${added} baru didaftarkan ke ${activity.name}` +
+    `${parsed.length} baris diproses: ${created} siswa baru, ${parsed.length - created} diperbarui` +
       (createdClasses ? `, ${createdClasses} kelas baru dibuat.` : '.'),
   );
 }

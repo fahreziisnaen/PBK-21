@@ -127,3 +127,42 @@ test('filter menerapkan diri tanpa tombol, dan kelas mengikuti tingkat', async (
 
   await prisma.schoolClass.deleteMany({ where: { name: lain } });
 });
+
+test('import excel mengisi data siswa tanpa mendaftarkan ke kegiatan mana pun', async () => {
+  const kelasBaru = `I${stamp.slice(-4)}-9`;
+  await page.goto('/master/siswa');
+  await page.getByRole('button', { name: 'Import Excel' }).click();
+  const dialog = page.getByRole('dialog', { name: 'Import Siswa dari Excel' });
+
+  // Satu siswa lama (NIS sudah ada — namanya diperbarui) dan dua siswa baru,
+  // salah satunya di kelas yang belum terdaftar di master.
+  await dialog.getByLabel('Data siswa dari Excel').fill(
+    [
+      `IN${stamp}1\tSiswa Induk 1 Diperbarui ${stamp}\tX\t${KELAS}`,
+      `IM${stamp}1\tSiswa Impor A ${stamp}\tX\t${KELAS}\t081234567890`,
+      `IM${stamp}2\tSiswa Impor B ${stamp}\tX\t${kelasBaru}`,
+    ].join('\n'),
+  );
+  await dialog.getByRole('button', { name: 'Import' }).click();
+  await expect(page.getByText('3 baris diproses: 2 siswa baru, 1 diperbarui, 1 kelas baru dibuat.')).toBeVisible();
+
+  const imported = await prisma.student.findMany({
+    where: { nis: { in: [`IM${stamp}1`, `IM${stamp}2`] } },
+    include: { _count: { select: { participations: true } } },
+  });
+  studentIds.push(...imported.map((s) => s.id));
+  expect(imported).toHaveLength(2);
+  // Inti perubahan ini: impor hanya mengisi data induk.
+  expect(imported.every((s) => s._count.participations === 0)).toBe(true);
+
+  // NIS lama diperbarui, tidak digandakan.
+  expect(await prisma.student.count({ where: { nis: `IN${stamp}1` } })).toBe(1);
+  expect((await prisma.student.findFirstOrThrow({ where: { nis: `IN${stamp}1` } })).name).toBe(
+    `Siswa Induk 1 Diperbarui ${stamp}`,
+  );
+
+  // Kelas yang belum ada dibuat otomatis.
+  expect(await prisma.schoolClass.count({ where: { name: kelasBaru } })).toBe(1);
+  await prisma.student.deleteMany({ where: { nis: `IM${stamp}2` } });
+  await prisma.schoolClass.deleteMany({ where: { name: kelasBaru } }).catch(() => {});
+});

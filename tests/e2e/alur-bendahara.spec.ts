@@ -72,8 +72,8 @@ test('alur bendahara lengkap', async ({ page, context }) => {
   await page.getByRole('button', { name: 'Hapus Permanen' }).click();
   await expect(page.getByRole('cell', { name: CLASS_DEL, exact: true })).toHaveCount(0);
 
-  // --- Siswa ---
-  await page.goto('/siswa');
+  // --- Siswa: dibuat di Data Siswa, bukan di Data Peserta ---
+  await page.goto('/master/siswa');
   await page.getByRole('button', { name: '+ Tambah Siswa' }).click();
   const stDialog = page.getByRole('dialog', { name: 'Tambah Siswa' });
   await stDialog.getByLabel('NIS').fill(NIS);
@@ -81,6 +81,15 @@ test('alur bendahara lengkap', async ({ page, context }) => {
   await stDialog.getByLabel('Tingkat').selectOption('X');
   await stDialog.getByLabel('Kelas', { exact: true }).selectOption(CLASS);
   await stDialog.getByRole('button', { name: 'Simpan' }).click();
+  await expect(page.getByRole('row', { name: new RegExp(STUDENT) })).toBeVisible();
+
+  // --- Peserta: siswa tadi didaftarkan ke kegiatan ---
+  await page.goto('/siswa');
+  await page.getByRole('button', { name: 'Daftarkan Siswa' }).click();
+  const enrollDialog = page.getByRole('dialog', { name: 'Daftarkan Siswa ke Kegiatan' });
+  await enrollDialog.getByLabel('Cari siswa').fill(NIS);
+  await enrollDialog.getByRole('checkbox', { name: new RegExp(STUDENT) }).check();
+  await enrollDialog.getByRole('button', { name: 'Daftarkan Terpilih' }).click();
   const studentRow = page.getByRole('row', { name: new RegExp(STUDENT) });
   await expect(studentRow).toContainText('Belum Bayar');
 

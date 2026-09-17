@@ -98,7 +98,7 @@ test('menariknya ke master memakai tingkat siswa terbanyak', async () => {
 });
 
 test('setelah ditarik, kelasnya bisa dipilih untuk siswa baru', async () => {
-  await page.goto('/siswa');
+  await page.goto('/master/siswa');
   await page.getByRole('button', { name: '+ Tambah Siswa' }).click();
   const dialog = page.getByRole('dialog', { name: 'Tambah Siswa' });
   await expect(dialog.getByLabel('Kelas', { exact: true }).getByRole('option', { name: new RegExp(KELAS_A) })).toHaveCount(1);
