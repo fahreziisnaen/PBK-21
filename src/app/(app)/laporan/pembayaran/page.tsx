@@ -2,7 +2,7 @@ import { PageHead } from '@/components/shell/PageHead';
 import { Badge } from '@/components/ui/Badge';
 import { Kpi, KpiRow, NoActivity } from '@/components/ui/Kpi';
 import { PrintButton } from '@/components/ui/PrintButton';
-import { ReportFilters } from '@/components/finance/ReportFilters';
+import { GradeClassSelects, ReportFilters } from '@/components/finance/ReportFilters';
 import { requireUser } from '@/lib/auth-guard';
 import { resolveReport } from '@/lib/report-context';
 import { isoDate, payStatus } from '@/lib/finance';
@@ -72,23 +72,7 @@ export default async function LaporanPembayaranPage({ searchParams }: { searchPa
       <PageHead pathname="/laporan/pembayaran" activity={activity} actions={<PrintButton label="Cetak Laporan" />} />
 
       <ReportFilters activities={activities} activityId={activity.id} from={sp.from} to={sp.to}>
-        <select name="grade" defaultValue={sp.grade ?? ''} className={`${input} max-w-[185px]`} aria-label="Tingkat">
-          <option value="">Semua tingkat</option>
-          <option value="X">Tingkat X</option>
-          <option value="XI">Tingkat XI</option>
-          <option value="XII">Tingkat XII</option>
-        </select>
-        <select name="kelas" defaultValue={sp.kelas ?? ''} className={`${input} max-w-[205px]`} aria-label="Kelas">
-          <option value="">Semua kelas</option>
-          <option value="-">— Tanpa kelas —</option>
-          {/* Hanya kelas pada tingkat yang sedang disaring: menawarkan kelas
-              tingkat lain di sini pasti menghasilkan laporan kosong. */}
-          {classes
-            .filter((c) => !sp.grade || c.grade === sp.grade)
-            .map((c) => (
-              <option key={c.id} value={c.name}>{c.name}</option>
-            ))}
-        </select>
+        <GradeClassSelects classes={classes} grade={sp.grade} kelas={sp.kelas} />
         <select name="status" defaultValue={sp.status ?? ''} className={`${input} max-w-[205px]`} aria-label="Status">
           <option value="">Semua status</option>
           <option>Lunas</option>

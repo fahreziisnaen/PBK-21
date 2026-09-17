@@ -1,7 +1,7 @@
 import { PageHead } from '@/components/shell/PageHead';
 import { Kpi, KpiRow, NoActivity } from '@/components/ui/Kpi';
 import { PrintButton } from '@/components/ui/PrintButton';
-import { ReportFilters } from '@/components/finance/ReportFilters';
+import { GradeClassSelects, ReportFilters } from '@/components/finance/ReportFilters';
 import { requireUser } from '@/lib/auth-guard';
 import { resolveReport } from '@/lib/report-context';
 import { isoDate, ledgerRows } from '@/lib/finance';
@@ -9,7 +9,16 @@ import { prisma } from '@/lib/prisma';
 import { fdate, fdateLong, rp } from '@/lib/format';
 import { input, mono, table, tableWrap, td, tdNum, th, thNum } from '@/lib/ui';
 
-type Search = { activityId?: string; from?: string; to?: string; categoryId?: string; type?: string; method?: string };
+type Search = {
+  activityId?: string;
+  from?: string;
+  to?: string;
+  categoryId?: string;
+  type?: string;
+  method?: string;
+  grade?: string;
+  kelas?: string;
+};
 
 export default async function LaporanKeuanganPage({ searchParams }: { searchParams: Promise<Search> }) {
   const user = await requireUser();
@@ -24,10 +33,22 @@ export default async function LaporanKeuanganPage({ searchParams }: { searchPara
       </>
     );
   }
-  const type = sp.type === 'masuk' || sp.type === 'keluar' ? sp.type : '';
   const method = sp.method === 'TUNAI' || sp.method === 'TRANSFER' ? sp.method : '';
-  const categories = await prisma.expenseCategory.findMany({ orderBy: { code: 'asc' } });
-  const categoryName = categories.find((c) => c.id === sp.categoryId)?.name;
+  const grade = sp.grade === 'X' || sp.grade === 'XI' || sp.grade === 'XII' ? sp.grade : '';
+  const kelas = sp.kelas ?? '';
+  const [categories, classes] = await Promise.all([
+    prisma.expenseCategory.findMany({ orderBy: { code: 'asc' } }),
+    prisma.schoolClass.findMany({ orderBy: [{ grade: 'asc' }, { name: 'asc' }] }),
+  ]);
+
+  // Menyaring per tingkat atau kelas mengubah laporan ini jadi laporan
+  // PEMASUKAN kelas itu. Pengeluaran milik kegiatan dan tidak terikat kelas
+  // mana pun, jadi ia dikeluarkan, dan saldo tidak ditampilkan: pemasukan satu
+  // kelas dikurangi seluruh pengeluaran kegiatan bukan angka yang berarti.
+  // Penyaring jenis dan kategori pengeluaran ikut diabaikan karena alasan yang sama.
+  const byClass = Boolean(grade || kelas);
+  const type = byClass ? '' : sp.type === 'masuk' || sp.type === 'keluar' ? sp.type : '';
+  const categoryName = byClass ? undefined : categories.find((c) => c.id === sp.categoryId)?.name;
 
   const ledger = await ledgerRows(activity.id);
   const inPeriod = (d: Date) => (!from || d >= from) && (!to || d <= to);
@@ -38,8 +59,16 @@ export default async function LaporanKeuanganPage({ searchParams }: { searchPara
       (type !== 'masuk' || r.income > 0) &&
       (type !== 'keluar' || r.expense > 0) &&
       (!categoryName || r.category === categoryName) &&
-      (!method || r.method === method),
+      (!method || r.method === method) &&
+      (!byClass ||
+        // Hanya pemasukan: pengeluaran berkelas null, dan tanpa syarat ini
+        // opsi "Tanpa kelas" (yang mencari null) ikut menyeretnya masuk.
+        (r.income > 0 &&
+          (!grade || r.grade === grade) &&
+          (!kelas || (kelas === '-' ? !r.className : r.className === kelas)))),
   );
+  // Saldo berjalan hanya bermakna bila seluruh mutasi kegiatan ikut terhitung.
+  const showBalance = !type && !categoryName && !byClass;
   const income = rows.reduce((s, r) => s + r.income, 0);
   const expense = rows.reduce((s, r) => s + r.expense, 0);
 
@@ -71,43 +100,75 @@ export default async function LaporanKeuanganPage({ searchParams }: { searchPara
       <PageHead pathname="/laporan/keuangan" activity={activity} actions={<PrintButton label="Cetak Laporan" />} />
 
       <ReportFilters activities={activities} activityId={activity.id} from={sp.from} to={sp.to}>
-        <select name="type" defaultValue={type} className={`${input} max-w-[205px]`} aria-label="Jenis">
-          <option value="">Masuk & keluar</option>
-          <option value="masuk">Pemasukan saja</option>
-          <option value="keluar">Pengeluaran saja</option>
-        </select>
+        <GradeClassSelects classes={classes} grade={grade} kelas={kelas} />
         <select name="method" defaultValue={method} className={`${input} max-w-[195px]`} aria-label="Metode">
           <option value="">Tunai & transfer</option>
           <option value="TUNAI">Tunai saja</option>
           <option value="TRANSFER">Transfer saja</option>
         </select>
-        <select name="categoryId" defaultValue={sp.categoryId ?? ''} className={`${input} max-w-[245px]`} aria-label="Kategori pengeluaran">
-          <option value="">Semua kategori</option>
-          {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-        </select>
+        {/* Tidak dirender saat menyaring per kelas: keduanya menyangkut
+            pengeluaran, yang tidak ikut dalam laporan per kelas. Karena tidak
+            ada di form, nilainya juga ikut lepas dari URL saat dikirim ulang. */}
+        {!byClass && (
+          <>
+            <select name="type" defaultValue={type} className={`${input} max-w-[205px]`} aria-label="Jenis">
+              <option value="">Masuk & keluar</option>
+              <option value="masuk">Pemasukan saja</option>
+              <option value="keluar">Pengeluaran saja</option>
+            </select>
+            <select name="categoryId" defaultValue={sp.categoryId ?? ''} className={`${input} max-w-[245px]`} aria-label="Kategori pengeluaran">
+              <option value="">Semua kategori</option>
+              {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+            </select>
+          </>
+        )}
       </ReportFilters>
 
       <div className="rounded-xl border border-gray-200 bg-white p-6 print:border-0 print:p-0">
         <div className="mb-5 border-b-2 border-gray-900 pb-3 text-center">
           <div className="text-[16px] font-extrabold uppercase tracking-wide text-gray-900">{school?.name}</div>
-          <div className="text-[15px] font-bold text-gray-900">LAPORAN KEUANGAN KEGIATAN</div>
-          <div className="text-[13px] text-gray-700">{activity.name} · {activity.category.name}</div>
+          <div className="text-[15px] font-bold text-gray-900">
+            {byClass ? 'LAPORAN PEMASUKAN KEGIATAN' : 'LAPORAN KEUANGAN KEGIATAN'}
+          </div>
+          <div className="text-[13px] text-gray-700">
+            {activity.name} · {activity.category.name}
+            {grade ? ` · Tingkat ${grade}` : ''}
+            {kelas ? ` · Kelas ${kelas === '-' ? 'belum diisi' : kelas}` : ''}
+          </div>
           <div className="text-[12px] text-gray-500">Periode {periodLabel}</div>
         </div>
 
-        <KpiRow>
-          <Kpi label="Saldo Awal" value={rp(opening)} />
-          <Kpi label="Total Pemasukan" value={rp(income)} tone="success" />
-          <Kpi label="Total Pengeluaran" value={rp(expense)} tone="error" />
-          <Kpi label="Saldo Akhir" value={rp(opening + income - expense)} tone="brand" />
-        </KpiRow>
+        {byClass ? (
+          <>
+            <KpiRow>
+              <Kpi label="Total Pemasukan" value={rp(income)} tone="success" />
+              <Kpi label="Pemasukan Tunai" value={rp(byMethod.income.TUNAI)} tone="success" />
+              <Kpi label="Pemasukan Transfer" value={rp(byMethod.income.TRANSFER)} tone="success" />
+              <Kpi label="Transaksi" value={String(rows.length)} hint="pembayaran sah" />
+            </KpiRow>
+            <p data-noprint className="mb-4 rounded-lg bg-gray-100 px-3 py-2 text-[12.5px] text-ink-soft">
+              Disaring per {kelas ? 'kelas' : 'tingkat'}: hanya pemasukan dari siswa yang cocok. Pengeluaran dan saldo
+              tidak ditampilkan karena pengeluaran milik kegiatan, bukan milik kelas. Kelas yang dipakai adalah kelas
+              siswa saat ini.
+            </p>
+          </>
+        ) : (
+          <>
+            <KpiRow>
+              <Kpi label="Saldo Awal" value={rp(opening)} />
+              <Kpi label="Total Pemasukan" value={rp(income)} tone="success" />
+              <Kpi label="Total Pengeluaran" value={rp(expense)} tone="error" />
+              <Kpi label="Saldo Akhir" value={rp(opening + income - expense)} tone="brand" />
+            </KpiRow>
 
-        <KpiRow>
-          <Kpi label="Pemasukan Tunai" value={rp(byMethod.income.TUNAI)} tone="success" />
-          <Kpi label="Pemasukan Transfer" value={rp(byMethod.income.TRANSFER)} tone="success" />
-          <Kpi label="Pengeluaran Tunai" value={rp(byMethod.expense.TUNAI)} tone="error" />
-          <Kpi label="Pengeluaran Transfer" value={rp(byMethod.expense.TRANSFER)} tone="error" />
-        </KpiRow>
+            <KpiRow>
+              <Kpi label="Pemasukan Tunai" value={rp(byMethod.income.TUNAI)} tone="success" />
+              <Kpi label="Pemasukan Transfer" value={rp(byMethod.income.TRANSFER)} tone="success" />
+              <Kpi label="Pengeluaran Tunai" value={rp(byMethod.expense.TUNAI)} tone="error" />
+              <Kpi label="Pengeluaran Transfer" value={rp(byMethod.expense.TRANSFER)} tone="error" />
+            </KpiRow>
+          </>
+        )}
 
         {perCategory.size > 0 && (
           <>
@@ -143,7 +204,7 @@ export default async function LaporanKeuanganPage({ searchParams }: { searchPara
                 <th className={th}>Metode</th>
                 <th className={thNum}>Masuk</th>
                 <th className={thNum}>Keluar</th>
-                {!type && !categoryName && <th className={thNum}>Saldo</th>}
+                {showBalance && <th className={thNum}>Saldo</th>}
               </tr>
             </thead>
             <tbody>
@@ -160,7 +221,7 @@ export default async function LaporanKeuanganPage({ searchParams }: { searchPara
                     <td className={td}>{r.method === 'TUNAI' ? 'Tunai' : 'Transfer'}</td>
                     <td className={tdNum}>{r.income ? rp(r.income) : ''}</td>
                     <td className={tdNum}>{r.expense ? rp(r.expense) : ''}</td>
-                    {!type && !categoryName && <td className={`${tdNum} font-semibold`}>{rp(balances[i]!)}</td>}
+                    {showBalance && <td className={`${tdNum} font-semibold`}>{rp(balances[i]!)}</td>}
                   </tr>
                 );
               })}
@@ -171,7 +232,7 @@ export default async function LaporanKeuanganPage({ searchParams }: { searchPara
                   <td className={td} colSpan={5}>Total</td>
                   <td className={tdNum}>{rp(income)}</td>
                   <td className={tdNum}>{rp(expense)}</td>
-                  {!type && !categoryName && <td className={tdNum}>{rp(opening + income - expense)}</td>}
+                  {showBalance && <td className={tdNum}>{rp(opening + income - expense)}</td>}
                 </tr>
               </tfoot>
             )}

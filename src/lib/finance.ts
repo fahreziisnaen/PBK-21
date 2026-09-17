@@ -107,6 +107,13 @@ export type LedgerRow = {
   expense: number;
   balance: number;
   href: string | null;
+  /**
+   * Tingkat dan kelas siswa pembayar, untuk penyaring laporan. Selalu null pada
+   * baris pengeluaran: pengeluaran milik kegiatan, tidak terikat kelas mana pun.
+   * Nilainya kelas siswa SAAT INI — riwayat kelas per tahun tidak disimpan.
+   */
+  grade: 'X' | 'XI' | 'XII' | null;
+  className: string | null;
 };
 
 /** Spec §4.3 — pembayaran sah dan pengeluaran aktif, kronologis, saldo berjalan. */
@@ -137,6 +144,8 @@ export async function ledgerRows(
       income: p.amount,
       expense: 0,
       href: `/pembayaran/${p.id}`,
+      grade: p.participant.student.grade,
+      className: p.participant.student.className,
     })),
     ...expenses.map((e) => ({
       sort: 1000 + e.seq,
@@ -149,13 +158,28 @@ export async function ledgerRows(
       income: 0,
       expense: e.amount,
       href: null,
+      grade: null,
+      className: null,
     })),
   ].sort((a, b) => a.date.getTime() - b.date.getTime() || a.sort - b.sort);
 
   let balance = 0;
   return rows.map((r) => {
     balance += r.income - r.expense;
-    return { key: r.key, date: r.date, ref: r.ref, description: r.description, category: r.category, method: r.method, income: r.income, expense: r.expense, href: r.href, balance };
+    return {
+      key: r.key,
+      date: r.date,
+      ref: r.ref,
+      description: r.description,
+      category: r.category,
+      method: r.method,
+      income: r.income,
+      expense: r.expense,
+      href: r.href,
+      balance,
+      grade: r.grade,
+      className: r.className,
+    };
   });
 }
 

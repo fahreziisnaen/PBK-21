@@ -1,5 +1,6 @@
 import type { AcademicYear, Activity } from '@prisma/client';
-import { btnSecondary, input } from '@/lib/ui';
+import { AutoSubmitForm } from '@/components/finance/AutoSubmitForm';
+import { input } from '@/lib/ui';
 
 type ReportActivity = Activity & { academicYear: AcademicYear | null };
 
@@ -38,7 +39,7 @@ export function ReportFilters({
   children?: React.ReactNode;
 }) {
   return (
-    <form className="mb-4 flex flex-wrap items-center gap-2 rounded-xl border border-gray-200 bg-white p-3" data-noprint>
+    <AutoSubmitForm className="mb-4 flex flex-wrap items-center gap-2 rounded-xl border border-gray-200 bg-white p-3">
       <select name="activityId" defaultValue={activityId} className={`${input} max-w-[325px]`} aria-label="Kegiatan">
         {groupByYear(activities).map((group) => (
           <optgroup key={group.label} label={group.label}>
@@ -54,7 +55,44 @@ export function ReportFilters({
       <span className="text-gray-400">–</span>
       <input type="date" name="to" defaultValue={to ?? ''} className={`${input} max-w-[160px]`} aria-label="Sampai tanggal" />
       {children}
-      <button className={btnSecondary}>Tampilkan</button>
-    </form>
+    </AutoSubmitForm>
+  );
+}
+
+/**
+ * Pasangan pilihan tingkat dan kelas untuk laporan. Daftar kelas dipersempit
+ * ke tingkat yang sedang disaring, dan tiap pilihan membawa tingkatnya di
+ * `data-grade` — dari situ AutoSubmitForm tahu kelas mana yang harus dilepas
+ * saat tingkatnya diganti.
+ */
+export function GradeClassSelects({
+  classes,
+  grade,
+  kelas,
+}: {
+  classes: { id: string; name: string; grade: string }[];
+  grade?: string;
+  kelas?: string;
+}) {
+  return (
+    <>
+      <select name="grade" defaultValue={grade ?? ''} className={`${input} max-w-[185px]`} aria-label="Tingkat">
+        <option value="">Semua tingkat</option>
+        <option value="X">Tingkat X</option>
+        <option value="XI">Tingkat XI</option>
+        <option value="XII">Tingkat XII</option>
+      </select>
+      <select name="kelas" defaultValue={kelas ?? ''} className={`${input} max-w-[205px]`} aria-label="Kelas">
+        <option value="">{grade ? `Semua kelas tingkat ${grade}` : 'Semua kelas'}</option>
+        <option value="-">— Tanpa kelas —</option>
+        {classes
+          .filter((c) => !grade || c.grade === grade)
+          .map((c) => (
+            <option key={c.id} value={c.name} data-grade={c.grade}>
+              {c.name}
+            </option>
+          ))}
+      </select>
+    </>
   );
 }
