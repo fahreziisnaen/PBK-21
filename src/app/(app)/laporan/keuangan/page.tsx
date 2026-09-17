@@ -9,7 +9,7 @@ import { isoDate, ledgerRows, todayIso } from '@/lib/finance';
 import { reportPeriod } from '@/lib/report-period';
 import { prisma } from '@/lib/prisma';
 import { fdate, rp } from '@/lib/format';
-import { input, mono, table, tableWrap, td, tdNum, th, thNum } from '@/lib/ui';
+import { filterFull, filterHalf, input, mono, table, tableWrap, td, tdNum, th, thNum } from '@/lib/ui';
 
 type Search = {
   activityId?: string;
@@ -110,7 +110,7 @@ export default async function LaporanKeuanganPage({ searchParams }: { searchPara
 
       <ReportFilters activities={activities} activityId={activity.id} from={sp.from} to={sp.to}>
         <GradeClassSelects classes={classes} grade={grade} kelas={kelas} />
-        <select name="method" defaultValue={method} className={`${input} max-w-[195px]`} aria-label="Metode">
+        <select name="method" defaultValue={method} className={`${input} max-w-[195px] ${filterHalf}`} aria-label="Metode">
           <option value="">Tunai & transfer</option>
           <option value="TUNAI">Tunai saja</option>
           <option value="TRANSFER">Transfer saja</option>
@@ -120,12 +120,12 @@ export default async function LaporanKeuanganPage({ searchParams }: { searchPara
             ada di form, nilainya juga ikut lepas dari URL saat dikirim ulang. */}
         {!byClass && (
           <>
-            <select name="type" defaultValue={type} className={`${input} max-w-[205px]`} aria-label="Jenis">
+            <select name="type" defaultValue={type} className={`${input} max-w-[205px] ${filterHalf}`} aria-label="Jenis">
               <option value="">Masuk & keluar</option>
               <option value="masuk">Pemasukan saja</option>
               <option value="keluar">Pengeluaran saja</option>
             </select>
-            <select name="categoryId" defaultValue={sp.categoryId ?? ''} className={`${input} max-w-[245px]`} aria-label="Kategori pengeluaran">
+            <select name="categoryId" defaultValue={sp.categoryId ?? ''} className={`${input} max-w-[245px] ${filterFull}`} aria-label="Kategori pengeluaran">
               <option value="">Semua kategori</option>
               {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>

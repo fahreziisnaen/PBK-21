@@ -47,9 +47,11 @@ export function AutoSubmitForm({ className, children }: { className?: string; ch
     // dan pengirimannya ditunda sebentar supaya ketikan beruntun jadi satu.
     const isDate = target instanceof HTMLInputElement && target.type === 'date';
     if (isDate && target.value && !(Number(target.value.slice(0, 4)) >= 2000)) return;
+    // Kotak pencarian juga ditunda: tanpa itu setiap huruf memuat ulang halaman.
+    const isText = target instanceof HTMLInputElement && (target.type === 'text' || target.type === 'search');
 
     clearTimeout(timer.current);
-    timer.current = setTimeout(submit, isDate ? 500 : 0);
+    timer.current = setTimeout(submit, isDate ? 500 : isText ? 350 : 0);
   }
 
   return (

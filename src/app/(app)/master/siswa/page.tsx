@@ -126,7 +126,7 @@ export default async function IndukSiswaPage({ searchParams }: { searchParams: P
                 </p>
                 <ul className="list-disc space-y-0.5 pl-5 text-[12px] text-gray-500">
                   <li>NIS yang sudah ada diperbarui datanya, tidak digandakan.</li>
-                  <li>Kelas yang belum ada di Master Data › Kelas dibuat otomatis.</li>
+                  <li>Kelas yang belum ada di Master Data › Data Kelas dibuat otomatis.</li>
                   <li>Siswa hanya masuk Data Siswa. Untuk mengikutkan ke kegiatan, pakai Daftarkan Siswa di Data Peserta.</li>
                 </ul>
                 <textarea

@@ -1,7 +1,7 @@
 'use client';
 
-import { useMemo, useState } from 'react';
-import { input } from '@/lib/ui';
+import { useState } from 'react';
+import { matchesStudent, StudentFilterFields, useStudentFilter } from '@/components/finance/StudentFilter';
 
 export type PickableStudent = { id: string; nis: string; name: string; grade: string; className: string | null };
 
@@ -9,98 +9,25 @@ export type PickableStudent = { id: string; nis: string; name: string; grade: st
  * Daftar siswa bercentang dengan pencarian dan penyaring, untuk modal
  * pendaftaran peserta.
  *
- * Penyaringnya di klien: siswanya sudah ikut terkirim bersama halaman, jadi
- * mengetik langsung menyaring tanpa menunggu server. Yang tersembunyi karena
- * penyaring ikut dilepas centangnya — kalau tidak, pengguna bisa mendaftarkan
- * siswa yang tidak terlihat lagi di layarnya dan tidak tahu sudah memilihnya.
+ * Yang tersembunyi karena penyaring ikut dilepas centangnya — kalau tidak,
+ * pengguna bisa mendaftarkan siswa yang tidak terlihat lagi di layarnya dan
+ * tidak tahu sudah memilihnya.
  */
 export function StudentPicker({ students }: { students: PickableStudent[] }) {
-  const [q, setQ] = useState('');
-  const [grade, setGrade] = useState('');
-  const [kelas, setKelas] = useState('');
+  const filter = useStudentFilter(students);
+  const { visible } = filter;
   const [checked, setChecked] = useState<Set<string>>(new Set());
-
-  const classes = useMemo(() => {
-    const names = new Map<string, string>();
-    for (const s of students) if (s.className) names.set(s.className, s.grade);
-    return [...names.entries()].sort((a, b) => a[0].localeCompare(b[0], 'id', { numeric: true }));
-  }, [students]);
-
-  const visible = useMemo(() => {
-    const needle = q.trim().toLowerCase();
-    return students.filter(
-      (s) =>
-        (!needle || s.name.toLowerCase().includes(needle) || s.nis.toLowerCase().includes(needle)) &&
-        (!grade || s.grade === grade) &&
-        (!kelas || (kelas === '-' ? !s.className : s.className === kelas)),
-    );
-  }, [students, q, grade, kelas]);
-
-  function retainVisible(next: { grade?: string; kelas?: string; q?: string }) {
-    const g = next.grade ?? grade;
-    const k = next.kelas ?? kelas;
-    const needle = (next.q ?? q).trim().toLowerCase();
-    const stillVisible = new Set(
-      students
-        .filter(
-          (s) =>
-            (!needle || s.name.toLowerCase().includes(needle) || s.nis.toLowerCase().includes(needle)) &&
-            (!g || s.grade === g) &&
-            (!k || (k === '-' ? !s.className : s.className === k)),
-        )
-        .map((s) => s.id),
-    );
-    setChecked((prev) => new Set([...prev].filter((id) => stillVisible.has(id))));
-  }
-
-  const visibleClasses = grade ? classes.filter(([, g]) => g === grade) : classes;
 
   return (
     <>
-      <div className="flex flex-wrap gap-2">
-        <input
-          value={q}
-          onChange={(e) => {
-            setQ(e.target.value);
-            retainVisible({ q: e.target.value });
-          }}
-          placeholder="Cari nama atau NIS…"
-          aria-label="Cari siswa"
-          className={`${input} max-w-[220px]`}
-        />
-        <select
-          value={grade}
-          aria-label="Tingkat siswa"
-          className={`${input} max-w-[150px]`}
-          onChange={(e) => {
-            const g = e.target.value;
-            const keepKelas = classes.some(([name, cg]) => name === kelas && (!g || cg === g));
-            setGrade(g);
-            if (!keepKelas) setKelas('');
-            retainVisible({ grade: g, kelas: keepKelas ? kelas : '' });
-          }}
-        >
-          <option value="">Semua tingkat</option>
-          <option value="X">Tingkat X</option>
-          <option value="XI">Tingkat XI</option>
-          <option value="XII">Tingkat XII</option>
-        </select>
-        <select
-          value={kelas}
-          aria-label="Kelas siswa"
-          className={`${input} max-w-[170px]`}
-          onChange={(e) => {
-            setKelas(e.target.value);
-            retainVisible({ kelas: e.target.value });
-          }}
-        >
-          <option value="">Semua kelas</option>
-          <option value="-">— Tanpa kelas —</option>
-          {visibleClasses.map(([name]) => (
-            <option key={name} value={name}>{name}</option>
-          ))}
-        </select>
-      </div>
+      <StudentFilterFields
+        filter={filter}
+        onChange={(next) => {
+          filter.setCriteria(next);
+          const stillVisible = new Set(students.filter((s) => matchesStudent(s, next)).map((s) => s.id));
+          setChecked((prev) => new Set([...prev].filter((id) => stillVisible.has(id))));
+        }}
+      />
 
       <div className="flex flex-wrap items-center gap-3 text-[12.5px]">
         <button
@@ -118,7 +45,7 @@ export function StudentPicker({ students }: { students: PickableStudent[] }) {
         <span className="ml-auto text-ink-soft">{checked.size} dipilih</span>
       </div>
 
-      <div className="max-h-[320px] overflow-y-auto rounded-lg border border-gray-200">
+      <div className="max-h-[320px] overflow-y-auto rounded-lg border border-gray-200 max-[520px]:max-h-[45vh]">
         {visible.length === 0 && (
           <p className="px-3 py-6 text-center text-[12.5px] text-gray-500">Tidak ada siswa yang cocok.</p>
         )}
@@ -142,12 +69,36 @@ export function StudentPicker({ students }: { students: PickableStudent[] }) {
               }
               className="h-4 w-4 flex-none rounded border-gray-300"
             />
-            <span className="min-w-0 flex-1 truncate font-semibold text-gray-900">{s.name}</span>
-            <span className="flex-none font-mono text-[12px] text-gray-500">{s.nis}</span>
-            <span className="w-16 flex-none text-right text-[12px] text-gray-500">{s.className ?? s.grade}</span>
+            <StudentLine student={s} />
           </label>
         ))}
       </div>
+    </>
+  );
+}
+
+/**
+ * Nama, NIS, dan kelas satu siswa dalam daftar pilihan. NIS dan kelas di
+ * bawah nama, bukan sebaris: di layar ponsel tiga kolom sebaris memotong nama
+ * tinggal beberapa huruf.
+ */
+export function StudentLine({
+  student,
+  aside,
+}: {
+  student: { nis: string; name: string; grade: string; className: string | null };
+  /** Keterangan tambahan di ujung kanan, mis. sisa tagihan. */
+  aside?: React.ReactNode;
+}) {
+  return (
+    <>
+      <span className="min-w-0 flex-1">
+        <span className="block truncate font-semibold text-gray-900">{student.name}</span>
+        <span className="block truncate text-[12px] text-gray-500">
+          <span className="font-mono">{student.nis}</span> · {student.className ?? `${student.grade} (tanpa kelas)`}
+        </span>
+      </span>
+      {aside && <span className="flex-none text-right text-[12px] text-gray-600">{aside}</span>}
     </>
   );
 }

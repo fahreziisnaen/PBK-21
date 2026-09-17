@@ -28,7 +28,7 @@ async function resolveClass(raw: string, grade: Grade): Promise<{ className: str
   const name = normalizeClassName(raw);
   if (!name) return { className: null, grade };
   const found = await prisma.schoolClass.findUnique({ where: { name } });
-  if (!found) return { error: `Kelas "${name}" belum terdaftar. Tambahkan dulu di Master Data › Kelas.` };
+  if (!found) return { error: `Kelas "${name}" belum terdaftar. Tambahkan dulu di Master Data › Data Kelas.` };
   return { className: found.name, grade: found.grade };
 }
 

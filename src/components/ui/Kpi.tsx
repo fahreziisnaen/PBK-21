@@ -19,7 +19,7 @@ export function NoActivity() {
     <div className="rounded-xl border border-gray-200 bg-white p-10 text-center">
       <div className="text-[15px] font-bold text-gray-900">Belum ada kegiatan aktif</div>
       <p className="mt-1 text-[13px] text-gray-500">
-        Buat kegiatan di <a href="/master/kegiatan" className="font-semibold text-brand-700">Master Data › Kegiatan</a>, lalu pilih di bagian atas halaman.
+        Buat kegiatan di <a href="/master/kegiatan" className="font-semibold text-brand-700">Master Data › Daftar Kegiatan</a>, lalu pilih di bagian atas halaman.
       </p>
     </div>
   );

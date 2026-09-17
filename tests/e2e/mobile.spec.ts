@@ -189,3 +189,62 @@ test('kuitansi dan halaman login muat di layar ponsel', async ({ browser }) => {
   if (SHOT_DIR) await guestPage.screenshot({ path: `${SHOT_DIR}/_login.png` });
   await guest.close();
 });
+
+/** Kotak batas sebuah isian; gagal jelas bila isiannya tidak dirender. */
+async function box(locator: import('@playwright/test').Locator) {
+  await expect(locator).toBeVisible();
+  const b = await locator.boundingBox();
+  if (!b) throw new Error('isian tidak punya kotak batas');
+  return b;
+}
+
+/** Dua isian berbagi satu baris dan masing-masing kira-kira separuh lebarnya. */
+async function expectSideBySide(a: import('@playwright/test').Locator, b: import('@playwright/test').Locator, rowWidth: number) {
+  const [ba, bb] = [await box(a), await box(b)];
+  expect(Math.abs(ba.y - bb.y), 'tidak sebaris').toBeLessThan(2);
+  expect(ba.width).toBeGreaterThan(rowWidth * 0.4);
+  expect(bb.width).toBeGreaterThan(rowWidth * 0.4);
+}
+
+test('penyaring tersusun dua kolom yang rapi di layar ponsel', async () => {
+  // Pembayaran: kotak cari selebar baris, metode dan status berdampingan,
+  // pasangan tanggal sebaris — dan tidak ada tombol Terapkan lagi.
+  await page.goto('/pembayaran');
+  const search = await box(page.getByLabel('Cari pembayaran'));
+  await expectSideBySide(page.getByLabel('Metode'), page.getByLabel('Status'), search.width);
+  await expectSideBySide(page.getByLabel('Dari tanggal'), page.getByLabel('Sampai tanggal'), search.width * 0.9);
+  expect(search.width).toBeGreaterThan(PHONE.width - 60);
+  await expect(page.getByRole('button', { name: 'Terapkan' })).toHaveCount(0);
+  if (SHOT_DIR) await page.screenshot({ path: `${SHOT_DIR}/_filter-pembayaran.png` });
+
+  // Data Siswa.
+  await page.goto('/master/siswa');
+  const cari = await box(page.getByLabel('Cari', { exact: true }));
+  expect(cari.width).toBeGreaterThan(PHONE.width - 60);
+  await expectSideBySide(page.getByLabel('Tingkat', { exact: true }), page.getByLabel('Kelas', { exact: true }), cari.width);
+
+  // Laporan Keuangan: tujuh penyaring dulu satu kolom setinggi hampir satu layar.
+  await page.goto('/laporan/keuangan');
+  const kegiatan = await box(page.getByLabel('Kegiatan', { exact: true }));
+  await expectSideBySide(page.getByLabel('Tingkat', { exact: true }), page.getByLabel('Kelas', { exact: true }), kegiatan.width);
+  const form = await box(page.locator('form[aria-busy]').first());
+  expect(form.height, 'panel penyaring laporan terlalu tinggi').toBeLessThan(320);
+  if (SHOT_DIR) await page.screenshot({ path: `${SHOT_DIR}/_filter-laporan.png` });
+});
+
+test('pemilih siswa di catat pembayaran nyaman dipakai di ponsel', async () => {
+  await page.goto('/pembayaran');
+  await page.getByRole('button', { name: '+ Catat Pembayaran' }).click();
+  const dialog = page.getByRole('dialog', { name: 'Catat Pembayaran' });
+
+  const cari = await box(dialog.getByLabel('Cari siswa'));
+  await expectSideBySide(dialog.getByLabel('Tingkat siswa'), dialog.getByLabel('Kelas siswa'), cari.width);
+  await dialog.getByLabel('Cari siswa').fill(`Siswa Mobile 2 ${stamp}`);
+  const choice = dialog.getByRole('radio', { name: new RegExp(`Siswa Mobile 2 ${stamp}`) });
+  await choice.check();
+  await expect(dialog.getByText(`Dipilih: Siswa Mobile 2 ${stamp}`)).toBeVisible();
+
+  const overflow = await dialog.evaluate((d) => d.scrollWidth - d.clientWidth);
+  expect(overflow, 'modal menggeser ke samping').toBeLessThanOrEqual(1);
+  if (SHOT_DIR) await page.screenshot({ path: `${SHOT_DIR}/_pemilih-pembayaran.png` });
+});

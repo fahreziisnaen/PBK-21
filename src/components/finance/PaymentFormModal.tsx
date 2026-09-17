@@ -1,9 +1,8 @@
 import { FormModal } from '@/components/ui/FormModal';
+import { ParticipantPicker, type PayableParticipant } from '@/components/finance/ParticipantPicker';
 import { recordPayment } from '@/lib/actions/payments';
 import { rp } from '@/lib/format';
 import { btnPrimary, input, label, textarea } from '@/lib/ui';
-
-type Option = { id: string; name: string; nis: string; remaining: number };
 
 export function PaymentFormModal({
   participants,
@@ -12,30 +11,38 @@ export function PaymentFormModal({
   trigger = '+ Catat Pembayaran',
   triggerClassName = btnPrimary,
 }: {
-  participants: Option[];
+  participants: PayableParticipant[];
   defaultParticipantId?: string;
   today: string;
   trigger?: string;
   triggerClassName?: string;
 }) {
-  const payable = participants.filter((p) => p.remaining > 0);
-  const single = payable.length === 1 ? payable[0] : undefined;
+  // Hanya kolom yang dibutuhkan pemilih yang dikirim ke browser — baris
+  // peserta juga memuat nomor telepon dan rincian tagihan.
+  const payable = participants
+    .filter((p) => p.remaining > 0)
+    .map(({ id, name, nis, grade, className, remaining }) => ({ id, name, nis, grade, className, remaining }));
+  // Dibuka dari baris peserta tertentu: siswanya sudah pasti, tidak perlu dipilih.
+  const fixed = defaultParticipantId ? payable.find((p) => p.id === defaultParticipantId) : undefined;
+  const single = fixed ?? (payable.length === 1 ? payable[0] : undefined);
 
   return (
-    <FormModal trigger={trigger} triggerClassName={triggerClassName} title="Catat Pembayaran" action={recordPayment}>
+    <FormModal trigger={trigger} triggerClassName={triggerClassName} title="Catat Pembayaran" action={recordPayment} wide={!fixed}>
       <div>
-        <label className={label} htmlFor="participantId">Siswa</label>
+        <span className={label}>Siswa</span>
         {payable.length === 0 ? (
           <p className="text-[13px] text-gray-500">Semua peserta sudah lunas.</p>
+        ) : fixed ? (
+          <div className="rounded-lg bg-gray-50 px-3 py-2.5 text-[13px]">
+            <input type="hidden" name="participantId" value={fixed.id} />
+            <div className="font-semibold text-gray-900">{fixed.name}</div>
+            <div className="text-[12px] text-gray-500">
+              <span className="font-mono">{fixed.nis}</span> · {fixed.className ?? fixed.grade} · sisa tagihan{' '}
+              <span className="font-mono">{rp(fixed.remaining)}</span>
+            </div>
+          </div>
         ) : (
-          <select id="participantId" name="participantId" required defaultValue={defaultParticipantId ?? ''} className={input}>
-            {!defaultParticipantId && <option value="" disabled>Pilih siswa…</option>}
-            {payable.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.name} · {p.nis} · sisa {rp(p.remaining)}
-              </option>
-            ))}
-          </select>
+          <ParticipantPicker participants={payable} />
         )}
       </div>
       <div className="grid grid-cols-2 gap-3 max-[520px]:grid-cols-1">

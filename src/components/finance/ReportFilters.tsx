@@ -1,6 +1,7 @@
 import type { AcademicYear, Activity } from '@prisma/client';
 import { AutoSubmitForm } from '@/components/finance/AutoSubmitForm';
-import { input } from '@/lib/ui';
+import { DateRange } from '@/components/ui/DateRange';
+import { filterFull, filterHalf, filterRow, input } from '@/lib/ui';
 
 type ReportActivity = Activity & { academicYear: AcademicYear | null };
 
@@ -39,8 +40,8 @@ export function ReportFilters({
   children?: React.ReactNode;
 }) {
   return (
-    <AutoSubmitForm className="mb-4 flex flex-wrap items-center gap-2 rounded-xl border border-gray-200 bg-white p-3">
-      <select name="activityId" defaultValue={activityId} className={`${input} max-w-[325px]`} aria-label="Kegiatan">
+    <AutoSubmitForm className={`${filterRow} mb-4 rounded-xl border border-gray-200 bg-white p-3`}>
+      <select name="activityId" defaultValue={activityId} className={`${input} max-w-[325px] ${filterFull}`} aria-label="Kegiatan">
         {groupByYear(activities).map((group) => (
           <optgroup key={group.label} label={group.label}>
             {group.items.map((a) => (
@@ -51,9 +52,7 @@ export function ReportFilters({
           </optgroup>
         ))}
       </select>
-      <input type="date" name="from" defaultValue={from ?? ''} className={`${input} max-w-[160px]`} aria-label="Dari tanggal" />
-      <span className="text-gray-400">–</span>
-      <input type="date" name="to" defaultValue={to ?? ''} className={`${input} max-w-[160px]`} aria-label="Sampai tanggal" />
+      <DateRange from={from} to={to} />
       {children}
     </AutoSubmitForm>
   );
@@ -76,13 +75,13 @@ export function GradeClassSelects({
 }) {
   return (
     <>
-      <select name="grade" defaultValue={grade ?? ''} className={`${input} max-w-[185px]`} aria-label="Tingkat">
+      <select name="grade" defaultValue={grade ?? ''} className={`${input} max-w-[185px] ${filterHalf}`} aria-label="Tingkat">
         <option value="">Semua tingkat</option>
         <option value="X">Tingkat X</option>
         <option value="XI">Tingkat XI</option>
         <option value="XII">Tingkat XII</option>
       </select>
-      <select name="kelas" defaultValue={kelas ?? ''} className={`${input} max-w-[205px]`} aria-label="Kelas">
+      <select name="kelas" defaultValue={kelas ?? ''} className={`${input} max-w-[205px] ${filterHalf}`} aria-label="Kelas">
         <option value="">{grade ? `Semua kelas tingkat ${grade}` : 'Semua kelas'}</option>
         <option value="-">— Tanpa kelas —</option>
         {classes

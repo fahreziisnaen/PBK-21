@@ -6,13 +6,15 @@ import { Kpi, KpiRow, NoActivity } from '@/components/ui/Kpi';
 import { PaymentFormModal } from '@/components/finance/PaymentFormModal';
 import { PAGE_SIZE, Pagination, pageFrom } from '@/components/ui/Pagination';
 import { CancelPaymentButton } from '@/components/finance/CancelPaymentButton';
+import { AutoSubmitForm } from '@/components/finance/AutoSubmitForm';
+import { DateRange } from '@/components/ui/DateRange';
 import { requireUser } from '@/lib/auth-guard';
 import { canWrite } from '@/lib/roles';
 import { getActiveActivity } from '@/lib/activity-context';
 import { isoDate, parseDateInput, participantRows, todayIso } from '@/lib/finance';
 import { prisma } from '@/lib/prisma';
 import { fdate, rp } from '@/lib/format';
-import { btnGhost, btnSecondary, input, mono, table, tableWrap, td, tdNum, th, thNum } from '@/lib/ui';
+import { btnGhost, filterFull, filterHalf, filterRow, input, mono, table, tableWrap, td, tdNum, th, thNum } from '@/lib/ui';
 
 type Search = { q?: string; method?: string; status?: string; from?: string; to?: string; page?: string };
 
@@ -87,22 +89,31 @@ export default async function PembayaranPage({ searchParams }: { searchParams: P
         <Kpi label="Dibatalkan" value={String(cancelled)} hint="tidak dihitung" />
       </KpiRow>
 
-      <form className="mb-3 flex flex-wrap gap-2" data-noprint>
-        <input name="q" defaultValue={q} placeholder="Cari siswa, NIS, atau no. kuitansi…" className={`${input} max-w-[280px]`} />
-        <select name="method" defaultValue={sp.method ?? ''} className={`${input} max-w-[195px]`}>
+      <AutoSubmitForm className={`${filterRow} mb-3`}>
+        <input
+          name="q"
+          defaultValue={q}
+          placeholder="Cari siswa, NIS, atau no. kuitansi…"
+          aria-label="Cari pembayaran"
+          className={`${input} max-w-[280px] ${filterFull}`}
+        />
+        <select name="method" defaultValue={sp.method ?? ''} aria-label="Metode" className={`${input} max-w-[195px] ${filterHalf}`}>
           <option value="">Semua metode</option>
           <option value="TUNAI">Tunai</option>
           <option value="TRANSFER">Transfer</option>
         </select>
-        <select name="status" defaultValue={sp.status ?? ''} className={`${input} max-w-[195px]`}>
+        <select name="status" defaultValue={sp.status ?? ''} aria-label="Status" className={`${input} max-w-[195px] ${filterHalf}`}>
           <option value="">Semua status</option>
           <option value="SAH">Sah</option>
           <option value="DIBATALKAN">Dibatalkan</option>
         </select>
-        <input type="date" name="from" defaultValue={sp.from ?? ''} className={`${input} max-w-[160px]`} aria-label="Dari tanggal" />
-        <input type="date" name="to" defaultValue={sp.to ?? ''} className={`${input} max-w-[160px]`} aria-label="Sampai tanggal" />
-        <button className={btnSecondary}>Terapkan</button>
-      </form>
+        <DateRange from={sp.from} to={sp.to} />
+        {(q || sp.method || sp.status || sp.from || sp.to) && (
+          <Link href="/pembayaran" className="text-[12.5px] font-semibold text-brand-700 hover:text-brand-800 max-[640px]:justify-self-start">
+            Reset
+          </Link>
+        )}
+      </AutoSubmitForm>
 
       <div className={tableWrap}>
         <table className={`${table} min-w-[900px]`}>

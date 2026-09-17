@@ -1,9 +1,12 @@
 import type { Expense, ExpenseCategory, Prisma } from '@prisma/client';
+import Link from 'next/link';
 import { PageHead } from '@/components/shell/PageHead';
 import { Badge } from '@/components/ui/Badge';
 import { FormModal } from '@/components/ui/FormModal';
 import { ConfirmAction } from '@/components/ui/ConfirmAction';
 import { Kpi, KpiRow, NoActivity } from '@/components/ui/Kpi';
+import { DateRange } from '@/components/ui/DateRange';
+import { AutoSubmitForm } from '@/components/finance/AutoSubmitForm';
 import { requireUser } from '@/lib/auth-guard';
 import { canWrite } from '@/lib/roles';
 import { getActiveActivity } from '@/lib/activity-context';
@@ -11,7 +14,7 @@ import { activityFinance, isoDate, parseDateInput, todayIso } from '@/lib/financ
 import { cancelExpense, saveExpense } from '@/lib/actions/expenses';
 import { prisma } from '@/lib/prisma';
 import { fdate, rp } from '@/lib/format';
-import { btnGhost, btnSecondary, input, label, mono, table, tableWrap, td, tdNum, textarea, th, thNum } from '@/lib/ui';
+import { btnGhost, filterFull, filterHalf, filterRow, input, label, mono, table, tableWrap, td, tdNum, textarea, th, thNum } from '@/lib/ui';
 
 type Search = { q?: string; categoryId?: string; status?: string; from?: string; to?: string };
 
@@ -120,21 +123,30 @@ export default async function PengeluaranPage({ searchParams }: { searchParams: 
         <Kpi label="Kategori Terbesar" value={topCategory ? rp(topCategory[1]) : '—'} hint={topCategory?.[0]} />
       </KpiRow>
 
-      <form className="mb-3 flex flex-wrap gap-2" data-noprint>
-        <input name="q" defaultValue={q} placeholder="Cari uraian atau no. ref…" className={`${input} max-w-[260px]`} />
-        <select name="categoryId" defaultValue={sp.categoryId ?? ''} className={`${input} max-w-[245px]`}>
+      <AutoSubmitForm className={`${filterRow} mb-3`}>
+        <input
+          name="q"
+          defaultValue={q}
+          placeholder="Cari uraian atau no. ref…"
+          aria-label="Cari pengeluaran"
+          className={`${input} max-w-[260px] ${filterFull}`}
+        />
+        <select name="categoryId" defaultValue={sp.categoryId ?? ''} aria-label="Kategori" className={`${input} max-w-[245px] ${filterHalf}`}>
           <option value="">Semua kategori</option>
           {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
         </select>
-        <select name="status" defaultValue={sp.status ?? ''} className={`${input} max-w-[195px]`}>
+        <select name="status" defaultValue={sp.status ?? ''} aria-label="Status" className={`${input} max-w-[195px] ${filterHalf}`}>
           <option value="">Semua status</option>
           <option value="AKTIF">Aktif</option>
           <option value="DIBATALKAN">Dibatalkan</option>
         </select>
-        <input type="date" name="from" defaultValue={sp.from ?? ''} className={`${input} max-w-[160px]`} aria-label="Dari tanggal" />
-        <input type="date" name="to" defaultValue={sp.to ?? ''} className={`${input} max-w-[160px]`} aria-label="Sampai tanggal" />
-        <button className={btnSecondary}>Terapkan</button>
-      </form>
+        <DateRange from={sp.from} to={sp.to} />
+        {(q || sp.categoryId || sp.status || sp.from || sp.to) && (
+          <Link href="/pengeluaran" className="text-[12.5px] font-semibold text-brand-700 hover:text-brand-800 max-[640px]:justify-self-start">
+            Reset
+          </Link>
+        )}
+      </AutoSubmitForm>
 
       <div className={tableWrap}>
         <table className={`${table} min-w-[960px]`}>

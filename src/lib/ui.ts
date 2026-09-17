@@ -19,6 +19,16 @@ export const input =
 export const textarea =
   'w-full rounded-control border border-gray-300 bg-white px-3 py-2 text-[13.5px] text-ink focus:outline-none';
 
+// Baris penyaring. Di layar lebar isiannya berjajar dengan lebarnya masing-
+// masing; di ponsel jadi kisi dua kolom. Tanpa itu setiap isian menempati
+// barisnya sendiri dengan lebar yang tidak seragam, dan tujuh penyaring
+// Laporan Keuangan menghabiskan satu layar penuh sebelum laporannya terlihat.
+export const filterRow = 'flex flex-wrap items-center gap-2 max-[640px]:grid max-[640px]:grid-cols-2';
+/** Isian penyaring yang di ponsel memenuhi satu baris kisi (pencarian, pemilih kegiatan). */
+export const filterFull = 'max-[640px]:col-span-2 max-[640px]:max-w-none';
+/** Isian penyaring yang di ponsel berbagi baris berdua (pilihan tingkat, kelas, status). */
+export const filterHalf = 'max-[640px]:max-w-none';
+
 export const card = 'rounded-card border border-gray-200 bg-white';
 export const tableWrap = 'overflow-x-auto rounded-card border border-gray-200 bg-white';
 export const table = 'w-full min-w-[640px] border-collapse text-[13px]';

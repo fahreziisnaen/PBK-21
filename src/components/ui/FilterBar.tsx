@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, useTransition } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { input } from '@/lib/ui';
+import { filterFull, filterHalf, filterRow, input } from '@/lib/ui';
 
 export type FilterClass = { id: string; name: string; grade: string };
 export type FilterOption = { value: string; label: string };
@@ -75,19 +75,19 @@ export function FilterBar({
   const dirty = Boolean(q || grade || kelas) || status !== defaultStatus;
 
   return (
-    <div data-noprint className={'mb-3 flex flex-wrap items-center gap-2 ' + (pending ? 'opacity-70' : '')}>
+    <div data-noprint className={`${filterRow} mb-3 ${pending ? 'opacity-70' : ''}`}>
       <input
         value={text}
         onChange={(e) => setText(e.target.value)}
         placeholder={searchPlaceholder}
         aria-label="Cari"
-        className={`${input} max-w-[260px]`}
+        className={`${input} max-w-[260px] ${filterFull}`}
       />
 
       <select
         value={grade}
         aria-label="Tingkat"
-        className={`${input} max-w-[185px]`}
+        className={`${input} max-w-[185px] ${filterHalf}`}
         onChange={(e) => {
           const next = e.target.value;
           // Kelas yang tidak lagi masuk tingkat baru dilepas bersamaan, dalam
@@ -105,7 +105,7 @@ export function FilterBar({
       <select
         value={kelas}
         aria-label="Kelas"
-        className={`${input} max-w-[205px]`}
+        className={`${input} max-w-[205px] ${filterHalf}`}
         onChange={(e) => push({ kelas: e.target.value })}
       >
         <option value="">{grade ? `Semua kelas tingkat ${grade}` : 'Semua kelas'}</option>
@@ -118,7 +118,7 @@ export function FilterBar({
       <select
         value={status}
         aria-label={statusLabel}
-        className={`${input} max-w-[205px]`}
+        className={`${input} max-w-[205px] ${filterHalf}`}
         onChange={(e) => push({ status: e.target.value })}
       >
         {statusOptions.map((o) => (
@@ -130,7 +130,7 @@ export function FilterBar({
         <button
           type="button"
           onClick={() => start(() => router.replace(pathname, { scroll: false }))}
-          className="text-[12.5px] font-semibold text-brand-700 hover:text-brand-800"
+          className="text-[12.5px] font-semibold text-brand-700 hover:text-brand-800 max-[640px]:justify-self-start"
         >
           Reset
         </button>

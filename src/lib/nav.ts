@@ -21,17 +21,15 @@ export const NAV_GROUPS: NavGroup[] = [
   {
     label: 'MASTER DATA',
     items: [
-      // Berpasangan dari yang melandasi ke yang bergantung padanya:
-      // tahun pelajaran → kelas → siswa, lalu kategori → kegiatan.
-      // Naik Kelas paling bawah: aksi tahunan yang mengubah seluruh data,
-      // jadi tidak diletakkan berdampingan dengan menu harian.
+      // Urutan ditetapkan pengguna: data sekolah (tahun pelajaran, kelas,
+      // siswa, naik kelas), lalu kegiatan, lalu pengeluaran.
       { label: 'Tahun Pelajaran', href: '/master/tahun-pelajaran' },
-      { label: 'Kelas', href: '/master/kelas' },
+      { label: 'Data Kelas', href: '/master/kelas' },
       { label: 'Data Siswa', href: '/master/siswa' },
-      { label: 'Kategori Kegiatan', href: '/master/kategori-kegiatan' },
-      { label: 'Kategori Pengeluaran', href: '/master/kategori-pengeluaran' },
-      { label: 'Kegiatan', href: '/master/kegiatan' },
       { label: 'Naik Kelas', href: '/master/naik-kelas' },
+      { label: 'Kategori Kegiatan', href: '/master/kategori-kegiatan' },
+      { label: 'Daftar Kegiatan', href: '/master/kegiatan' },
+      { label: 'Kategori Pengeluaran', href: '/master/kategori-pengeluaran' },
     ],
   },
   {

@@ -9,7 +9,7 @@ import { resolveReport } from '@/lib/report-context';
 import { isoDate, payStatus, todayIso } from '@/lib/finance';
 import { prisma } from '@/lib/prisma';
 import { fdateLong, rp } from '@/lib/format';
-import { input, mono, table, tableWrap, td, tdNum, th, thNum } from '@/lib/ui';
+import { filterHalf, input, mono, table, tableWrap, td, tdNum, th, thNum } from '@/lib/ui';
 
 type Search = { activityId?: string; from?: string; to?: string; grade?: string; status?: string; kelas?: string };
 
@@ -82,7 +82,7 @@ export default async function LaporanPembayaranPage({ searchParams }: { searchPa
 
       <ReportFilters activities={activities} activityId={activity.id} from={sp.from} to={sp.to}>
         <GradeClassSelects classes={classes} grade={sp.grade} kelas={sp.kelas} />
-        <select name="status" defaultValue={sp.status ?? ''} className={`${input} max-w-[205px]`} aria-label="Status">
+        <select name="status" defaultValue={sp.status ?? ''} className={`${input} max-w-[205px] ${filterHalf}`} aria-label="Status">
           <option value="">Semua status</option>
           <option>Lunas</option>
           <option>Belum Lunas</option>

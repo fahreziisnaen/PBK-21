@@ -2,6 +2,8 @@ import Link from 'next/link';
 import { PageHead } from '@/components/shell/PageHead';
 import { Kpi, KpiRow, NoActivity } from '@/components/ui/Kpi';
 import { PrintButton } from '@/components/ui/PrintButton';
+import { DateRange } from '@/components/ui/DateRange';
+import { AutoSubmitForm } from '@/components/finance/AutoSubmitForm';
 import { ReportKop, ReportSignature, SignatureFooterRow } from '@/components/finance/ReportDocument';
 import { requireUser } from '@/lib/auth-guard';
 import { getActiveActivity } from '@/lib/activity-context';
@@ -9,7 +11,7 @@ import { isoDate, ledgerRows, parseDateInput, todayIso } from '@/lib/finance';
 import { reportPeriod } from '@/lib/report-period';
 import { prisma } from '@/lib/prisma';
 import { fdate, rp } from '@/lib/format';
-import { btnSecondary, input, mono, table, tableWrap, td, tdNum, th, thNum } from '@/lib/ui';
+import { filterRow, mono, table, tableWrap, td, tdNum, th, thNum } from '@/lib/ui';
 
 export default async function BukuKasPage({ searchParams }: { searchParams: Promise<{ from?: string; to?: string }> }) {
   const user = await requireUser();
@@ -65,14 +67,15 @@ export default async function BukuKasPage({ searchParams }: { searchParams: Prom
         <Kpi label="Saldo Akhir" value={rp(opening + income - expense)} tone="brand" />
       </KpiRow>
 
-      <form className="mb-3 flex flex-wrap items-center gap-2" data-noprint>
-        <span className="text-[12.5px] font-semibold text-gray-600">Periode</span>
-        <input type="date" name="from" defaultValue={sp.from ?? ''} className={`${input} max-w-[160px]`} aria-label="Dari tanggal" />
-        <span className="text-gray-400">–</span>
-        <input type="date" name="to" defaultValue={sp.to ?? ''} className={`${input} max-w-[160px]`} aria-label="Sampai tanggal" />
-        <button className={btnSecondary}>Terapkan</button>
-        {(sp.from || sp.to) && <Link href="/buku-kas" className="text-[12.5px] font-semibold text-brand-700">Reset</Link>}
-      </form>
+      <AutoSubmitForm className={`${filterRow} mb-3`}>
+        <span className="text-[12.5px] font-semibold text-gray-600 max-[640px]:col-span-2">Periode</span>
+        <DateRange from={sp.from} to={sp.to} />
+        {(sp.from || sp.to) && (
+          <Link href="/buku-kas" className="text-[12.5px] font-semibold text-brand-700 max-[640px]:justify-self-start">
+            Reset
+          </Link>
+        )}
+      </AutoSubmitForm>
 
       <div className={tableWrap}>
         <table className={`${table} min-w-[900px]`}>

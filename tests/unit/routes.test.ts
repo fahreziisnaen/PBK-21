@@ -14,7 +14,7 @@ describe('ROUTES', () => {
       crumbs: ['Dashboard'],
     });
     expect(ROUTES['/buku-kas'].subtitle).toBe('Mutasi kas kronologis kegiatan aktif');
-    expect(ROUTES['/master/kegiatan'].crumbs).toEqual(['Master Data', 'Kegiatan']);
+    expect(ROUTES['/master/kegiatan'].crumbs).toEqual(['Master Data', 'Daftar Kegiatan']);
   });
 });
 
@@ -86,6 +86,25 @@ describe('NAV_GROUPS', () => {
     expect(NAV_GROUPS.map((g) => g.label)).toEqual([
       'DASHBOARD', 'KEUANGAN', 'DATA', 'MASTER DATA', 'LAPORAN', 'ADMINISTRASI', 'SISTEM',
     ]);
+  });
+
+  it('menyusun Master Data sesuai urutan yang diminta pengguna', () => {
+    const master = NAV_GROUPS.find((g) => g.label === 'MASTER DATA')!;
+    expect(master.items.map((i) => i.label)).toEqual([
+      'Tahun Pelajaran',
+      'Data Kelas',
+      'Data Siswa',
+      'Naik Kelas',
+      'Kategori Kegiatan',
+      'Daftar Kegiatan',
+      'Kategori Pengeluaran',
+    ]);
+  });
+
+  it('judul halaman sama dengan label menunya', () => {
+    for (const g of NAV_GROUPS) {
+      for (const it of g.items) expect(ROUTES[it.href]?.title, it.href).toBe(it.label);
+    }
   });
 
   it('hanya menautkan href yang terdaftar di ROUTES', () => {

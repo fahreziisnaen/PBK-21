@@ -24,7 +24,6 @@ let activityId: string;
 // ditolak MAX_CHALLENGES_PER_WINDOW — pengaman 2FA, bukan cacat fitur.
 let page: Page;
 const studentIds: string[] = [];
-const participantIds: string[] = [];
 
 test.beforeAll(async ({ browser }) => {
   bendahara = await createE2eUser({ role: 'BENDAHARA', withTotp: true });
@@ -49,8 +48,7 @@ test.beforeAll(async ({ browser }) => {
       data: { nis: `RV${stamp}${n}`, name: `Siswa Revisi ${n} ${stamp}`, grade: 'X', className: cls.name },
     });
     studentIds.push(student.id);
-    const participant = await prisma.participant.create({ data: { activityId, studentId: student.id, billing: 200_000 } });
-    participantIds.push(participant.id);
+    await prisma.participant.create({ data: { activityId, studentId: student.id, billing: 200_000 } });
   }
 
   const context = await browser.newContext();
@@ -89,7 +87,8 @@ test('pembayaran transfer menyimpan bukti, dan kelas tampil di data pembayaran',
   await page.goto('/pembayaran');
   await page.getByRole('button', { name: '+ Catat Pembayaran' }).click();
   const dialog = page.getByRole('dialog', { name: 'Catat Pembayaran' });
-  await dialog.getByLabel('Siswa').selectOption(participantIds[0]);
+  await dialog.getByLabel('Cari siswa').fill(`RV${stamp}1`);
+  await dialog.getByRole('radio', { name: new RegExp(`Siswa Revisi 1 ${stamp}`) }).check();
   await dialog.getByLabel('Nominal (Rp)').fill('275000');
   await dialog.getByRole('radio', { name: 'Transfer' }).check();
   await dialog.getByLabel('Bukti Transfer').setInputFiles({ name: 'bukti.png', mimeType: 'image/png', buffer: PNG });

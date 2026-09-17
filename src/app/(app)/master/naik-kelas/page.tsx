@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { PageHead } from '@/components/shell/PageHead';
 import { SaveForm } from '@/components/ui/SaveForm';
+import { StayBackPicker } from '@/components/finance/StayBackPicker';
 import { requireUser } from '@/lib/auth-guard';
 import { canWrite } from '@/lib/roles';
 import { prisma } from '@/lib/prisma';
@@ -152,21 +153,10 @@ export default async function NaikKelasPage() {
         <div>
           <h2 className="mb-1 text-[15px] font-bold text-gray-900">2. Siswa yang tinggal kelas</h2>
           <p className="mb-3 text-[12.5px] text-ink-soft">
-            Centang siswa yang <b>tidak</b> naik. Tingkat dan kelasnya dibiarkan apa adanya. Kosongkan bila semua naik.
+            Cari lalu centang siswa yang <b>tidak</b> naik. Tingkat dan kelasnya dibiarkan apa adanya. Kosongkan bila
+            semua naik.
           </p>
-          <div className="max-h-[320px] overflow-y-auto rounded-card border border-gray-200">
-            {students.map((s) => (
-              <label
-                key={s.id}
-                className="flex cursor-pointer items-center gap-3 border-b border-gray-100 px-3 py-2 text-[13px] last:border-0 hover:bg-gray-50"
-              >
-                <input type="checkbox" name="tinggal" value={s.id} className="h-4 w-4 flex-none rounded border-gray-300" />
-                <span className="min-w-0 flex-1 truncate font-semibold text-gray-900">{s.name}</span>
-                <span className={`flex-none ${mono} text-[12px] text-gray-500`}>{s.nis}</span>
-                <span className="w-24 flex-none text-right text-[12px] text-gray-500">{s.className ?? s.grade}</span>
-              </label>
-            ))}
-          </div>
+          <StayBackPicker students={students} />
         </div>
 
         <div className="rounded-card border border-warn-200 bg-warn-50 p-4">
