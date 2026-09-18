@@ -76,7 +76,7 @@ export async function CategoryPage({ kind }: { kind: 'activity' | 'expense' }) {
         }
       />
       <div className={tableWrap}>
-        <table className={table}>
+        <table data-stack className={table}>
           <thead>
             <tr>
               <th className={th}>Kode</th>
@@ -97,51 +97,53 @@ export async function CategoryPage({ kind }: { kind: 'activity' | 'expense' }) {
             )}
             {rows.map((row) => (
               <tr key={row.id}>
-                <td className={`${td} ${mono} font-semibold text-gray-900`}>{row.code}</td>
-                <td className={`${td} font-semibold text-gray-900`}>{row.name}</td>
-                <td className={`${td} text-gray-500`}>{row.description ?? '—'}</td>
-                <td className={tdNum}>{row.used}</td>
-                <td className={td}><Badge status={row.status} /></td>
+                <td data-label="Kode" className={`${td} ${mono} font-semibold text-gray-900`}>{row.code}</td>
+                <td data-label="Nama Kategori" className={`${td} font-semibold text-gray-900`}>{row.name}</td>
+                <td data-label="Deskripsi" className={`${td} text-gray-500`}>{row.description ?? '—'}</td>
+                <td data-label={usedLabel} className={tdNum}>{row.used}</td>
+                <td data-label="Status" className={td}><Badge status={row.status} /></td>
                 {admin && (
-                  <td className={`${td} whitespace-nowrap`}>
-                    <FormModal trigger="Edit" triggerClassName={btnGhost} title="Edit Kategori" action={save}>
-                      <Fields row={row} />
-                    </FormModal>
-                    {row.status === 'AKTIF' ? (
-                      <ConfirmAction
-                        label="Nonaktifkan"
-                        title="Nonaktifkan Kategori"
-                        body={`Kategori "${row.name}" tidak akan bisa dipilih untuk data baru.`}
-                        bullets={[
-                          'Data lama yang memakai kategori ini tetap tersimpan dan tetap tampil di laporan.',
-                          'Kategori dapat diaktifkan kembali kapan saja.',
-                        ]}
-                        confirmLabel="Nonaktifkan"
-                        tone="warn"
-                        run={toggle.bind(null, row.id)}
-                      />
-                    ) : (
-                      <ConfirmAction
-                        label="Aktifkan"
-                        className={btnGhost}
-                        title="Aktifkan Kategori"
-                        body={`Kategori "${row.name}" bisa dipilih lagi untuk data baru.`}
-                        bullets={[]}
-                        confirmLabel="Aktifkan"
-                        tone="warn"
-                        run={toggle.bind(null, row.id)}
-                      />
-                    )}
-                    {row.used === 0 && (
-                      <ConfirmAction
-                        label="Hapus"
-                        title="Hapus Kategori"
-                        body={`Kategori "${row.name}" akan dihapus permanen.`}
-                        bullets={['Hanya kategori yang belum pernah dipakai yang bisa dihapus.', 'Tindakan ini tidak bisa dibatalkan.']}
-                        confirmLabel="Hapus Permanen"
-                        run={remove.bind(null, row.id)}
-                      />
-                    )}
+                  <td data-label="Aksi" className={`${td} whitespace-nowrap`}>
+                    <div className="flex flex-wrap items-center gap-1">
+                      <FormModal trigger="Edit" triggerClassName={btnGhost} title="Edit Kategori" action={save}>
+                        <Fields row={row} />
+                      </FormModal>
+                      {row.status === 'AKTIF' ? (
+                        <ConfirmAction
+                          label="Nonaktifkan"
+                          title="Nonaktifkan Kategori"
+                          body={`Kategori "${row.name}" tidak akan bisa dipilih untuk data baru.`}
+                          bullets={[
+                            'Data lama yang memakai kategori ini tetap tersimpan dan tetap tampil di laporan.',
+                            'Kategori dapat diaktifkan kembali kapan saja.',
+                          ]}
+                          confirmLabel="Nonaktifkan"
+                          tone="warn"
+                          run={toggle.bind(null, row.id)}
+                        />
+                      ) : (
+                        <ConfirmAction
+                          label="Aktifkan"
+                          className={btnGhost}
+                          title="Aktifkan Kategori"
+                          body={`Kategori "${row.name}" bisa dipilih lagi untuk data baru.`}
+                          bullets={[]}
+                          confirmLabel="Aktifkan"
+                          tone="warn"
+                          run={toggle.bind(null, row.id)}
+                        />
+                      )}
+                      {row.used === 0 && (
+                        <ConfirmAction
+                          label="Hapus"
+                          title="Hapus Kategori"
+                          body={`Kategori "${row.name}" akan dihapus permanen.`}
+                          bullets={['Hanya kategori yang belum pernah dipakai yang bisa dihapus.', 'Tindakan ini tidak bisa dibatalkan.']}
+                          confirmLabel="Hapus Permanen"
+                          run={remove.bind(null, row.id)}
+                        />
+                      )}
+                    </div>
                   </td>
                 )}
               </tr>

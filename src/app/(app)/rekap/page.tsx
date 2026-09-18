@@ -43,7 +43,7 @@ function RecapTable({
     <>
       <h2 className="mb-2 mt-2 text-[14px] font-bold text-gray-900">{title}</h2>
       <div className={`${tableWrap} mb-6`}>
-        <table className={`${table} min-w-[900px]`}>
+        <table data-stack className={`${table} min-w-[900px]`}>
           <thead>
             <tr>
               <th className={th}>{firstCol}</th>
@@ -65,15 +65,15 @@ function RecapTable({
               const s = summarize(g.rows);
               return (
                 <tr key={g.key}>
-                  <td className={`${td} font-semibold text-gray-900`}>{g.key}</td>
-                  <td className={tdNum}>{s.count}</td>
-                  <td className={`${tdNum} text-success-700`}>{s.lunas}</td>
-                  <td className={`${tdNum} text-warn-700`}>{s.belumLunas}</td>
-                  <td className={`${tdNum} text-error-600`}>{s.belumBayar}</td>
-                  <td className={tdNum}>{rp(s.billing)}</td>
-                  <td className={tdNum}>{rp(s.paid)}</td>
-                  <td className={tdNum}>{rp(s.remaining)}</td>
-                  <td className={tdNum}>
+                  <td data-label={firstCol} className={`${td} font-semibold text-gray-900`}>{g.key}</td>
+                  <td data-label="Peserta" className={tdNum}>{s.count}</td>
+                  <td data-label="Lunas" className={`${tdNum} text-success-700`}>{s.lunas}</td>
+                  <td data-label="Belum Lunas" className={`${tdNum} text-warn-700`}>{s.belumLunas}</td>
+                  <td data-label="Belum Bayar" className={`${tdNum} text-error-600`}>{s.belumBayar}</td>
+                  <td data-label="Tagihan" className={tdNum}>{rp(s.billing)}</td>
+                  <td data-label="Dibayar" className={tdNum}>{rp(s.paid)}</td>
+                  <td data-label="Sisa" className={tdNum}>{rp(s.remaining)}</td>
+                  <td data-label="Terkumpul" className={tdNum}>
                     <div className="flex items-center justify-end gap-2">
                       {/* Bilah tidak tercetak: latar belakang tidak ikut dicetak, jadi
                           yang tersisa hanya ruang kosong di depan persentase. */}
@@ -90,15 +90,15 @@ function RecapTable({
           {groups.length > 0 && (
             <tfoot>
               <tr className="bg-gray-50 font-semibold">
-                <td className={td}>Total</td>
-                <td className={tdNum}>{total.count}</td>
-                <td className={tdNum}>{total.lunas}</td>
-                <td className={tdNum}>{total.belumLunas}</td>
-                <td className={tdNum}>{total.belumBayar}</td>
-                <td className={tdNum}>{rp(total.billing)}</td>
-                <td className={tdNum}>{rp(total.paid)}</td>
-                <td className={tdNum}>{rp(total.remaining)}</td>
-                <td className={tdNum}>{total.pct}%</td>
+                <td data-label="" className={td}>Total</td>
+                <td data-label="Peserta" className={tdNum}>{total.count}</td>
+                <td data-label="Lunas" className={tdNum}>{total.lunas}</td>
+                <td data-label="Belum Lunas" className={tdNum}>{total.belumLunas}</td>
+                <td data-label="Belum Bayar" className={tdNum}>{total.belumBayar}</td>
+                <td data-label="Tagihan" className={tdNum}>{rp(total.billing)}</td>
+                <td data-label="Dibayar" className={tdNum}>{rp(total.paid)}</td>
+                <td data-label="Sisa" className={tdNum}>{rp(total.remaining)}</td>
+                <td data-label="Terkumpul" className={tdNum}>{total.pct}%</td>
               </tr>
               {footer}
             </tfoot>

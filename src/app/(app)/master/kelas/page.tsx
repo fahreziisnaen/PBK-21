@@ -90,7 +90,7 @@ export default async function KelasPage() {
       />
 
       <div className={tableWrap}>
-        <table className={table}>
+        <table data-stack className={table}>
           <thead>
             <tr>
               <th className={th}>Kelas</th>
@@ -112,10 +112,10 @@ export default async function KelasPage() {
               const students = studentsIn.get(c.name) ?? 0;
               return (
                 <tr key={c.id}>
-                  <td className={`${td} ${mono} font-semibold text-gray-900`}>{c.name}</td>
-                  <td className={td}>{c.grade}</td>
-                  <td className={td}>{c.homeroomTeacher ?? '—'}</td>
-                  <td className={tdNum}>
+                  <td data-label="Kelas" className={`${td} ${mono} font-semibold text-gray-900`}>{c.name}</td>
+                  <td data-label="Tingkat" className={td}>{c.grade}</td>
+                  <td data-label="Wali Kelas" className={td}>{c.homeroomTeacher ?? '—'}</td>
+                  <td data-label="Siswa" className={tdNum}>
                     {students > 0 ? (
                       <Link
                         href={`/master/siswa?kelas=${encodeURIComponent(c.name)}`}
@@ -129,20 +129,22 @@ export default async function KelasPage() {
                     )}
                   </td>
                   {writer && (
-                    <td className={`${td} whitespace-nowrap`}>
-                      <FormModal trigger="Edit" triggerClassName={btnGhost} title="Edit Kelas" action={saveClass}>
-                        <ClassFields row={c} />
-                      </FormModal>
-                      {students === 0 && (
-                        <ConfirmAction
-                          label="Hapus"
-                          title="Hapus Kelas"
-                          body={`Kelas ${c.name} akan dihapus permanen.`}
-                          bullets={['Hanya kelas tanpa siswa yang bisa dihapus.', 'Tindakan ini tidak bisa dibatalkan.']}
-                          confirmLabel="Hapus Permanen"
-                          run={deleteClass.bind(null, c.id)}
-                        />
-                      )}
+                    <td data-label="Aksi" className={`${td} whitespace-nowrap`}>
+                      <div className="flex flex-wrap items-center gap-1">
+                        <FormModal trigger="Edit" triggerClassName={btnGhost} title="Edit Kelas" action={saveClass}>
+                          <ClassFields row={c} />
+                        </FormModal>
+                        {students === 0 && (
+                          <ConfirmAction
+                            label="Hapus"
+                            title="Hapus Kelas"
+                            body={`Kelas ${c.name} akan dihapus permanen.`}
+                            bullets={['Hanya kelas tanpa siswa yang bisa dihapus.', 'Tindakan ini tidak bisa dibatalkan.']}
+                            confirmLabel="Hapus Permanen"
+                            run={deleteClass.bind(null, c.id)}
+                          />
+                        )}
+                      </div>
                     </td>
                   )}
                 </tr>

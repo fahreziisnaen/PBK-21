@@ -212,7 +212,7 @@ export default async function LaporanKeuanganPage({ searchParams }: { searchPara
 
         <h2 className="mb-2 text-[14px] font-bold text-gray-900">Rincian Transaksi</h2>
         <div className={tableWrap}>
-          <table className={`${table} min-w-[860px]`}>
+          <table data-stack className={`${table} min-w-[860px]`}>
             <thead>
               <tr>
                 <th className={th}>Tanggal</th>
@@ -232,14 +232,14 @@ export default async function LaporanKeuanganPage({ searchParams }: { searchPara
               {rows.map((r, i) => {
                 return (
                   <tr key={r.key}>
-                    <td className={`${td} whitespace-nowrap`}>{fdate(isoDate(r.date))}</td>
-                    <td className={`${td} ${mono}`}>{r.ref}</td>
-                    <td className={td}>{r.description}</td>
-                    <td className={`${td} print:whitespace-nowrap`}>{r.category}</td>
-                    <td className={td}>{r.method === 'TUNAI' ? 'Tunai' : 'Transfer'}</td>
-                    <td className={tdNum}>{r.income ? rp(r.income) : ''}</td>
-                    {!byClass && <td className={tdNum}>{r.expense ? rp(r.expense) : ''}</td>}
-                    {showBalance && <td className={`${tdNum} font-semibold`}>{rp(balances[i]!)}</td>}
+                    <td data-label="Tanggal" className={`${td} whitespace-nowrap`}>{fdate(isoDate(r.date))}</td>
+                    <td data-label="No. Ref" className={`${td} ${mono}`}>{r.ref}</td>
+                    <td data-label="Keterangan" className={td}>{r.description}</td>
+                    <td data-label="Kategori" className={`${td} print:whitespace-nowrap`}>{r.category}</td>
+                    <td data-label="Metode" className={td}>{r.method === 'TUNAI' ? 'Tunai' : 'Transfer'}</td>
+                    <td data-label="Masuk" className={tdNum}>{r.income ? rp(r.income) : ''}</td>
+                    {!byClass && <td data-label="Keluar" className={tdNum}>{r.expense ? rp(r.expense) : ''}</td>}
+                    {showBalance && <td data-label="Saldo" className={`${tdNum} font-semibold`}>{rp(balances[i]!)}</td>}
                   </tr>
                 );
               })}
@@ -248,9 +248,9 @@ export default async function LaporanKeuanganPage({ searchParams }: { searchPara
               <tfoot>
                 <tr className="bg-gray-50 font-semibold">
                   <td className={td} colSpan={5}>Total</td>
-                  <td className={tdNum}>{rp(income)}</td>
-                  {!byClass && <td className={tdNum}>{rp(expense)}</td>}
-                  {showBalance && <td className={tdNum}>{rp(opening + income - expense)}</td>}
+                  <td data-label="Masuk" className={tdNum}>{rp(income)}</td>
+                  {!byClass && <td data-label="Keluar" className={tdNum}>{rp(expense)}</td>}
+                  {showBalance && <td data-label="Saldo" className={tdNum}>{rp(opening + income - expense)}</td>}
                 </tr>
                 <SignatureFooterRow
                   colSpan={6 + (byClass ? 0 : 1) + (showBalance ? 1 : 0)}

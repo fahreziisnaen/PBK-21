@@ -164,7 +164,7 @@ export default async function DataPesertaPage({ searchParams }: { searchParams: 
   const tabel = (
     <>
       <div className={tableWrap}>
-        <table className={`${table} min-w-[900px]`}>
+        <table data-stack className={`${table} min-w-[900px]`}>
           <thead>
             <tr>
               {editable && <th className={`${th} w-10`}><span className="sr-only">Pilih</span></th>}
@@ -191,7 +191,7 @@ export default async function DataPesertaPage({ searchParams }: { searchParams: 
             {paged.map((r) => (
               <tr key={r.id}>
                 {editable && (
-                  <td className={td}>
+                  <td data-label="" className={td}>
                     <input
                       type="checkbox"
                       name="ids"
@@ -201,63 +201,65 @@ export default async function DataPesertaPage({ searchParams }: { searchParams: 
                     />
                   </td>
                 )}
-                <td className={`${td} ${mono}`}>{r.nis}</td>
-                <td className={td}>
+                <td data-label="NIS" className={`${td} ${mono}`}>{r.nis}</td>
+                <td data-label="Nama Siswa" className={td}>
                   <Link href={`/siswa/${r.studentId}`} className="font-semibold text-gray-900 hover:text-brand-800">{r.name}</Link>
                 </td>
-                <td className={td}>{r.className ?? r.grade}</td>
-                <td className={tdNum}>{rp(r.billing)}</td>
-                <td className={tdNum}>{rp(r.paid)}</td>
-                <td className={tdNum}>{rp(Math.max(r.remaining, 0))}</td>
-                <td className={td}><Badge status={r.status} /></td>
+                <td data-label="Kelas" className={td}>{r.className ?? r.grade}</td>
+                <td data-label="Tagihan" className={tdNum}>{rp(r.billing)}</td>
+                <td data-label="Dibayar" className={tdNum}>{rp(r.paid)}</td>
+                <td data-label="Sisa" className={tdNum}>{rp(Math.max(r.remaining, 0))}</td>
+                <td data-label="Status" className={td}><Badge status={r.status} /></td>
                 {editable && (
-                  <td className={`${td} whitespace-nowrap`}>
-                    {r.remaining > 0 && (
-                      <PaymentFormModal
-                        trigger="Bayar"
-                        triggerClassName={btnGhost}
-                        participants={[r]}
-                        defaultParticipantId={r.id}
-                        today={todayIso()}
-                      />
-                    )}
-                    <FormModal trigger="Ubah Tagihan" triggerClassName={btnGhost} title="Ubah Tagihan Peserta" action={updateParticipantBilling}>
-                      <input type="hidden" name="participantId" value={r.id} />
-                      <div className="rounded-lg bg-gray-50 px-3 py-2.5 text-[13px]">
-                        <div className="font-semibold text-gray-900">{r.name}</div>
-                        <div className="text-gray-500">
-                          <span className={mono}>{r.nis}</span> · {r.className ?? `Tingkat ${r.grade}`}
-                        </div>
-                      </div>
-                      <div>
-                        <label className={label} htmlFor={`billing-${r.id}`}>Tagihan (Rp)</label>
-                        <input
-                          id={`billing-${r.id}`}
-                          name="billing"
-                          inputMode="numeric"
-                          required
-                          defaultValue={r.billing}
-                          className={`${input} font-mono`}
+                  <td data-label="Aksi" className={`${td} whitespace-nowrap`}>
+                    <div className="flex flex-wrap items-center gap-1">
+                      {r.remaining > 0 && (
+                        <PaymentFormModal
+                          trigger="Bayar"
+                          triggerClassName={btnGhost}
+                          participants={[r]}
+                          defaultParticipantId={r.id}
+                          today={todayIso()}
                         />
-                      </div>
-                      <p className="text-[11.5px] text-gray-500">
-                        Nama, kelas, atau telepon salah? Ubah di{' '}
-                        <Link href={`/master/siswa?q=${encodeURIComponent(r.nis)}`} className="font-semibold text-brand-700">
-                          Master Data › Data Siswa
-                        </Link>
-                        .
-                      </p>
-                    </FormModal>
-                    {r.paymentCount === 0 && (
-                      <ConfirmAction
-                        label="Keluarkan"
-                        title="Keluarkan dari Kegiatan"
-                        body={`${r.name} akan dikeluarkan dari ${activity.name}.`}
-                        bullets={['Data siswa tetap tersimpan dan bisa didaftarkan lagi.', 'Hanya bisa dilakukan selama belum ada pembayaran, termasuk yang sudah dibatalkan.']}
-                        confirmLabel="Keluarkan"
-                        run={removeParticipant.bind(null, r.id)}
-                      />
-                    )}
+                      )}
+                      <FormModal trigger="Ubah Tagihan" triggerClassName={btnGhost} title="Ubah Tagihan Peserta" action={updateParticipantBilling}>
+                        <input type="hidden" name="participantId" value={r.id} />
+                        <div className="rounded-lg bg-gray-50 px-3 py-2.5 text-[13px]">
+                          <div className="font-semibold text-gray-900">{r.name}</div>
+                          <div className="text-gray-500">
+                            <span className={mono}>{r.nis}</span> · {r.className ?? `Tingkat ${r.grade}`}
+                          </div>
+                        </div>
+                        <div>
+                          <label className={label} htmlFor={`billing-${r.id}`}>Tagihan (Rp)</label>
+                          <input
+                            id={`billing-${r.id}`}
+                            name="billing"
+                            inputMode="numeric"
+                            required
+                            defaultValue={r.billing}
+                            className={`${input} font-mono`}
+                          />
+                        </div>
+                        <p className="text-[11.5px] text-gray-500">
+                          Nama, kelas, atau telepon salah? Ubah di{' '}
+                          <Link href={`/master/siswa?q=${encodeURIComponent(r.nis)}`} className="font-semibold text-brand-700">
+                            Master Data › Data Siswa
+                          </Link>
+                          .
+                        </p>
+                      </FormModal>
+                      {r.paymentCount === 0 && (
+                        <ConfirmAction
+                          label="Keluarkan"
+                          title="Keluarkan dari Kegiatan"
+                          body={`${r.name} akan dikeluarkan dari ${activity.name}.`}
+                          bullets={['Data siswa tetap tersimpan dan bisa didaftarkan lagi.', 'Hanya bisa dilakukan selama belum ada pembayaran, termasuk yang sudah dibatalkan.']}
+                          confirmLabel="Keluarkan"
+                          run={removeParticipant.bind(null, r.id)}
+                        />
+                      )}
+                    </div>
                   </td>
                 )}
               </tr>

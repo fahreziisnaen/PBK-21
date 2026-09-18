@@ -78,7 +78,7 @@ export default async function BukuKasPage({ searchParams }: { searchParams: Prom
       </AutoSubmitForm>
 
       <div className={tableWrap}>
-        <table className={`${table} min-w-[900px]`}>
+        <table data-stack className={`${table} min-w-[900px]`}>
           <thead>
             <tr>
               <th className={th}>Tanggal</th>
@@ -94,7 +94,7 @@ export default async function BukuKasPage({ searchParams }: { searchParams: Prom
             {opening !== 0 && (
               <tr>
                 <td className={td} colSpan={6}><i className="text-gray-500">Saldo sebelum periode</i></td>
-                <td className={tdNum}>{rp(opening)}</td>
+                <td data-label="Saldo" className={tdNum}>{rp(opening)}</td>
               </tr>
             )}
             {inRange.length === 0 && (
@@ -102,15 +102,15 @@ export default async function BukuKasPage({ searchParams }: { searchParams: Prom
             )}
             {inRange.map((r) => (
               <tr key={r.key}>
-                <td className={`${td} whitespace-nowrap`}>{fdate(isoDate(r.date))}</td>
-                <td className={`${td} ${mono}`}>
+                <td data-label="Tanggal" className={`${td} whitespace-nowrap`}>{fdate(isoDate(r.date))}</td>
+                <td data-label="No. Ref" className={`${td} ${mono}`}>
                   {r.href ? <Link href={r.href} className="text-brand-700 hover:underline">{r.ref}</Link> : r.ref}
                 </td>
-                <td className={td}>{r.description}</td>
-                <td className={`${td} print:whitespace-nowrap`}>{r.category}</td>
-                <td className={`${tdNum} text-success-700`}>{r.income ? rp(r.income) : ''}</td>
-                <td className={`${tdNum} text-error-600`}>{r.expense ? rp(r.expense) : ''}</td>
-                <td className={`${tdNum} font-semibold text-gray-900`}>{rp(r.balance)}</td>
+                <td data-label="Keterangan" className={td}>{r.description}</td>
+                <td data-label="Kategori" className={`${td} print:whitespace-nowrap`}>{r.category}</td>
+                <td data-label="Masuk" className={`${tdNum} text-success-700`}>{r.income ? rp(r.income) : ''}</td>
+                <td data-label="Keluar" className={`${tdNum} text-error-600`}>{r.expense ? rp(r.expense) : ''}</td>
+                <td data-label="Saldo" className={`${tdNum} font-semibold text-gray-900`}>{rp(r.balance)}</td>
               </tr>
             ))}
           </tbody>
@@ -118,9 +118,9 @@ export default async function BukuKasPage({ searchParams }: { searchParams: Prom
             <tfoot>
               <tr className="bg-gray-50 font-semibold">
                 <td className={td} colSpan={4}>Total mutasi</td>
-                <td className={`${tdNum} text-success-700`}>{rp(income)}</td>
-                <td className={`${tdNum} text-error-600`}>{rp(expense)}</td>
-                <td className={`${tdNum} text-gray-900`}>{rp(opening + income - expense)}</td>
+                <td data-label="Masuk" className={`${tdNum} text-success-700`}>{rp(income)}</td>
+                <td data-label="Keluar" className={`${tdNum} text-error-600`}>{rp(expense)}</td>
+                <td data-label="Saldo" className={`${tdNum} text-gray-900`}>{rp(opening + income - expense)}</td>
               </tr>
               <SignatureFooterRow colSpan={7} name={user.name ?? ''} signatureImage={signer?.signatureImage} date={todayIso()} />
             </tfoot>

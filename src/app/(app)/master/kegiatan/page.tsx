@@ -112,7 +112,7 @@ export default async function KegiatanPage() {
       </div>
 
       <div className={tableWrap}>
-        <table className={`${table} min-w-[960px]`}>
+        <table data-stack className={`${table} min-w-[960px]`}>
           <thead>
             <tr>
               <th className={th}>Kegiatan</th>
@@ -137,49 +137,51 @@ export default async function KegiatanPage() {
               const f = finances[i]!;
               return (
                 <tr key={a.id}>
-                  <td className={td}>
+                  <td data-label="Kegiatan" className={td}>
                     <div className="font-semibold text-gray-900">{a.name}</div>
                     <div className="text-[12px] text-gray-500">{a.location} · <span className={mono}>{a.receiptPrefix}</span></div>
                   </td>
-                  <td className={td}>{a.category.name}</td>
-                  <td className={`${td} whitespace-nowrap`}>
+                  <td data-label="Kategori" className={td}>{a.category.name}</td>
+                  <td data-label="Periode" className={`${td} whitespace-nowrap`}>
                     {fdate(isoDate(a.startDate))} – {fdate(isoDate(a.endDate))}
                   </td>
-                  <td className={tdNum}>{rp(a.contribution)}</td>
-                  <td className={tdNum}>{f.participants}{a.participantTarget ? ` / ${a.participantTarget}` : ''}</td>
-                  <td className={tdNum}>{rp(f.balance)}</td>
-                  <td className={td}><Badge status={a.status} /></td>
+                  <td data-label="Kontribusi" className={tdNum}>{rp(a.contribution)}</td>
+                  <td data-label="Peserta" className={tdNum}>{f.participants}{a.participantTarget ? ` / ${a.participantTarget}` : ''}</td>
+                  <td data-label="Saldo" className={tdNum}>{rp(f.balance)}</td>
+                  <td data-label="Status" className={td}><Badge status={a.status} /></td>
                   {writer && (
-                    <td className={`${td} whitespace-nowrap`}>
-                      {a.status !== 'ARSIP' && (
-                        <FormModal trigger="Edit" triggerClassName={btnGhost} title="Edit Kegiatan" action={saveActivity} wide>
-                          <ActivityFields categories={categories} row={a} />
-                        </FormModal>
-                      )}
-                      {admin && a.status !== 'ARSIP' && (
-                        <ConfirmAction
-                          label="Arsipkan"
-                          title="Arsipkan Kegiatan"
-                          body={`"${a.name}" akan menjadi hanya-baca.`}
-                          bullets={[
-                            'Transaksi baru untuk kegiatan ini akan ditolak.',
-                            'Seluruh riwayat, buku kas, dan laporan tetap bisa dilihat dan dicetak.',
-                          ]}
-                          confirmLabel="Arsipkan"
-                          tone="warn"
-                          run={archiveActivity.bind(null, a.id)}
-                        />
-                      )}
-                      {admin && a._count.participants + a._count.payments + a._count.expenses === 0 && (
-                        <ConfirmAction
-                          label="Hapus"
-                          title="Hapus Kegiatan"
-                          body={`"${a.name}" akan dihapus permanen.`}
-                          bullets={['Hanya kegiatan tanpa peserta dan tanpa transaksi yang bisa dihapus.', 'Tindakan ini tidak bisa dibatalkan.']}
-                          confirmLabel="Hapus Permanen"
-                          run={deleteActivity.bind(null, a.id)}
-                        />
-                      )}
+                    <td data-label="Aksi" className={`${td} whitespace-nowrap`}>
+                      <div className="flex flex-wrap items-center gap-1">
+                        {a.status !== 'ARSIP' && (
+                          <FormModal trigger="Edit" triggerClassName={btnGhost} title="Edit Kegiatan" action={saveActivity} wide>
+                            <ActivityFields categories={categories} row={a} />
+                          </FormModal>
+                        )}
+                        {admin && a.status !== 'ARSIP' && (
+                          <ConfirmAction
+                            label="Arsipkan"
+                            title="Arsipkan Kegiatan"
+                            body={`"${a.name}" akan menjadi hanya-baca.`}
+                            bullets={[
+                              'Transaksi baru untuk kegiatan ini akan ditolak.',
+                              'Seluruh riwayat, buku kas, dan laporan tetap bisa dilihat dan dicetak.',
+                            ]}
+                            confirmLabel="Arsipkan"
+                            tone="warn"
+                            run={archiveActivity.bind(null, a.id)}
+                          />
+                        )}
+                        {admin && a._count.participants + a._count.payments + a._count.expenses === 0 && (
+                          <ConfirmAction
+                            label="Hapus"
+                            title="Hapus Kegiatan"
+                            body={`"${a.name}" akan dihapus permanen.`}
+                            bullets={['Hanya kegiatan tanpa peserta dan tanpa transaksi yang bisa dihapus.', 'Tindakan ini tidak bisa dibatalkan.']}
+                            confirmLabel="Hapus Permanen"
+                            run={deleteActivity.bind(null, a.id)}
+                          />
+                        )}
+                      </div>
                     </td>
                   )}
                 </tr>

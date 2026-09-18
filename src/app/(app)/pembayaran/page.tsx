@@ -116,7 +116,7 @@ export default async function PembayaranPage({ searchParams }: { searchParams: P
       </AutoSubmitForm>
 
       <div className={tableWrap}>
-        <table className={`${table} min-w-[900px]`}>
+        <table data-stack className={`${table} min-w-[900px]`}>
           <thead>
             <tr>
               <th className={th}>No. Kuitansi</th>
@@ -138,26 +138,28 @@ export default async function PembayaranPage({ searchParams }: { searchParams: P
             )}
             {payments.map((p) => (
               <tr key={p.id} className={p.status === 'DIBATALKAN' ? 'opacity-60' : ''}>
-                <td className={`${td} ${mono} font-semibold`}>
+                <td data-label="No. Kuitansi" className={`${td} ${mono} font-semibold`}>
                   <Link href={`/pembayaran/${p.id}`} className="text-brand-700 hover:underline">{p.receiptNo}</Link>
                 </td>
-                <td className={`${td} whitespace-nowrap`}>{fdate(isoDate(p.date))}</td>
-                <td className={td}>
+                <td data-label="Tanggal" className={`${td} whitespace-nowrap`}>{fdate(isoDate(p.date))}</td>
+                <td data-label="Siswa" className={td}>
                   <div className="font-semibold text-gray-900">{p.participant.student.name}</div>
                   <div className="text-[12px] text-gray-500">
                     <span className={mono}>{p.participant.student.nis}</span>
                     {p.participant.student.className ? ` · ${p.participant.student.className}` : ''}
                   </div>
                 </td>
-                <td className={td}>
+                <td data-label="Metode" className={td}>
                   {p.method === 'TUNAI' ? 'Tunai' : 'Transfer'}
                   {p.proof && <span className="ml-1.5 rounded bg-brand-50 px-1.5 py-0.5 text-[11px] font-semibold text-brand-700">bukti</span>}
                 </td>
-                <td className={`${tdNum} ${p.status === 'DIBATALKAN' ? 'line-through' : ''}`}>{rp(p.amount)}</td>
-                <td className={td}><Badge status={p.status} /></td>
-                <td className={`${td} whitespace-nowrap`}>
-                  <Link href={`/kuitansi?id=${p.id}`} className={btnGhost}>Kuitansi</Link>
-                  {writer && !archived && p.status === 'SAH' && <CancelPaymentButton id={p.id} receiptNo={p.receiptNo} />}
+                <td data-label="Jumlah" className={`${tdNum} ${p.status === 'DIBATALKAN' ? 'line-through' : ''}`}>{rp(p.amount)}</td>
+                <td data-label="Status" className={td}><Badge status={p.status} /></td>
+                <td data-label="Aksi" className={`${td} whitespace-nowrap`}>
+                  <div className="flex flex-wrap items-center gap-1">
+                    <Link href={`/kuitansi?id=${p.id}`} className={btnGhost}>Kuitansi</Link>
+                    {writer && !archived && p.status === 'SAH' && <CancelPaymentButton id={p.id} receiptNo={p.receiptNo} />}
+                  </div>
                 </td>
               </tr>
             ))}

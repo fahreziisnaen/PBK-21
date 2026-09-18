@@ -102,7 +102,7 @@ export default async function NaikKelasPage() {
             tetapi belum punya kelas — mereka bisa ditemukan lewat filter “Tanpa kelas” di Master Data › Data Siswa.
           </p>
           <div className={tableWrap}>
-            <table className={`${table} min-w-[640px]`}>
+            <table data-stack className={`${table} min-w-[640px]`}>
               <thead>
                 <tr>
                   <th className={th}>Kelas Sekarang</th>
@@ -123,10 +123,10 @@ export default async function NaikKelasPage() {
                   const next = nextGrade(grade);
                   return (
                     <tr key={name}>
-                      <td className={`${td} ${mono} font-semibold text-gray-900`}>{name}</td>
-                      <td className={td}>{grade}</td>
-                      <td className={tdNum}>{count}</td>
-                      <td className={td}>
+                      <td data-label="Kelas Sekarang" className={`${td} ${mono} font-semibold text-gray-900`}>{name}</td>
+                      <td data-label="Tingkat" className={td}>{grade}</td>
+                      <td data-label="Siswa" className={tdNum}>{count}</td>
+                      <td data-label="Kelas Tujuan" className={td}>
                         {next === null ? (
                           <span className="rounded-full bg-success-50 px-2.5 py-1 text-[11.5px] font-semibold text-success-700">
                             Lulus — jadi alumni

@@ -164,7 +164,7 @@ export default async function IndukSiswaPage({ searchParams }: { searchParams: P
       />
 
       <div className={tableWrap}>
-        <table className={`${table} min-w-[820px]`}>
+        <table data-stack className={`${table} min-w-[820px]`}>
           <thead>
             <tr>
               <th className={th}>NIS</th>
@@ -187,13 +187,13 @@ export default async function IndukSiswaPage({ searchParams }: { searchParams: P
             )}
             {students.map((s) => (
               <tr key={s.id}>
-                <td className={`${td} ${mono}`}>{s.nis}</td>
-                <td className={`${td} font-semibold text-gray-900`}>{s.name}</td>
-                <td className={td}>{s.grade}</td>
-                <td className={td}>
+                <td data-label="NIS" className={`${td} ${mono}`}>{s.nis}</td>
+                <td data-label="Nama Siswa" className={`${td} font-semibold text-gray-900`}>{s.name}</td>
+                <td data-label="Tingkat" className={td}>{s.grade}</td>
+                <td data-label="Kelas" className={td}>
                   {s.className ?? <span className="text-error-600">— belum ada —</span>}
                 </td>
-                <td className={td}>
+                <td data-label="Status" className={td}>
                   {s.status === 'ALUMNI' ? (
                     <span className="rounded-full bg-gray-100 px-2.5 py-1 text-[11.5px] font-semibold text-gray-600">
                       Alumni {s.graduatedYear ?? ''}
@@ -202,26 +202,28 @@ export default async function IndukSiswaPage({ searchParams }: { searchParams: P
                     <span className="text-gray-500">Aktif</span>
                   )}
                 </td>
-                <td className={td}>{s.phone ? formatPhoneLocal(s.phone) : '—'}</td>
-                <td className={tdNum}>{s._count.participations}</td>
+                <td data-label="Telepon Ortu" className={td}>{s.phone ? formatPhoneLocal(s.phone) : '—'}</td>
+                <td data-label="Kegiatan" className={tdNum}>{s._count.participations}</td>
                 {writer && (
-                  <td className={`${td} whitespace-nowrap`}>
-                    <FormModal trigger="Edit" triggerClassName={btnGhost} title="Edit Data Siswa" action={saveStudentMaster} wide>
-                      <StudentMasterFields classes={classes} row={s} />
-                    </FormModal>
-                    {s._count.participations === 0 && (
-                      <ConfirmAction
-                        label="Hapus"
-                        title="Hapus Siswa"
-                        body={`${s.name} (NIS ${s.nis}) akan dihapus permanen dari data siswa.`}
-                        bullets={[
-                          'Hanya siswa yang belum pernah ikut kegiatan yang bisa dihapus.',
-                          'Tindakan ini tidak bisa dibatalkan.',
-                        ]}
-                        confirmLabel="Hapus Permanen"
-                        run={deleteStudentMaster.bind(null, s.id)}
-                      />
-                    )}
+                  <td data-label="Aksi" className={`${td} whitespace-nowrap`}>
+                    <div className="flex flex-wrap items-center gap-1">
+                      <FormModal trigger="Edit" triggerClassName={btnGhost} title="Edit Data Siswa" action={saveStudentMaster} wide>
+                        <StudentMasterFields classes={classes} row={s} />
+                      </FormModal>
+                      {s._count.participations === 0 && (
+                        <ConfirmAction
+                          label="Hapus"
+                          title="Hapus Siswa"
+                          body={`${s.name} (NIS ${s.nis}) akan dihapus permanen dari data siswa.`}
+                          bullets={[
+                            'Hanya siswa yang belum pernah ikut kegiatan yang bisa dihapus.',
+                            'Tindakan ini tidak bisa dibatalkan.',
+                          ]}
+                          confirmLabel="Hapus Permanen"
+                          run={deleteStudentMaster.bind(null, s.id)}
+                        />
+                      )}
+                    </div>
                   </td>
                 )}
               </tr>

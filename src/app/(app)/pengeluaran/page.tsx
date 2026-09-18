@@ -149,7 +149,7 @@ export default async function PengeluaranPage({ searchParams }: { searchParams: 
       </AutoSubmitForm>
 
       <div className={tableWrap}>
-        <table className={`${table} min-w-[960px]`}>
+        <table data-stack className={`${table} min-w-[960px]`}>
           <thead>
             <tr>
               <th className={th}>No. Ref</th>
@@ -168,36 +168,38 @@ export default async function PengeluaranPage({ searchParams }: { searchParams: 
             )}
             {expenses.map((e) => (
               <tr key={e.id} className={e.status === 'DIBATALKAN' ? 'opacity-60' : ''}>
-                <td className={`${td} ${mono} font-semibold`}>{e.refNo}</td>
-                <td className={`${td} whitespace-nowrap`}>{fdate(isoDate(e.date))}</td>
-                <td className={td}>{e.category.name}</td>
-                <td className={td}>
+                <td data-label="No. Ref" className={`${td} ${mono} font-semibold`}>{e.refNo}</td>
+                <td data-label="Tanggal" className={`${td} whitespace-nowrap`}>{fdate(isoDate(e.date))}</td>
+                <td data-label="Kategori" className={td}>{e.category.name}</td>
+                <td data-label="Uraian" className={td}>
                   <div className="text-gray-900">{e.description}</div>
                   {e.note && <div className="text-[12px] text-gray-500">{e.note}</div>}
                 </td>
-                <td className={td}>{e.method === 'TUNAI' ? 'Tunai' : 'Transfer'}</td>
-                <td className={`${tdNum} ${e.status === 'DIBATALKAN' ? 'line-through' : ''}`}>{rp(e.amount)}</td>
-                <td className={td}><Badge status={e.status} /></td>
+                <td data-label="Metode" className={td}>{e.method === 'TUNAI' ? 'Tunai' : 'Transfer'}</td>
+                <td data-label="Jumlah" className={`${tdNum} ${e.status === 'DIBATALKAN' ? 'line-through' : ''}`}>{rp(e.amount)}</td>
+                <td data-label="Status" className={td}><Badge status={e.status} /></td>
                 {writable && (
-                  <td className={`${td} whitespace-nowrap`}>
-                    {e.status === 'AKTIF' && (
-                      <>
-                        <FormModal trigger="Edit" triggerClassName={btnGhost} title="Edit Pengeluaran" action={saveExpense} wide>
-                          <ExpenseFields categories={categories} row={e} today={today} />
-                        </FormModal>
-                        <ConfirmAction
-                          label="Batalkan"
-                          title="Batalkan Pengeluaran"
-                          body={`Pengeluaran ${e.refNo} akan dibatalkan.`}
-                          bullets={[
-                            'Transaksi tetap tersimpan dalam riwayat dan jejak audit — tidak ada catatan keuangan yang dihapus.',
-                            'Nominal tidak lagi dihitung dalam total pengeluaran maupun saldo kas.',
-                          ]}
-                          confirmLabel="Batalkan Pengeluaran"
-                          run={cancelExpense.bind(null, e.id)}
-                        />
-                      </>
-                    )}
+                  <td data-label="Aksi" className={`${td} whitespace-nowrap`}>
+                    <div className="flex flex-wrap items-center gap-1">
+                      {e.status === 'AKTIF' && (
+                        <>
+                          <FormModal trigger="Edit" triggerClassName={btnGhost} title="Edit Pengeluaran" action={saveExpense} wide>
+                            <ExpenseFields categories={categories} row={e} today={today} />
+                          </FormModal>
+                          <ConfirmAction
+                            label="Batalkan"
+                            title="Batalkan Pengeluaran"
+                            body={`Pengeluaran ${e.refNo} akan dibatalkan.`}
+                            bullets={[
+                              'Transaksi tetap tersimpan dalam riwayat dan jejak audit — tidak ada catatan keuangan yang dihapus.',
+                              'Nominal tidak lagi dihitung dalam total pengeluaran maupun saldo kas.',
+                            ]}
+                            confirmLabel="Batalkan Pengeluaran"
+                            run={cancelExpense.bind(null, e.id)}
+                          />
+                        </>
+                      )}
+                    </div>
                   </td>
                 )}
               </tr>

@@ -115,7 +115,7 @@ export default async function LaporanPembayaranPage({ searchParams }: { searchPa
         </KpiRow>
 
         <div className={tableWrap}>
-          <table className={`${table} min-w-[860px]`}>
+          <table data-stack className={`${table} min-w-[860px]`}>
             <thead>
               <tr>
                 <th className={th}>No</th>
@@ -134,14 +134,14 @@ export default async function LaporanPembayaranPage({ searchParams }: { searchPa
               )}
               {rows.map((r, i) => (
                 <tr key={r.id}>
-                  <td className={tdNum}>{i + 1}</td>
-                  <td className={`${td} ${mono}`}>{r.student.nis}</td>
-                  <td className={`${td} font-semibold text-gray-900`}>{r.student.name}</td>
-                  <td className={td}>{r.student.className ?? r.student.grade}</td>
-                  <td className={tdNum}>{rp(r.billing)}</td>
-                  <td className={tdNum}>{rp(r.paid)}</td>
-                  <td className={tdNum}>{rp(r.remaining)}</td>
-                  <td className={td}><Badge status={r.status} /></td>
+                  <td data-label="No" className={tdNum}>{i + 1}</td>
+                  <td data-label="NIS" className={`${td} ${mono}`}>{r.student.nis}</td>
+                  <td data-label="Nama Siswa" className={`${td} font-semibold text-gray-900`}>{r.student.name}</td>
+                  <td data-label="Kelas" className={td}>{r.student.className ?? r.student.grade}</td>
+                  <td data-label="Tagihan" className={tdNum}>{rp(r.billing)}</td>
+                  <td data-label="Dibayar" className={tdNum}>{rp(r.paid)}</td>
+                  <td data-label="Sisa" className={tdNum}>{rp(r.remaining)}</td>
+                  <td data-label="Status" className={td}><Badge status={r.status} /></td>
                 </tr>
               ))}
             </tbody>
@@ -149,10 +149,10 @@ export default async function LaporanPembayaranPage({ searchParams }: { searchPa
               <tfoot>
                 <tr className="bg-gray-50 font-semibold">
                   <td className={td} colSpan={4}>Total</td>
-                  <td className={tdNum}>{rp(billing)}</td>
-                  <td className={tdNum}>{rp(paid)}</td>
-                  <td className={tdNum}>{rp(Math.max(billing - paid, 0))}</td>
-                  <td className={td}></td>
+                  <td data-label="Tagihan" className={tdNum}>{rp(billing)}</td>
+                  <td data-label="Dibayar" className={tdNum}>{rp(paid)}</td>
+                  <td data-label="Sisa" className={tdNum}>{rp(Math.max(billing - paid, 0))}</td>
+                  <td data-label="" className={td}></td>
                 </tr>
                 <SignatureFooterRow colSpan={8} name={user.name ?? ''} signatureImage={signer?.signatureImage} date={today} />
               </tfoot>

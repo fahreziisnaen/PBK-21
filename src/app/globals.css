@@ -155,6 +155,85 @@
 }
 
 /* ---------------------------------------------------------------------------
+   TABEL DI LAYAR SEMPIT
+
+   Di ponsel, tabel berkolom banyak hanya bisa dibaca dengan menggeser ke
+   samping — nilai tiap kolom tidak terlihat bersama judulnya. Tabel bertanda
+   `data-stack` karena itu berubah bentuk: satu baris jadi satu kartu, dan tiap
+   sel menampilkan nama kolomnya sendiri di kiri (dari `data-label`) dengan
+   nilainya di kanan. Judul tabel disembunyikan karena sudah pindah ke sel.
+
+   Aturan ini tidak berlapis (@layer), jadi menang atas utilitas Tailwind.
+   --------------------------------------------------------------------------- */
+/* `screen` wajib: lebar kertas A4 sekitar 700px, jadi tanpa itu laporan yang
+   dicetak ikut berubah jadi kartu dan judul kolomnya hilang. */
+@media screen and (max-width: 900px) {
+  /* Lebar minimum untuk layar besar dilepas: yang tidak diubah jadi kartu pun
+     menciut mengikuti layar, bukan memaksa halaman digeser. */
+  table { min-width: 0 !important; }
+
+  /* Pembungkus gulir dan bingkainya dilepas — bingkai pindah ke tiap kartu. */
+  .overflow-x-auto:has(> table[data-stack]) {
+    overflow: visible;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+  }
+
+  table[data-stack] { display: block; }
+  table[data-stack] > thead { display: none; }
+  table[data-stack] > tbody,
+  table[data-stack] > tfoot { display: block; }
+
+  table[data-stack] > tbody > tr,
+  table[data-stack] > tfoot > tr {
+    display: block;
+    margin-bottom: 8px;
+    border: 1px solid var(--color-gray-200);
+    border-radius: var(--radius-card);
+    background: #fff;
+    padding: 6px 2px;
+  }
+  table[data-stack] > tfoot > tr { background: var(--color-gray-50); }
+
+  table[data-stack] td {
+    display: grid;
+    grid-template-columns: 6.5rem minmax(0, 1fr);
+    align-items: baseline;
+    gap: 10px;
+    border: 0 !important;
+    padding: 4px 10px !important;
+    white-space: normal !important;
+  }
+  /* Isi sel selalu di kolom kanan, berapa pun jumlah elemennya — sel yang
+     memuat nama dan NIS sekaligus tetap tersusun ke bawah, bukan berjajar.
+     Isinya menempel ke kiri kolom: lencana status yang dibiarkan meregang akan
+     selebar kartu dan tidak lagi terbaca sebagai lencana. Sel angka meregang
+     ke kanan, mengikuti perataan kolomnya di layar lebar. */
+  table[data-stack] td > * { grid-column: 2; justify-self: start; }
+  table[data-stack] td[class~='text-right'] > * { justify-self: end; }
+  table[data-stack] td::before {
+    content: attr(data-label);
+    grid-column: 1;
+    /* Sel angka rata kanan; labelnya tetap rata kiri supaya berjajar rapi. */
+    text-align: left;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    color: var(--color-gray-500);
+  }
+
+  /* Sel tanpa label: baris kosong, baris "Total", dan kolom centang. */
+  table[data-stack] td:not([data-label]),
+  table[data-stack] td[data-label=''] { display: block; }
+  table[data-stack] td:not([data-label])::before,
+  table[data-stack] td[data-label='']::before { content: none; }
+  table[data-stack] td[colspan] { display: block; }
+
+}
+
+/* ---------------------------------------------------------------------------
    CETAK
 
    Lebar cetak A4 dengan margin ini sekitar 700px — di bawah batas tampilan

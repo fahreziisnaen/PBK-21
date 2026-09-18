@@ -66,7 +66,7 @@ export default async function TahunPelajaranPage() {
       </div>
 
       <div className={tableWrap}>
-        <table className={table}>
+        <table data-stack className={table}>
           <thead>
             <tr>
               <th className={th}>Tahun Pelajaran</th>
@@ -85,8 +85,8 @@ export default async function TahunPelajaranPage() {
             )}
             {years.map((y) => (
               <tr key={y.id}>
-                <td className={`${td} ${mono} font-semibold text-gray-900`}>{y.name}</td>
-                <td className={td}>
+                <td data-label="Tahun Pelajaran" className={`${td} ${mono} font-semibold text-gray-900`}>{y.name}</td>
+                <td data-label="Status" className={td}>
                   {y.isActive ? (
                     <span className="rounded-full bg-brand-50 px-2.5 py-1 text-[11.5px] font-semibold text-brand-700">
                       Berjalan
@@ -95,24 +95,26 @@ export default async function TahunPelajaranPage() {
                     <span className="text-gray-500">—</span>
                   )}
                 </td>
-                <td className={tdNum}>{y._count.activities}</td>
+                <td data-label="Kegiatan" className={tdNum}>{y._count.activities}</td>
                 {writer && (
-                  <td className={td}>
-                    {!y.isActive && (
-                      <ConfirmAction
-                        label="Jadikan Berjalan"
-                        title="Ganti Tahun Pelajaran Berjalan"
-                        body={`Tahun pelajaran berjalan akan diubah menjadi ${y.name}.`}
-                        bullets={[
-                          'Kegiatan baru akan masuk ke tahun ini.',
-                          'Tingkat dan kelas siswa tidak berubah — gunakan Naik Kelas untuk itu.',
-                        ]}
-                        confirmLabel="Jadikan Berjalan"
-                        run={setActiveAcademicYear.bind(null, y.id)}
-                        className={btnGhost}
-                        tone="warn"
-                      />
-                    )}
+                  <td data-label="Aksi" className={td}>
+                    <div className="flex flex-wrap items-center gap-1">
+                      {!y.isActive && (
+                        <ConfirmAction
+                          label="Jadikan Berjalan"
+                          title="Ganti Tahun Pelajaran Berjalan"
+                          body={`Tahun pelajaran berjalan akan diubah menjadi ${y.name}.`}
+                          bullets={[
+                            'Kegiatan baru akan masuk ke tahun ini.',
+                            'Tingkat dan kelas siswa tidak berubah — gunakan Naik Kelas untuk itu.',
+                          ]}
+                          confirmLabel="Jadikan Berjalan"
+                          run={setActiveAcademicYear.bind(null, y.id)}
+                          className={btnGhost}
+                          tone="warn"
+                        />
+                      )}
+                    </div>
                   </td>
                 )}
               </tr>

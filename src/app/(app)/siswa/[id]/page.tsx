@@ -58,7 +58,7 @@ export default async function DetailSiswaPage({ params }: { params: Promise<{ id
 
       <h2 className="mb-2 text-[14px] font-bold text-gray-900">Tagihan per Kegiatan</h2>
       <div className={`${tableWrap} mb-6`}>
-        <table className={table}>
+        <table data-stack className={table}>
           <thead>
             <tr>
               <th className={th}>Kegiatan</th>
@@ -74,11 +74,11 @@ export default async function DetailSiswaPage({ params }: { params: Promise<{ id
             )}
             {summaries.map((p) => (
               <tr key={p.id}>
-                <td className={`${td} font-semibold text-gray-900`}>{p.activity.name}</td>
-                <td className={tdNum}>{rp(p.billing)}</td>
-                <td className={tdNum}>{rp(p.paid)}</td>
-                <td className={tdNum}>{rp(Math.max(p.remaining, 0))}</td>
-                <td className={td}><Badge status={p.status} /></td>
+                <td data-label="Kegiatan" className={`${td} font-semibold text-gray-900`}>{p.activity.name}</td>
+                <td data-label="Tagihan" className={tdNum}>{rp(p.billing)}</td>
+                <td data-label="Dibayar" className={tdNum}>{rp(p.paid)}</td>
+                <td data-label="Sisa" className={tdNum}>{rp(Math.max(p.remaining, 0))}</td>
+                <td data-label="Status" className={td}><Badge status={p.status} /></td>
               </tr>
             ))}
           </tbody>
@@ -87,7 +87,7 @@ export default async function DetailSiswaPage({ params }: { params: Promise<{ id
 
       <h2 className="mb-2 text-[14px] font-bold text-gray-900">Riwayat Pembayaran</h2>
       <div className={tableWrap}>
-        <table className={table}>
+        <table data-stack className={table}>
           <thead>
             <tr>
               <th className={th}>No. Kuitansi</th>
@@ -104,14 +104,14 @@ export default async function DetailSiswaPage({ params }: { params: Promise<{ id
             )}
             {payments.map((x) => (
               <tr key={x.id} className={x.status === 'DIBATALKAN' ? 'opacity-60' : ''}>
-                <td className={`${td} ${mono} font-semibold`}>
+                <td data-label="No. Kuitansi" className={`${td} ${mono} font-semibold`}>
                   <Link href={`/pembayaran/${x.id}`} className="text-brand-700 hover:underline">{x.receiptNo}</Link>
                 </td>
-                <td className={td}>{fdate(isoDate(x.date))}</td>
-                <td className={td}>{x.activityName}</td>
-                <td className={td}>{x.method === 'TUNAI' ? 'Tunai' : 'Transfer'}</td>
-                <td className={tdNum}>{rp(x.amount)}</td>
-                <td className={td}><Badge status={x.status} /></td>
+                <td data-label="Tanggal" className={td}>{fdate(isoDate(x.date))}</td>
+                <td data-label="Kegiatan" className={td}>{x.activityName}</td>
+                <td data-label="Metode" className={td}>{x.method === 'TUNAI' ? 'Tunai' : 'Transfer'}</td>
+                <td data-label="Jumlah" className={tdNum}>{rp(x.amount)}</td>
+                <td data-label="Status" className={td}><Badge status={x.status} /></td>
               </tr>
             ))}
           </tbody>

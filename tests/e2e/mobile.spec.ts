@@ -248,3 +248,49 @@ test('pemilih siswa di catat pembayaran nyaman dipakai di ponsel', async () => {
   expect(overflow, 'modal menggeser ke samping').toBeLessThanOrEqual(1);
   if (SHOT_DIR) await page.screenshot({ path: `${SHOT_DIR}/_pemilih-pembayaran.png` });
 });
+
+test('tabel di layar ponsel tidak perlu digeser ke samping, dan tiap nilai membawa nama kolomnya', async () => {
+  const salah: string[] = [];
+  const digeser: string[] = [];
+  let diperiksa = 0;
+
+  for (const route of ROUTES) {
+    await page.goto(route);
+    await page.waitForLoadState('networkidle');
+    const hasil = await page.evaluate(() => {
+      const out: { label: string[]; geser: string[]; sel: number } = { label: [], geser: [], sel: 0 };
+      for (const [i, t] of Array.from(document.querySelectorAll('table')).entries()) {
+        const table = t as HTMLTableElement;
+        // Tabel apa pun: isinya harus muat, bukan digeser ke samping.
+        const wrap = table.parentElement!;
+        if (wrap.scrollWidth > wrap.clientWidth + 1) out.geser.push(`tabel ${i + 1} (${wrap.scrollWidth} > ${wrap.clientWidth})`);
+        if (!table.hasAttribute('data-stack')) continue;
+
+        const judul = Array.from(table.querySelectorAll('thead th')).map((th) => (th.textContent ?? '').trim());
+        for (const row of Array.from(table.querySelectorAll('tbody tr, tfoot tr'))) {
+          let kolom = 0;
+          for (const cell of Array.from(row.children) as HTMLTableCellElement[]) {
+            const span = cell.colSpan || 1;
+            const label = cell.getAttribute('data-label');
+            // Sel yang membentang beberapa kolom (baris kosong, "Total") tidak berlabel.
+            if (span === 1 && label !== '' && judul[kolom] !== undefined) {
+              out.sel += 1;
+              if (label === null) out.label.push(`tabel ${i + 1} kolom "${judul[kolom]}": tanpa label`);
+              else if (label !== judul[kolom]) out.label.push(`tabel ${i + 1}: label "${label}" ≠ judul "${judul[kolom]}"`);
+            }
+            kolom += span;
+          }
+        }
+      }
+      return out;
+    });
+    diperiksa += hasil.sel;
+    salah.push(...hasil.label.map((m) => `${route}: ${m}`));
+    digeser.push(...hasil.geser.map((m) => `${route}: ${m}`));
+  }
+
+  expect(digeser, `tabel masih harus digeser ke samping: ${digeser.join(', ')}`).toEqual([]);
+  expect(salah, `label sel tidak cocok dengan judul kolomnya: ${salah.slice(0, 8).join(' | ')}`).toEqual([]);
+  // Menjaga agar pemeriksaan di atas benar-benar menemui sel, bukan halaman kosong.
+  expect(diperiksa).toBeGreaterThan(30);
+});

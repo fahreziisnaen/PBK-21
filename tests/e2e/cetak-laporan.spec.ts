@@ -116,6 +116,11 @@ for (const r of reports) {
     // Semua kolom muat di lebar kertas, termasuk kolom uang di ujung kanan.
     expect(await overflowingTables()).toEqual([]);
 
+    // Lebar kertas A4 lebih sempit dari batas tampilan ponsel, jadi tabel di
+    // kertas harus tetap tabel: judul kolomnya tampil, bukan berubah jadi
+    // kartu berlabel seperti di layar ponsel.
+    await expect(report.getByRole('columnheader').first()).toBeVisible();
+
     // Laporan berkolom banyak dicetak melintang.
     const pageName = await report.evaluate((el) => getComputedStyle(el).getPropertyValue('page'));
     expect(pageName).toBe(r.landscape ? 'melintang' : 'auto');

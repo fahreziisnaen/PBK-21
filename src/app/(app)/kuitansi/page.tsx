@@ -129,7 +129,7 @@ export default async function KuitansiPage({ searchParams }: { searchParams: Pro
       <PageHead pathname="/kuitansi" activity={activity} />
       <p className="mb-3 text-[13px] text-gray-600">Pilih pembayaran untuk menampilkan kuitansi siap cetak.</p>
       <div className={tableWrap}>
-        <table className={table}>
+        <table data-stack className={table}>
           <thead>
             <tr>
               <th className={th}>No. Kuitansi</th>
@@ -147,11 +147,11 @@ export default async function KuitansiPage({ searchParams }: { searchParams: Pro
             )}
             {recent.map((p) => (
               <tr key={p.id} className={p.status === 'DIBATALKAN' ? 'opacity-60' : ''}>
-                <td className={`${td} ${mono} font-semibold`}>{p.receiptNo}</td>
-                <td className={td}>{fdate(isoDate(p.date))}</td>
-                <td className={td}>{p.participant.student.name}</td>
-                <td className={tdNum}>{rp(p.amount)}</td>
-                <td className={td}><Link href={`/kuitansi?id=${p.id}`} className={btnGhost}>Tampilkan</Link></td>
+                <td data-label="No. Kuitansi" className={`${td} ${mono} font-semibold`}>{p.receiptNo}</td>
+                <td data-label="Tanggal" className={td}>{fdate(isoDate(p.date))}</td>
+                <td data-label="Siswa" className={td}>{p.participant.student.name}</td>
+                <td data-label="Jumlah" className={tdNum}>{rp(p.amount)}</td>
+                <td data-label="" className={td}><Link href={`/kuitansi?id=${p.id}`} className={btnGhost}>Tampilkan</Link></td>
               </tr>
             ))}
           </tbody>
